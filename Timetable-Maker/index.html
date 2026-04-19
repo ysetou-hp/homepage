@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タイムテーブルメーカー</title>
+  
+  <!-- Tailwind CSSの読み込み -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- ReactとReactDOMの読み込み -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babelの読み込み (ブラウザ内でJSXをコンパイルするため) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    /* 印刷時に背景色を正確に出力するための設定 */
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    // useMemo と useCallback を追加
+    const { useState, useRef, useEffect, useMemo, useCallback } = React;
+
+    // --- アイコンコンポーネント (lucide-reactの代替) ---
+    const Plus = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+    const Copy = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
+    const Trash2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+    const X = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
+    const Settings = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+    const Columns = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path></svg>;
+    const AlignLeft = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>;
+    const GripVertical = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>;
+    const Download = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
+    const Save = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
+    const Upload = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
+    const Users = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+
+    // --- 定数と初期データ ---
+
+    const STEP_MIN = 5; 
+
+    const PALETTE = [
+      { bg: '#EBF4FF', border: '#60A5FA', text: '#1E3A8A', name: '青' },
+      { bg: '#FFF7ED', border: '#FB923C', text: '#9A3412', name: 'オレンジ' },
+      { bg: '#F0FDF4', border: '#4ADE80', text: '#14532D', name: '緑' },
+      { bg: '#FEF2F2', border: '#F87171', text: '#7F1D1D', name: '赤' },
+      { bg: '#FEFCE8', border: '#FACC15', text: '#713F12', name: '黄' },
+      { bg: '#F3F4F6', border: '#9CA3AF', text: '#1F2937', name: 'グレー' },
+      { bg: '#FFFFFF', border: '#D1D5DB', text: '#374151', name: '白' },
+    ];
+
+    const COLUMN_PALETTE = [
+      { bg: '#EF4444', text: '#FFFFFF', name: '赤' },
+      { bg: '#3B82F6', text: '#FFFFFF', name: '青' },
+      { bg: '#F59E0B', text: '#FFFFFF', name: 'オレンジ' },
+      { bg: '#10B981', text: '#FFFFFF', name: '緑' },
+      { bg: '#FDE047', text: '#000000', name: '黄' },
+      { bg: '#6B7280', text: '#FFFFFF', name: 'グレー' },
+      { bg: '#000000', text: '#FFFFFF', name: '黒' },
+    ];
+
+    const INITIAL_COLUMNS = [
+      { id: 'c1', name: '赤組', bgColor: '#EF4444', textColor: '#FFFFFF', width: 1, capacity: '' },
+      { id: 'c2', name: '青組', bgColor: '#3B82F6', textColor: '#FFFFFF', width: 1, capacity: '' },
+      { id: 'c3', name: '黄組', bgColor: '#FDE047', textColor: '#000000', width: 1, capacity: '' },
+      { id: 'c4', name: '緑組', bgColor: '#10B981', textColor: '#FFFFFF', width: 1, capacity: '' },
+    ];
+
+    const INITIAL_EVENTS = [
+      { id: 'ev1', title: '組み分けはこちらでさせていただきます', start: 480, end: 500, startColIdx: 0, colSpan: 4, bgColor: '#FEFCE8', borderColor: '#FACC15', borderStyle: 'solid', showTime: false, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev2', title: '受 付', start: 500, end: 540, startColIdx: 0, colSpan: 4, bgColor: '#EBF4FF', borderColor: '#60A5FA', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev3', title: '全体説明', start: 540, end: 570, startColIdx: 0, colSpan: 4, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev4', title: '学科イベント1', start: 570, end: 600, colId: 'c1', colSpan: 1, bgColor: '#F0FDF4', borderColor: '#4ADE80', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev5', title: '学寮見学', start: 600, end: 660, colId: 'c2', colSpan: 1, bgColor: '#FEF2F2', borderColor: '#F87171', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev6', title: '学科イベント2', start: 600, end: 660, colId: 'c1', colSpan: 1, bgColor: '#F0FDF4', borderColor: '#4ADE80', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev7', title: '練習船\n「弓削丸」\n体験航海', start: 570, end: 690, colId: 'c3', colSpan: 1, bgColor: '#EBF4FF', borderColor: '#60A5FA', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev8', title: '練習船\n「弓削丸」\n体験航海', start: 570, end: 690, colId: 'c4', colSpan: 1, bgColor: '#EBF4FF', borderColor: '#60A5FA', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev9', title: '学寮見学', start: 660, end: 720, colId: 'c1', colSpan: 1, bgColor: '#FEF2F2', borderColor: '#F87171', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev10', title: '学科イベント2', start: 660, end: 720, colId: 'c2', colSpan: 1, bgColor: '#F0FDF4', borderColor: '#4ADE80', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev11', title: 'お昼休み\n進路相談', start: 690, end: 750, colId: 'c3', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev12', title: 'お昼休み\n進路相談', start: 690, end: 750, colId: 'c4', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev13', title: 'お昼休み\n進路相談', start: 720, end: 780, colId: 'c1', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { id: 'ev14', title: 'お昼休み\n進路相談', start: 720, end: 780, colId: 'c2', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+    ];
+
+    // --- ユーティリティ ---
+
+    const generateId = () => Math.random().toString(36).substr(2, 9);
+
+    const formatTime = (minutes) => {
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      return `${h}:${m.toString().padStart(2, '0')}`;
+    };
+
+    const globalTimeOptions = [];
+    for (let m = 0; m <= 24 * 60; m += STEP_MIN) {
+      globalTimeOptions.push({ value: m, label: formatTime(m) });
+    }
+
+    const loadSavedData = () => {
+      const saved = localStorage.getItem('timetable_save_data');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch(e){}
+      }
+      return null;
+    };
+
+    // --- メインコンポーネント ---
+
+    function App() {
+      // 最適化: 初回マウント時のみローカルストレージからデータを読み込む (遅延初期化)
+      const [initialData] = useState(() => loadSavedData());
+
+      const [startMin, setStartMin] = useState(initialData?.startMin !== undefined ? initialData.startMin : 8 * 60);
+      const [endMin, setEndMin] = useState(initialData?.endMin !== undefined ? initialData.endMin : 16 * 60 + 30); 
+      const rows = (endMin - startMin) / STEP_MIN;
+
+      const [columns, setColumns] = useState(initialData?.columns || INITIAL_COLUMNS);
+      const [events, setEvents] = useState(initialData?.events || INITIAL_EVENTS);
+      const [titleConfig, setTitleConfig] = useState(initialData?.titleConfig || { text: '7月11日（土）、12日（日）　※商船学科のみ', fontSize: 'text-xl', color: '#1F2937' });
+      const [isZoomed, setIsZoomed] = useState(initialData?.isZoomed || false);
+      const [showBlockCapacity, setShowBlockCapacity] = useState(initialData?.showBlockCapacity !== undefined ? initialData.showBlockCapacity : true);
+      const [selectedEventIds, setSelectedEventIds] = useState([]);
+      const [isShiftPressed, setIsShiftPressed] = useState(false);
+      
+      const [editingTitle, setEditingTitle] = useState(false);
+      const [editingEvent, setEditingEvent] = useState(null);
+      const [editingColumn, setEditingColumn] = useState(null);
+      const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
+      const [resizing, setResizing] = useState(null);
+      const [dragging, setDragging] = useState(null); 
+      const [draggedColId, setDraggedColId] = useState(null); 
+
+      const [hoveredEvent, setHoveredEvent] = useState(null);
+
+      const gridRef = useRef(null);
+      const mainRef = useRef(null);
+      const colHeaderRefs = useRef({}); 
+      const justResized = useRef(false);
+      const dragInfo = useRef({ hasMoved: false }); 
+
+      const latestSelectedEventIds = useRef([]);
+      useEffect(() => { latestSelectedEventIds.current = selectedEventIds; }, [selectedEventIds]);
+      const latestEvents = useRef([]);
+      useEffect(() => { latestEvents.current = events; }, [events]);
+
+      // === 履歴 (Undo/Redo) 管理用のStateとRef ===
+      const [history, setHistory] = useState([]);
+      const [historyIndex, setHistoryIndex] = useState(-1);
+      const historyRef = useRef([]);
+      const historyIndexRef = useRef(-1);
+
+      useEffect(() => {
+        historyRef.current = history;
+        historyIndexRef.current = historyIndex;
+      }, [history, historyIndex]);
+
+      const latestColumns = useRef(columns);
+      const latestTitleConfig = useRef(titleConfig);
+      useEffect(() => { latestColumns.current = columns; }, [columns]);
+      useEffect(() => { latestTitleConfig.current = titleConfig; }, [titleConfig]);
+
+      const saveHistory = useCallback((newEvents, newColumns, newTitleConfig) => {
+        const evts = newEvents !== undefined ? newEvents : latestEvents.current;
+        const cols = newColumns !== undefined ? newColumns : latestColumns.current;
+        const tc = newTitleConfig !== undefined ? newTitleConfig : latestTitleConfig.current;
+
+        const currentHist = historyRef.current;
+        const currentIndex = historyIndexRef.current;
+        const lastState = currentHist[currentIndex];
+
+        if (lastState && 
+            JSON.stringify(lastState.events) === JSON.stringify(evts) &&
+            JSON.stringify(lastState.columns) === JSON.stringify(cols) &&
+            JSON.stringify(lastState.titleConfig) === JSON.stringify(tc)) {
+            return;
+        }
+
+        const past = currentHist.slice(0, currentIndex + 1);
+        const newState = { events: evts, columns: cols, titleConfig: tc };
+        const newHistory = [...past, newState].slice(-50); // 最大50回
+        
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+      }, []);
+
+      useEffect(() => {
+        saveHistory(events, columns, titleConfig);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+
+      const undo = useCallback(() => {
+        const currentHist = historyRef.current;
+        const currentIndex = historyIndexRef.current;
+        if (currentIndex > 0) {
+          const newIndex = currentIndex - 1;
+          const state = currentHist[newIndex];
+          setEvents(state.events);
+          setColumns(state.columns);
+          setTitleConfig(state.titleConfig);
+          setHistoryIndex(newIndex);
+          setSelectedEventIds([]);
+        }
+      }, []);
+
+      const redo = useCallback(() => {
+        const currentHist = historyRef.current;
+        const currentIndex = historyIndexRef.current;
+        if (currentIndex < currentHist.length - 1) {
+          const newIndex = currentIndex + 1;
+          const state = currentHist[newIndex];
+          setEvents(state.events);
+          setColumns(state.columns);
+          setTitleConfig(state.titleConfig);
+          setHistoryIndex(newIndex);
+          setSelectedEventIds([]);
+        }
+      }, []);
+      // === 履歴管理ここまで ===
+
+      // 最適化: 派生データのメモ化。columnsが変化した時だけ再計算
+      const visibleColumns = useMemo(() => columns.filter(col => col.isVisible !== false), [columns]);
+
+      // 最適化: useCallbackで関数の不要な再生成を防止
+      const getEventStartIndex = useCallback((ev) => {
+        if (ev.startColIdx !== undefined) return ev.startColIdx;
+        return visibleColumns.findIndex(c => c.id === ev.colId);
+      }, [visibleColumns]);
+
+      // ブロックの人数を計算する処理（複数列にまたがる場合は合計）
+      const calculateEventCapacity = useCallback((evt) => {
+        const startIndex = getEventStartIndex(evt);
+        if (startIndex === -1) return null;
+        
+        let total = 0;
+        let hasCapacity = false;
+        
+        let renderColSpan = evt.colSpan || 1;
+        if (startIndex + renderColSpan > visibleColumns.length) {
+            renderColSpan = visibleColumns.length - startIndex;
+        }
+
+        for (let i = 0; i < renderColSpan; i++) {
+          const col = visibleColumns[startIndex + i];
+          if (col && col.capacity) {
+            // 全角数字を半角に変換して数値を抽出
+            const normalizedCapacity = String(col.capacity).replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            const match = normalizedCapacity.match(/\d+/);
+            if (match) {
+              total += parseInt(match[0], 10);
+              hasCapacity = true;
+            }
+          }
+        }
+        
+        return hasCapacity ? `（${total}名）` : null;
+      }, [visibleColumns, getEventStartIndex]);
+
+      const getColOffsetsFromDOM = () => {
+        const offsets = [0];
+        let currentX = 0;
+        visibleColumns.forEach(col => {
+          const el = colHeaderRefs.current[col.id];
+          const width = el ? el.offsetWidth : (160 * (col.width || 1)); 
+          currentX += width;
+          offsets.push(currentX);
+        });
+        return offsets;
+      };
+
+      const handleDragStart = (e, id) => {
+        if (e.target.classList.contains('resize-handle')) return;
+        
+        dragInfo.current.hasMoved = false;
+
+        const evt = events.find(ev => ev.id === id);
+        if (!evt || !gridRef.current) return;
+
+        const gridRect = gridRef.current.getBoundingClientRect();
+        const rowHeight = (gridRect.height - 104) / rows; 
+        const colOffsets = getColOffsetsFromDOM();
+
+        let targetIds = [id];
+        if (selectedEventIds.includes(id)) {
+          targetIds = [...selectedEventIds];
+        } else {
+          setSelectedEventIds([id]);
+        }
+
+        const targetEvents = events.filter(ev => targetIds.includes(ev.id)).map(ev => ({
+          ...ev,
+          initialColIndex: getEventStartIndex(ev)
+        }));
+
+        let initialMouseColIndex = colOffsets.findIndex((offset, idx) => {
+            const nextOffset = colOffsets[idx + 1] || Infinity;
+            return e.clientX >= offset && e.clientX < nextOffset;
+        });
+        if (initialMouseColIndex === -1) initialMouseColIndex = 0;
+
+        setDragging({
+          ids: targetIds,
+          startY: e.clientY,
+          startX: e.clientX,
+          initialEvents: targetEvents,
+          rowHeight,
+          colOffsets,
+          initialMouseColIndex
+        });
+      };
+
+      useEffect(() => {
+        if (!dragging) return;
+
+        const handleMouseMove = (e) => {
+          const deltaY = e.clientY - dragging.startY;
+          const deltaX = e.clientX - dragging.startX;
+
+          if (!dragInfo.current.hasMoved && Math.abs(deltaX) < 3 && Math.abs(deltaY) < 3) return;
+          dragInfo.current.hasMoved = true;
+
+          let actualDeltaRows = Math.round(deltaY / dragging.rowHeight);
+          let minAllowedDeltaRows = -Infinity;
+          let maxAllowedDeltaRows = Infinity;
+
+          dragging.initialEvents.forEach(ie => {
+            const minD = (startMin - ie.start) / STEP_MIN; 
+            const maxD = (endMin - ie.end) / STEP_MIN;
+            if (minD > minAllowedDeltaRows) minAllowedDeltaRows = minD;
+            if (maxD < maxAllowedDeltaRows) maxAllowedDeltaRows = maxD;
+          });
+
+          if (actualDeltaRows < minAllowedDeltaRows) actualDeltaRows = minAllowedDeltaRows;
+          if (actualDeltaRows > maxAllowedDeltaRows) actualDeltaRows = maxAllowedDeltaRows;
+
+          let currentMouseX = e.clientX;
+          let currentMouseColIndex = dragging.colOffsets.findIndex((offset, idx) => {
+              const nextOffset = dragging.colOffsets[idx + 1] || Infinity;
+              return currentMouseX >= offset && currentMouseX < nextOffset;
+          });
+          if (currentMouseColIndex === -1) currentMouseColIndex = visibleColumns.length - 1;
+          if (currentMouseX < dragging.colOffsets[0]) currentMouseColIndex = 0;
+
+          let deltaCols = currentMouseColIndex - dragging.initialMouseColIndex;
+          let minDeltaCols = -Infinity;
+          let maxDeltaCols = Infinity;
+
+          dragging.initialEvents.forEach(ie => {
+             const colIdx = ie.initialColIndex;
+             if (colIdx === -1) return;
+             const minC = -colIdx; 
+             const maxC = visibleColumns.length - (colIdx + (ie.colSpan || 1)); 
+             if (minC > minDeltaCols) minDeltaCols = minC;
+             if (maxC < maxDeltaCols) maxDeltaCols = maxC;
+          });
+
+          if (deltaCols < minDeltaCols) deltaCols = minDeltaCols;
+          if (deltaCols > maxDeltaCols) deltaCols = maxDeltaCols;
+
+          setEvents(prevEvents => prevEvents.map(ev => {
+            if (!dragging.ids.includes(ev.id)) return ev;
+
+            const initialEventInfo = dragging.initialEvents.find(ie => ie.id === ev.id);
+            if (!initialEventInfo) return ev;
+
+            let newStart = initialEventInfo.start + actualDeltaRows * STEP_MIN;
+            let newEnd = initialEventInfo.end + actualDeltaRows * STEP_MIN;
+
+            if (initialEventInfo.initialColIndex === -1) {
+               return { ...ev, start: newStart, end: newEnd };
+            }
+
+            let newColIndex = initialEventInfo.initialColIndex + deltaCols;
+
+            if (ev.colSpan > 1) {
+                return { ...ev, start: newStart, end: newEnd, startColIdx: newColIndex, colId: undefined };
+            } else {
+                return { ...ev, start: newStart, end: newEnd, colId: visibleColumns[newColIndex].id, startColIdx: undefined };
+            }
+          }));
+        };
+
+        const handleMouseUp = () => {
+          if (dragInfo.current.hasMoved) {
+            justResized.current = true;
+            setTimeout(() => { justResized.current = false; }, 100);
+            saveHistory(); // ドラッグ確定時に履歴保存
+          }
+          setDragging(null);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [dragging, visibleColumns, startMin, endMin]);
+
+      const handleResizeStart = (e, id, type) => {
+        if (e.shiftKey) return;
+        e.stopPropagation();
+        dragInfo.current.hasMoved = false;
+
+        const evt = events.find(ev => ev.id === id);
+        if (!evt || !gridRef.current) return;
+
+        const gridRect = gridRef.current.getBoundingClientRect();
+        const rowHeight = (gridRect.height - 104) / rows;
+        const colOffsets = getColOffsetsFromDOM();
+
+        setResizing({
+          id,
+          type, 
+          startY: e.clientY,
+          startX: e.clientX,
+          initialEvent: { ...evt },
+          rowHeight,
+          colOffsets,
+          initialColIndex: getEventStartIndex(evt)
+        });
+      };
+
+      useEffect(() => {
+        if (!resizing) return;
+
+        const handleMouseMove = (e) => {
+          const deltaY = e.clientY - resizing.startY;
+          const deltaX = e.clientX - resizing.startX;
+
+          if (!dragInfo.current.hasMoved && Math.abs(deltaX) < 3 && Math.abs(deltaY) < 3) return;
+          dragInfo.current.hasMoved = true;
+
+          setEvents(prevEvents => prevEvents.map(ev => {
+            if (ev.id !== resizing.id) return ev;
+
+            if (resizing.type === 'top') {
+              const deltaRows = Math.round(deltaY / resizing.rowHeight);
+              let newStart = resizing.initialEvent.start + deltaRows * STEP_MIN;
+              
+              if (newStart >= ev.end) newStart = ev.end - STEP_MIN;
+              if (newStart < startMin) newStart = startMin;
+              
+              return { ...ev, start: newStart };
+            } 
+
+            if (resizing.type === 'bottom') {
+              const deltaRows = Math.round(deltaY / resizing.rowHeight);
+              let newEnd = resizing.initialEvent.end + deltaRows * STEP_MIN;
+              
+              if (newEnd <= ev.start) newEnd = ev.start + STEP_MIN;
+              if (newEnd > endMin) newEnd = endMin;
+              
+              return { ...ev, end: newEnd };
+            } 
+            
+            if (resizing.type === 'left') {
+              const initialStartIdx = resizing.initialColIndex;
+              if (initialStartIdx === -1) return ev;
+
+              const initialEndIdx = initialStartIdx + resizing.initialEvent.colSpan - 1;
+              const initialX = resizing.colOffsets[initialStartIdx];
+              const targetX = initialX + deltaX; 
+              
+              let newStartIdx = initialStartIdx;
+              
+              let k = 0;
+              for (let i = 0; i < resizing.colOffsets.length - 1; i++) {
+                if (targetX >= resizing.colOffsets[i] && targetX <= resizing.colOffsets[i+1]) {
+                  k = i;
+                  break;
+                }
+              }
+              if (targetX < resizing.colOffsets[0]) {
+                newStartIdx = 0;
+              } else if (targetX > resizing.colOffsets[resizing.colOffsets.length - 1]) {
+                newStartIdx = resizing.colOffsets.length - 1;
+              } else {
+                const w = resizing.colOffsets[k+1] - resizing.colOffsets[k];
+                const p = (targetX - resizing.colOffsets[k]) / w;
+                
+                if (targetX > initialX) {
+                  // 右へ動かして縮小 (1/4動かしたら切り替える)
+                  newStartIdx = p >= 0.25 ? k + 1 : k;
+                } else if (targetX < initialX) {
+                  // 左へ動かして拡張 (1/4動かしたら切り替える)
+                  newStartIdx = p <= 0.75 ? k : k + 1;
+                }
+              }
+              
+              if (newStartIdx > initialEndIdx) newStartIdx = initialEndIdx;
+              
+              const newColSpan = initialEndIdx - newStartIdx + 1;
+              
+              if (newColSpan > 1) {
+                  return { ...ev, startColIdx: newStartIdx, colSpan: newColSpan, colId: undefined };
+              } else {
+                  return { ...ev, colId: visibleColumns[newStartIdx].id, colSpan: newColSpan, startColIdx: undefined };
+              }
+            }
+
+            if (resizing.type === 'right') {
+              const initialStartIdx = resizing.initialColIndex;
+              if (initialStartIdx === -1) return ev;
+
+              const initialRightBoundIdx = initialStartIdx + resizing.initialEvent.colSpan;
+              const initialX = resizing.colOffsets[initialRightBoundIdx];
+              const targetX = initialX + deltaX; 
+              
+              let newRightBoundIdx = initialRightBoundIdx;
+              
+              let k = 0;
+              for (let i = 0; i < resizing.colOffsets.length - 1; i++) {
+                if (targetX >= resizing.colOffsets[i] && targetX <= resizing.colOffsets[i+1]) {
+                  k = i;
+                  break;
+                }
+              }
+              if (targetX < resizing.colOffsets[0]) {
+                newRightBoundIdx = 1;
+              } else if (targetX > resizing.colOffsets[resizing.colOffsets.length - 1]) {
+                newRightBoundIdx = resizing.colOffsets.length - 1;
+              } else {
+                const w = resizing.colOffsets[k+1] - resizing.colOffsets[k];
+                const p = (targetX - resizing.colOffsets[k]) / w;
+                
+                if (targetX < initialX) {
+                  // 左へ動かして縮小 (1/4動かしたら切り替える)
+                  newRightBoundIdx = p <= 0.75 ? k : k + 1;
+                } else if (targetX > initialX) {
+                  // 右へ動かして拡張 (1/4動かしたら切り替える)
+                  newRightBoundIdx = p >= 0.25 ? k + 1 : k;
+                }
+              }
+              
+              let newEndIdx = newRightBoundIdx - 1;
+              
+              if (newEndIdx < initialStartIdx) newEndIdx = initialStartIdx;
+              if (newEndIdx >= visibleColumns.length) newEndIdx = visibleColumns.length - 1;
+              
+              let newColSpan = newEndIdx - initialStartIdx + 1;
+              
+              if (newColSpan > 1) {
+                  return { ...ev, colSpan: newColSpan, startColIdx: initialStartIdx, colId: undefined };
+              } else {
+                  return { ...ev, colSpan: newColSpan, colId: visibleColumns[initialStartIdx].id, startColIdx: undefined };
+              }
+            }
+
+            return ev;
+          }));
+        };
+
+        const handleMouseUp = () => {
+          if (dragInfo.current.hasMoved) {
+            justResized.current = true;
+            setTimeout(() => { justResized.current = false; }, 100);
+            saveHistory(); // リサイズ確定時に履歴保存
+          }
+          setResizing(null);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [resizing, visibleColumns, startMin, endMin]);
+
+      const addEvent = () => {
+        const newEvent = {
+          id: generateId(),
+          title: '新規ブロック',
+          start: startMin,
+          end: startMin + 60,
+          colId: visibleColumns[0]?.id || columns[0]?.id,
+          colSpan: 1,
+          bgColor: PALETTE[6].bg,
+          borderColor: PALETTE[6].border,
+          borderStyle: 'solid',
+          showTime: true,
+          titleFontSize: 'text-sm',
+          timeFontSize: 'text-sm',
+        };
+        const newEvents = [...events, newEvent];
+        setEvents(newEvents);
+        saveHistory(newEvents, undefined, undefined);
+        setEditingEvent(newEvent);
+      };
+
+      const saveEvent = (updatedEvent) => {
+        const newEvents = events.map(ev => {
+          if (ev.id === updatedEvent.id) {
+            return updatedEvent;
+          }
+          if (ev.title === updatedEvent.title && ev.title.trim() !== '') {
+            return {
+              ...ev,
+              bgColor: updatedEvent.bgColor,
+              borderColor: updatedEvent.borderColor,
+            };
+          }
+          return ev;
+        });
+        setEvents(newEvents);
+        saveHistory(newEvents, undefined, undefined);
+        setEditingEvent(null);
+      };
+
+      const deleteEvent = (id) => {
+        const newEvents = events.filter(ev => ev.id !== id);
+        setEvents(newEvents);
+        saveHistory(newEvents, undefined, undefined);
+        setEditingEvent(null);
+      };
+
+      const duplicateEvent = (evt) => {
+        const newEvent = { ...evt, id: generateId() };
+        const newEvents = [...events, newEvent];
+        setEvents(newEvents);
+        saveHistory(newEvents, undefined, undefined);
+        setEditingEvent(null);
+      };
+
+      const addColumn = () => {
+        const newCol = {
+          id: generateId(),
+          name: '新規列',
+          bgColor: '#6B7280',
+          textColor: '#FFFFFF',
+          width: 1, 
+          isVisible: true,
+          capacity: '',
+        };
+        const resetColumns = columns.map(c => ({ ...c, width: 1 }));
+        const newColumns = [...resetColumns, newCol];
+        setColumns(newColumns);
+        saveHistory(undefined, newColumns, undefined);
+      };
+
+      const saveColumn = (updatedCol) => {
+        const newColumns = columns.map(c => c.id === updatedCol.id ? updatedCol : c);
+        setColumns(newColumns);
+        saveHistory(undefined, newColumns, undefined);
+        setEditingColumn(null);
+      };
+
+      const deleteColumn = (id) => {
+        if (window.confirm('この列を削除しますか？関連するブロックも削除または縮小されます。')) {
+          const deletedIndex = columns.findIndex(c => c.id === id);
+          const newColumns = columns.filter(c => c.id !== id);
+          
+          const newEvents = events.map(ev => {
+            const isFixed = ev.startColIdx !== undefined;
+            let startIndex = isFixed ? ev.startColIdx : columns.findIndex(c => c.id === ev.colId);
+            let colSpan = ev.colSpan || 1;
+            let endIndex = startIndex + colSpan - 1;
+            
+            if (!isFixed) {
+              if (startIndex === deletedIndex) {
+                 return { ...ev, _delete: true }; 
+              }
+            } else {
+              if (deletedIndex < startIndex) {
+                startIndex -= 1;
+              } else if (deletedIndex >= startIndex && deletedIndex <= endIndex) {
+                colSpan -= 1;
+              }
+              
+              if (colSpan === 1) {
+                return { ...ev, colSpan: 1, colId: newColumns[startIndex]?.id, startColIdx: undefined };
+              } else {
+                return { ...ev, startColIdx: startIndex, colSpan: colSpan };
+              }
+            }
+            return ev;
+          }).filter(ev => !ev._delete);
+          
+          setColumns(newColumns);
+          setEvents(newEvents);
+          saveHistory(newEvents, newColumns, undefined);
+          setEditingColumn(null);
+        }
+      };
+
+      const handleHeaderDragStart = (e, colId) => {
+        setDraggedColId(colId);
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', '');
+        }
+      };
+
+      const handleHeaderDragOver = (e, targetColId) => {
+        e.preventDefault(); 
+        if (draggedColId === null || draggedColId === targetColId) return;
+        
+        const newCols = [...columns];
+        const draggedIdx = newCols.findIndex(c => c.id === draggedColId);
+        const targetIdx = newCols.findIndex(c => c.id === targetColId);
+
+        if (draggedIdx === -1 || targetIdx === -1) return;
+
+        const draggedItem = newCols[draggedIdx];
+        newCols.splice(draggedIdx, 1);
+        newCols.splice(targetIdx, 0, draggedItem);
+        
+        setColumns(newCols);
+      };
+
+      const handleHeaderDragEnd = () => {
+        setDraggedColId(null);
+        saveHistory(); // 列の入れ替え完了時に保存
+      };
+
+      const handlePrint = () => {
+        window.print();
+      };
+
+      // 最適化: キーボードショートカットのリスナー登録最適化
+      const latestTargetEvent = useRef(null);
+      useEffect(() => {
+        latestTargetEvent.current = hoveredEvent || editingEvent;
+      }, [hoveredEvent, editingEvent]);
+
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.key === 'Shift') {
+            setIsShiftPressed(true);
+          }
+          
+          const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+          const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+
+          // Undo / Redo
+          if (modifier && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+            return;
+          }
+          if (modifier && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            redo();
+            return;
+          }
+
+          const targetIds = latestSelectedEventIds.current.length > 0 
+              ? latestSelectedEventIds.current 
+              : (latestTargetEvent.current ? [latestTargetEvent.current.id] : []);
+              
+          if (targetIds.length === 0) return;
+
+          if (e.key === 'Delete' || e.key === 'Backspace') {
+            const newEvents = latestEvents.current.filter(ev => !targetIds.includes(ev.id));
+            setEvents(newEvents);
+            saveHistory(newEvents, undefined, undefined);
+            setEditingEvent(null);
+            setHoveredEvent(null);
+            setSelectedEventIds([]);
+          } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'd')) {
+            e.preventDefault(); 
+            const targetEventsToCopy = latestEvents.current.filter(ev => targetIds.includes(ev.id));
+            const newEventsToAdd = targetEventsToCopy.map(ev => ({ ...ev, id: generateId() }));
+            const newEvents = [...latestEvents.current, ...newEventsToAdd];
+            setEvents(newEvents);
+            saveHistory(newEvents, undefined, undefined);
+            setSelectedEventIds(newEventsToAdd.map(ev => ev.id));
+            setEditingEvent(null);
+          }
+        };
+
+        const handleKeyUp = (e) => {
+          if (e.key === 'Shift') {
+            setIsShiftPressed(false);
+          }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+        return () => {
+          window.removeEventListener('keydown', handleKeyDown);
+          window.removeEventListener('keyup', handleKeyUp);
+        };
+      }, []); // 依存配列を空にしてマウント時のみ登録するように改善
+
+      // データの自動保存
+      useEffect(() => {
+        const data = { columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity };
+        localStorage.setItem('timetable_save_data', JSON.stringify(data));
+      }, [columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity]);
+
+      // JSONとして保存
+      const handleExport = () => {
+        const data = { columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity };
+        const json = JSON.stringify(data, null, 2);
+        
+        try {
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'タイムテーブル.json';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setIsSettingsOpen(false);
+        } catch (err) {
+          console.error('保存エラー:', err);
+          alert('保存に失敗しました。');
+        }
+      };
+
+      // JSONからの読み込み
+      const fileInputRef = useRef(null);
+
+      // アプリ起動時の自動読み込み処理
+      useEffect(() => {
+        const fetchInitialData = async () => {
+          try {
+            // キャッシュ対策としてクエリパラメータを付与して取得
+            const response = await fetch('./タイムテーブル.json?t=' + new Date().getTime());
+            if (response.ok) {
+              const data = await response.json();
+              if (data.columns) setColumns(data.columns);
+              if (data.events) setEvents(data.events);
+              if (data.titleConfig) setTitleConfig(data.titleConfig);
+              if (data.startMin !== undefined) setStartMin(data.startMin);
+              if (data.endMin !== undefined) setEndMin(data.endMin);
+              if (data.isZoomed !== undefined) setIsZoomed(data.isZoomed);
+              if (data.showBlockCapacity !== undefined) setShowBlockCapacity(data.showBlockCapacity);
+              
+              // 読込時に履歴もリセット
+              const initialHistoryState = {
+                events: data.events || [],
+                columns: data.columns || [],
+                titleConfig: data.titleConfig || titleConfig
+              };
+              setHistory([initialHistoryState]);
+              setHistoryIndex(0);
+            } else {
+              // ファイルが存在しない場合はファイル選択ダイアログを開く
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }
+          } catch (error) {
+            // ローカルのHTMLファイルを直接開いている場合（CORS制約等）やネットワークエラー時もファイル選択を開く
+            if (fileInputRef.current) {
+              fileInputRef.current.click();
+            }
+          }
+        };
+
+        fetchInitialData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+
+      const handleImport = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.columns) setColumns(data.columns);
+            if (data.events) setEvents(data.events);
+            if (data.titleConfig) setTitleConfig(data.titleConfig);
+            if (data.startMin !== undefined) setStartMin(data.startMin);
+            if (data.endMin !== undefined) setEndMin(data.endMin);
+            if (data.isZoomed !== undefined) setIsZoomed(data.isZoomed);
+            if (data.showBlockCapacity !== undefined) setShowBlockCapacity(data.showBlockCapacity);
+            
+            // 読込時に履歴もリセット
+            const initialHistoryState = {
+              events: data.events || [],
+              columns: data.columns || [],
+              titleConfig: data.titleConfig || titleConfig
+            };
+            setHistory([initialHistoryState]);
+            setHistoryIndex(0);
+
+            alert('データを読み込みました。');
+            setIsSettingsOpen(false);
+          } catch (error) {
+            alert('ファイルの読み込みに失敗しました。');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; 
+      };
+
+      const handleZoomToggle = useCallback((row) => {
+        const mainEl = mainRef.current;
+        if (!mainEl) {
+          setIsZoomed(prev => !prev);
+          return;
+        }
+
+        const currentScrollTop = mainEl.scrollTop;
+        const oldRowHeight = isZoomed ? 30 : 12;
+        const newRowHeight = isZoomed ? 12 : 30;
+        
+        // クリックした行の高さの差分を計算
+        const deltaScroll = (newRowHeight - oldRowHeight) * row;
+        
+        setIsZoomed(prev => !prev);
+
+        // ReactのDOM更新が完了した直後にスクロール位置を調整する
+        setTimeout(() => {
+          if (mainRef.current) {
+            mainRef.current.scrollTop = currentScrollTop + deltaScroll;
+          }
+        }, 0);
+      }, [isZoomed]);
+
+      // 最適化: 重いグリッド描画処理をメモ化
+      const gridBackgroundCells = useMemo(() => {
+        const cells = [];
+        for (let row = 0; row < rows; row++) {
+          const timeMin = startMin + row * STEP_MIN;
+          const is10Min = timeMin % 10 === 0;
+          const isHalfHour = timeMin % 30 === 0;
+          const isHour = timeMin % 60 === 0;
+
+          const showLabel = isHour || isHalfHour;
+          let labelText = '';
+          if (isHour) {
+            labelText = formatTime(timeMin);
+          } else if (isHalfHour) {
+            labelText = '30';
+          }
+
+          let timeCellBorderClass = '';
+          if (isHour) timeCellBorderClass = 'border-t-2 border-gray-400';
+          else if (isHalfHour) timeCellBorderClass = 'border-t border-gray-200';
+
+          // 左側の時間軸
+          cells.push(
+            <div key={`time-l-${row}`} 
+                 onClick={() => handleZoomToggle(row)}
+                 style={{ gridRow: row + 3, gridColumn: 1 }} 
+                 className={`border-r border-gray-400 text-center font-bold text-gray-700 bg-white relative cursor-pointer ${timeCellBorderClass}`}
+                 title="クリックで拡大/縮小を切り替え">
+              {showLabel && (
+                <span className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-0.5 text-xs ${row === 0 ? 'z-30' : 'z-10'}`}>
+                  {labelText}
+                </span>
+              )}
+            </div>
+          );
+
+          // 右側の時間軸
+          cells.push(
+            <div key={`time-r-${row}`} 
+                 onClick={() => handleZoomToggle(row)}
+                 style={{ gridRow: row + 3, gridColumn: visibleColumns.length + 2 }} 
+                 className={`border-l border-gray-400 text-center font-bold text-gray-700 bg-white relative cursor-pointer ${timeCellBorderClass}`}
+                 title="クリックで拡大/縮小を切り替え">
+              {showLabel && (
+                <span className={`absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-0.5 text-xs ${row === 0 ? 'z-30' : 'z-10'}`}>
+                  {labelText}
+                </span>
+              )}
+            </div>
+          );
+
+          visibleColumns.forEach((col, colIndex) => {
+            let cellBorderClass = '';
+            if (isHour) cellBorderClass = 'border-t-2 border-gray-400';
+            else if (is10Min) cellBorderClass = 'border-t border-gray-200'; 
+
+            cells.push(
+              <div
+                key={`drop-${col.id}-${row}`}
+                onClick={() => setSelectedEventIds([])}
+                style={{ gridRow: row + 3, gridColumn: colIndex + 2 }} 
+                className={`z-0 ${cellBorderClass}`}
+              ></div>
+            );
+          });
+        }
+        return cells;
+      }, [rows, startMin, visibleColumns, isZoomed, handleZoomToggle]);
+
+      return (
+        <div className="flex flex-col h-screen bg-gray-50 font-sans print:h-auto print:bg-white">
+          <header className="bg-white border-b border-gray-200 p-4 flex justify-between items-center shadow-sm z-30 print:hidden">
+            <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <AlignLeft className="w-6 h-6 text-blue-600" />
+              タイムテーブルメーカー
+            </h1>
+            <div className="flex gap-3 items-center">
+              <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 transition-colors select-none" title="ブロック内の人数表示を切り替え">
+                <Users className="w-4 h-4" />
+                <input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" checked={showBlockCapacity} onChange={(e) => setShowBlockCapacity(e.target.checked)} />
+              </label>
+              <button onClick={() => setIsSettingsOpen(true)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors" title="設定メニュー">
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </header>
+
+          {/* 余白(padding-top)をなくし、スクロール時の見えを修正 */}
+          <main ref={mainRef} className="flex-1 overflow-auto px-6 pb-6 pt-0 print:overflow-visible print:p-0">
+            <div className="inline-block min-w-full bg-white shadow-md border border-gray-300 rounded-sm">
+              <div 
+                ref={gridRef}
+                className="relative"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `60px ${visibleColumns.length > 0 ? visibleColumns.map(c => `minmax(calc(160px * ${c.width || 1}), ${c.width || 1}fr)`).join(' ') : '1fr'} 60px`,
+                  gridTemplateRows: `60px 44px repeat(${rows}, minmax(${isZoomed ? '30px' : '12px'}, 1fr))` 
+                }}
+              >
+                <div 
+                  style={{ gridRow: 1, gridColumn: '1 / -1' }}
+                  className="sticky top-0 z-[100] bg-gray-100 border-b-2 border-gray-400 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors select-none"
+                  onClick={() => setEditingTitle(true)}
+                  title="クリックしてタイトルを編集"
+                >
+                  <div
+                    className={`text-center font-bold ${titleConfig.fontSize} px-4 truncate w-full`}
+                    style={{ color: titleConfig.color }}
+                  >
+                    {titleConfig.text || "タイトルを入力してください"}
+                  </div>
+                </div>
+
+                <div className="sticky top-[60px] z-[90] bg-white border-r border-gray-400" style={{ gridRow: 2, gridColumn: 1 }}></div>
+                <div className="sticky top-[60px] z-[90] bg-white border-l border-gray-400" style={{ gridRow: 2, gridColumn: visibleColumns.length + 2 }}></div>
+                
+                {visibleColumns.map((col, i) => (
+                  <div 
+                    key={col.id} 
+                    ref={el => colHeaderRefs.current[col.id] = el}
+                    style={{ gridRow: 2, gridColumn: i + 2 }}
+                    className="sticky top-[60px] z-[90] bg-white p-[3px]"
+                  >
+                    <div
+                      draggable
+                      onDragStart={(e) => handleHeaderDragStart(e, col.id)}
+                      onDragOver={(e) => handleHeaderDragOver(e, col.id)}
+                      onDragEnd={handleHeaderDragEnd}
+                      className={`w-full h-full rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:shadow-md transition-all relative text-sm font-bold ${draggedColId === col.id ? 'opacity-40 scale-95 ring-2 ring-blue-500 ring-offset-1' : ''}`}
+                      style={{ backgroundColor: col.bgColor || '#6B7280', color: col.textColor || '#FFFFFF' }}
+                      onClick={() => setEditingColumn(col)}
+                      title="ドラッグで移動 / クリックで編集"
+                    >
+                      <span className="leading-tight text-center truncate px-1">
+                        {col.name}{col.capacity && <span className="font-normal ml-0.5">（{col.capacity}）</span>}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {gridBackgroundCells}
+
+                {events.map((evt, evtIndex) => {
+                  let startRow = (evt.start - startMin) / STEP_MIN + 3; 
+                  let endRow = (evt.end - startMin) / STEP_MIN + 3; 
+
+                  if (endRow <= 3 || startRow >= rows + 3) return null;
+                  
+                  if (startRow < 3) startRow = 3;
+                  if (endRow > rows + 3) endRow = rows + 3;
+
+                  const colIndex = getEventStartIndex(evt);
+                  if (colIndex === -1) return null; 
+                  
+                  let renderColSpan = evt.colSpan || 1;
+                  if (colIndex + renderColSpan > visibleColumns.length) {
+                      renderColSpan = visibleColumns.length - colIndex;
+                  }
+
+                  // ------------------------------
+                  // 重なり判定 (自分が上になっているか)
+                  // ------------------------------
+                  const isTopOverlapping = events.some((otherEvt, otherIdx) => {
+                    if (evt.id === otherEvt.id) return false;
+                    
+                    // 時間の重なり
+                    if (evt.end <= otherEvt.start || evt.start >= otherEvt.end) return false;
+                    
+                    // 列の重なり
+                    const colIdx2 = getEventStartIndex(otherEvt);
+                    if (colIdx2 === -1) return false;
+                    const endCol1 = colIndex + renderColSpan - 1;
+                    const endCol2 = colIdx2 + (otherEvt.colSpan || 1) - 1;
+                    if (endCol1 < colIdx2 || colIndex > endCol2) return false;
+                    
+                    // Zインデックスの比較（同じ場合は後から描画される配列の後ろのものが上になる）
+                    const z1 = evt.zIndex !== undefined ? evt.zIndex : 10;
+                    const z2 = otherEvt.zIndex !== undefined ? otherEvt.zIndex : 10;
+                    if (z1 > z2) return true;
+                    if (z1 === z2 && evtIndex > otherIdx) return true;
+                    
+                    return false;
+                  });
+
+                  const isResizingThis = resizing?.id === evt.id;
+                  const isDraggingThis = dragging?.ids?.includes(evt.id);
+                  const isSelected = selectedEventIds.includes(evt.id);
+                  const isInteracting = isResizingThis || isDraggingThis;
+                  const baseZIndex = evt.zIndex !== undefined ? evt.zIndex : 10;
+                  const capacityText = calculateEventCapacity(evt);
+
+                  return (
+                    <div
+                      key={evt.id}
+                      onMouseDown={(e) => {
+                        if (e.target.classList.contains('resize-handle')) return;
+                        
+                        // シフトキーが押されている場合は選択のトグルのみ行う（ドラッグは開始しない）
+                        if (e.shiftKey) {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setSelectedEventIds(prev => 
+                            prev.includes(evt.id) ? prev.filter(id => id !== evt.id) : [...prev, evt.id]
+                          );
+                          return;
+                        }
+                        
+                        // シフトキーが押されていない場合はドラッグ開始判定
+                        handleDragStart(e, evt.id);
+                      }}
+                      onClick={(e) => {
+                        if (e.target.classList.contains('resize-handle')) return;
+                        if (justResized.current) return; 
+                        if (dragInfo.current.hasMoved) return; // ドラッグした後のクリックは無視する
+                        
+                        // シフトキーが押されていない単なるクリックの場合
+                        if (!e.shiftKey) {
+                          setSelectedEventIds([evt.id]); // まずブロックを選択状態にする
+                          
+                          // テキスト部分がクリックされた場合のみ編集モーダルを開く
+                          if (e.target.closest('.text-content')) {
+                            setEditingEvent(evt);
+                            setHoveredEvent(null);
+                          }
+                        }
+                      }}
+                      onMouseEnter={() => {
+                        setHoveredEvent(evt);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredEvent(null);
+                      }}
+                      style={{
+                        gridRowStart: startRow,
+                        gridRowEnd: endRow,
+                        gridColumnStart: colIndex + 2,
+                        gridColumnEnd: colIndex + 2 + renderColSpan,
+                        backgroundColor: evt.bgColor,
+                        borderColor: evt.borderColor,
+                        borderWidth: '2px',
+                        borderStyle: evt.borderStyle || 'solid',
+                        color: '#000000', 
+                        zIndex: isInteracting ? 50 : (isSelected ? 40 : baseZIndex),
+                      }}
+                      className={`
+                        ${isTopOverlapping ? 'm-[3px]' : 'm-[2px]'} rounded-md overflow-hidden
+                        transition-all duration-75 group relative select-none
+                        ${isShiftPressed ? 'cursor-pointer' : 'cursor-move'}
+                        ${isDraggingThis ? 'opacity-90 shadow-xl scale-[1.02] ring-2 ring-blue-400 ring-offset-1' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md hover:-translate-y-[1px] opacity-100'}
+                        ${isSelected && !isDraggingThis ? 'ring-[3px] ring-blue-600 ring-offset-2 shadow-md brightness-95' : ''}
+                      `}
+                    >
+                      {/* pointer-events-none を削除してテキスト要素をクリック可能にする */}
+                      <div className="absolute inset-0 p-1 flex flex-col items-center justify-center overflow-hidden">
+                        {evt.showTime !== false && (
+                          <div className={`text-content cursor-pointer hover:opacity-60 transition-opacity font-semibold ${evt.timeFontSize || 'text-sm'} tracking-wider opacity-90 whitespace-nowrap mb-0.5 truncate max-w-full text-center px-1`} title="クリックして編集">
+                            {formatTime(evt.start)} <span className="text-[0.75em] mx-0.5 pointer-events-none">▶</span> {formatTime(evt.end)}
+                          </div>
+                        )}
+                        <div className={`text-content cursor-pointer hover:opacity-60 transition-opacity font-bold whitespace-pre-wrap leading-tight drop-shadow-sm ${evt.titleFontSize || 'text-sm'} text-center overflow-hidden max-w-full text-ellipsis px-1`} title="クリックして編集">
+                          {evt.title}{showBlockCapacity && capacityText && <span className="font-normal text-[0.85em] ml-0.5 whitespace-nowrap">{capacityText}</span>}
+                        </div>
+                      </div>
+
+                      {!isShiftPressed && (
+                        <>
+                          <div 
+                            className="resize-handle absolute top-0 left-4 right-4 h-3 cursor-ns-resize z-20"
+                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'top')}
+                          />
+                          <div 
+                            className="resize-handle absolute bottom-0 left-4 right-4 h-3 cursor-ns-resize z-20"
+                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'bottom')}
+                          />
+                          <div 
+                            className="resize-handle absolute top-3 bottom-3 left-0 w-3 cursor-ew-resize z-20"
+                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'left')}
+                          />
+                          <div 
+                            className="resize-handle absolute top-3 bottom-3 right-0 w-3 cursor-ew-resize z-20"
+                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'right')}
+                          />
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </main>
+
+          {/* --- 各種モーダル --- */}
+          {editingTitle && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+                 <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800">タイトル設定</h2>
+                  <button onClick={() => { setEditingTitle(false); saveHistory(); }} className="text-gray-500 hover:text-gray-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-4 flex flex-col gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">タイトル</label>
+                    <input 
+                      type="text" 
+                      value={titleConfig.text} 
+                      onChange={e => setTitleConfig({...titleConfig, text: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                      placeholder="タイトルを入力してください"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">文字サイズ</label>
+                    <select 
+                        value={titleConfig.fontSize}
+                        onChange={e => setTitleConfig({...titleConfig, fontSize: e.target.value})}
+                        className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none"
+                      >
+                        <option value="text-base">中</option>
+                        <option value="text-lg">大</option>
+                        <option value="text-xl">特大</option>
+                        <option value="text-2xl">超特大</option>
+                        <option value="text-3xl">極大</option>
+                      </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">文字色</label>
+                     <div className="flex flex-wrap gap-2">
+                      {['#1F2937', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'].map((color, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setTitleConfig({...titleConfig, color: color})}
+                          className={`w-8 h-8 rounded-full border-2 ${titleConfig.color === color ? 'ring-2 ring-offset-1 ring-blue-500' : 'border-gray-300 hover:scale-110 transition-transform'}`}
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                 <div className="bg-gray-50 px-4 py-3 border-t flex justify-end items-center">
+                    <button onClick={() => { setEditingTitle(false); saveHistory(); }} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium">完了</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {editingEvent && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+                <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800">ブロックの編集</h2>
+                  <button onClick={() => setEditingEvent(null)} className="text-gray-500 hover:text-gray-700">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-4 flex flex-col gap-5">
+                  <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">タイトル / 内容</label>
+                    <textarea
+                      value={editingEvent.title}
+                      onChange={e => {
+                        const newTitle = e.target.value;
+                        const existingEvent = events.find(ev => ev.title === newTitle && ev.id !== editingEvent.id);
+                        if (existingEvent) {
+                          setEditingEvent({...editingEvent, title: newTitle, bgColor: existingEvent.bgColor, borderColor: existingEvent.borderColor });
+                        } else {
+                          setEditingEvent({...editingEvent, title: newTitle});
+                        }
+                      }}
+                      className="w-full border border-gray-300 rounded-md p-2 text-sm h-20 focus:ring-2 focus:ring-blue-500 outline-none resize-none mb-2"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-gray-600">文字サイズ:</label>
+                      <select 
+                        value={editingEvent.titleFontSize || 'text-sm'}
+                        onChange={e => setEditingEvent({...editingEvent, titleFontSize: e.target.value})}
+                        className="border border-gray-300 rounded p-1 text-xs outline-none bg-white"
+                      >
+                        <option value="text-xs">小</option>
+                        <option value="text-sm">中 (標準)</option>
+                        <option value="text-base">大</option>
+                        <option value="text-lg">特大</option>
+                        <option value="text-xl">超特大</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-bold text-gray-700">時間設定</label>
+                      <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" checked={editingEvent.showTime !== false} onChange={e => setEditingEvent({...editingEvent, showTime: e.target.checked})} className="rounded border-gray-300 text-blue-600 w-4 h-4" />
+                        時間を表示する
+                      </label>
+                    </div>
+                    <div className="flex gap-4 mb-2">
+                      <select value={editingEvent.start} onChange={e => { const newStart = Number(e.target.value); const newEnd = Math.max(newStart + STEP_MIN, editingEvent.end); setEditingEvent({...editingEvent, start: newStart, end: newEnd}); }} className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white">
+                        {globalTimeOptions.filter(opt => opt.value < editingEvent.end).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                      <div className="flex items-center text-gray-400">〜</div>
+                      <select value={editingEvent.end} onChange={e => setEditingEvent({...editingEvent, end: Number(e.target.value)})} className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white">
+                        {globalTimeOptions.filter(opt => opt.value > editingEvent.start).map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-medium text-gray-600">文字サイズ:</label>
+                      <select value={editingEvent.timeFontSize || 'text-sm'} onChange={e => setEditingEvent({...editingEvent, timeFontSize: e.target.value})} className="border border-gray-300 rounded p-1 text-xs outline-none bg-white">
+                        <option value="text-[10px]">極小</option>
+                        <option value="text-xs">小</option>
+                        <option value="text-sm">中 (標準)</option>
+                        <option value="text-base">大</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">開始列</label>
+                      <select 
+                        value={visibleColumns[getEventStartIndex(editingEvent)]?.id || ''} 
+                        onChange={e => { 
+                          const newColIndex = visibleColumns.findIndex(c => c.id === e.target.value); 
+                          let newColSpan = editingEvent.colSpan || 1; 
+                          if (newColIndex + newColSpan > visibleColumns.length) newColSpan = visibleColumns.length - newColIndex; 
+                          
+                          if (newColSpan > 1) {
+                            setEditingEvent({...editingEvent, startColIdx: newColIndex, colSpan: newColSpan, colId: undefined}); 
+                          } else {
+                            setEditingEvent({...editingEvent, colId: e.target.value, colSpan: newColSpan, startColIdx: undefined}); 
+                          }
+                        }} 
+                        className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none"
+                      >
+                        {visibleColumns.map(col => <option key={col.id} value={col.id}>{col.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">終了列</label>
+                      <select 
+                        value={visibleColumns[getEventStartIndex(editingEvent) + (editingEvent.colSpan || 1) - 1]?.id || ''} 
+                        onChange={e => { 
+                          const currentStartIdx = getEventStartIndex(editingEvent);
+                          const endIdx = visibleColumns.findIndex(c => c.id === e.target.value); 
+                          let newColSpan = endIdx - currentStartIdx + 1;
+                          if (newColSpan < 1) newColSpan = 1;
+                          
+                          if (newColSpan > 1) {
+                            setEditingEvent({...editingEvent, colSpan: newColSpan, startColIdx: currentStartIdx, colId: undefined});
+                          } else {
+                            setEditingEvent({...editingEvent, colSpan: newColSpan, colId: visibleColumns[currentStartIdx].id, startColIdx: undefined});
+                          }
+                        }} 
+                        className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none"
+                      >
+                        {visibleColumns.map((col, idx) => { 
+                          const currentStartIdx = getEventStartIndex(editingEvent);
+                          return idx >= currentStartIdx ? <option key={col.id} value={col.id}>{col.name}</option> : null; 
+                        })}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">重なり順</label>
+                    <select 
+                      value={editingEvent.zIndex !== undefined ? editingEvent.zIndex : 10} 
+                      onChange={e => setEditingEvent({...editingEvent, zIndex: Number(e.target.value)})} 
+                      className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
+                    >
+                      <option value={20}>手前に表示 (前面)</option>
+                      <option value={10}>標準</option>
+                      <option value={0}>奥に表示 (背面)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">ブロックのカラー</label>
+                    <div className="flex flex-wrap gap-2">
+                      {PALETTE.map((color, idx) => (
+                        <button key={idx} onClick={() => setEditingEvent({...editingEvent, bgColor: color.bg, borderColor: color.border})} className={`w-8 h-8 rounded-full border-2 ${editingEvent.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: color.bg, borderColor: color.border }} title={color.name} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 border-t flex justify-between items-center mt-2">
+                  <div className="flex gap-2">
+                    <button onClick={() => deleteEvent(editingEvent.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-md"><Trash2 className="w-5 h-5" /></button>
+                    <button onClick={() => duplicateEvent(editingEvent)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-md flex items-center gap-1 text-sm font-medium"><Copy className="w-4 h-4" /> 複製</button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingEvent(null)} className="px-4 py-2 border rounded-md text-sm hover:bg-gray-100">キャンセル</button>
+                    <button onClick={() => saveEvent(editingEvent)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 shadow-sm">保存</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {editingColumn && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+                 <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800">列の編集</h2>
+                  <button onClick={() => setEditingColumn(null)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+                </div>
+                <div className="p-4 flex flex-col gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">列の名前</label>
+                    <input type="text" value={editingColumn.name} onChange={e => setEditingColumn({...editingColumn, name: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">人数（任意）</label>
+                    <input type="text" value={editingColumn.capacity || ''} onChange={e => setEditingColumn({...editingColumn, capacity: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="例: 30名" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">表示設定</label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={editingColumn.isVisible !== false} 
+                        onChange={e => setEditingColumn({...editingColumn, isVisible: e.target.checked})} 
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                      />
+                      <span className="text-sm text-gray-700">タイムテーブルに表示する</span>
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">列の横幅（比率）</label>
+                    <select value={editingColumn.width || 1} onChange={e => setEditingColumn({...editingColumn, width: Number(e.target.value)})} className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none">
+                      <option value={0.35}>0.35倍</option>
+                      <option value={0.5}>0.5倍</option>
+                      <option value={1}>1倍 (標準)</option>
+                      <option value={1.25}>1.25倍</option>
+                      <option value={1.5}>1.5倍</option>
+                      <option value={2}>2倍</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">列ブロックのカラー</label>
+                     <div className="flex flex-wrap gap-2">
+                      {COLUMN_PALETTE.map((color, idx) => (
+                        <button key={idx} onClick={() => setEditingColumn({...editingColumn, bgColor: color.bg, textColor: color.text})} className={`w-8 h-8 rounded-md ${editingColumn.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: color.bg }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                 <div className="bg-gray-50 px-4 py-3 border-t flex justify-between items-center">
+                   <button onClick={() => deleteColumn(editingColumn.id)} className="text-sm text-red-600 hover:underline">この列を削除</button>
+                   <button onClick={() => saveColumn(editingColumn)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">保存</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSettingsOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+                <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Settings className="w-5 h-5" /> 設定メニュー</h2>
+                  <button onClick={() => setIsSettingsOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+                </div>
+
+                <div className="p-4 border-b border-gray-200 bg-white flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button onClick={() => { addEvent(); setIsSettingsOpen(false); }} className="flex-1 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium flex items-center justify-center gap-1 shadow-sm">
+                      <Plus className="w-4 h-4" /> ブロック追加
+                    </button>
+                    <button onClick={() => { setIsSettingsOpen(false); setTimeout(handlePrint, 300); }} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
+                      <Download className="w-4 h-4" /> PDF出力
+                    </button>
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button onClick={handleExport} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
+                      <Save className="w-4 h-4" /> データ保存
+                    </button>
+                    <button onClick={() => fileInputRef.current.click()} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
+                      <Upload className="w-4 h-4" /> データ読込
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" className="hidden" />
+                  </div>
+                </div>
+                
+                <div className="p-4 border-b border-gray-200 bg-gray-50">
+                  <h3 className="text-sm font-bold text-gray-700 mb-2">タイムテーブルの表示時間</h3>
+                  <div className="flex gap-2 items-center">
+                    <select 
+                      value={startMin} 
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        if (val >= endMin) {
+                          alert("開始時間は終了時間より前に設定してください。");
+                          return;
+                        }
+                        setStartMin(val);
+                      }}
+                      className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
+                    >
+                      {globalTimeOptions.slice(0, -1).map(opt => <option key={`s-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                    <span className="text-gray-400">〜</span>
+                    <select 
+                      value={endMin} 
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        if (val <= startMin) {
+                          alert("終了時間は開始時間より後に設定してください。");
+                          return;
+                        }
+                        setEndMin(val);
+                      }}
+                      className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
+                    >
+                      {globalTimeOptions.slice(1).map(opt => <option key={`e-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-4 flex flex-col gap-2 max-h-[35vh] overflow-y-auto">
+                  <h3 className="text-sm font-bold text-gray-700 mb-1">列の表示・追加</h3>
+                  {columns.map((col, idx) => (
+                    <div 
+                      key={col.id} 
+                      className={`flex justify-between items-center p-2 border rounded-md transition-all ${col.isVisible === false ? 'bg-gray-50 border-gray-200' : 'bg-white border-gray-300'}`}
+                    >
+                      <div className="flex items-center gap-2 flex-1">
+                        <label className="flex items-center gap-3 cursor-pointer flex-1">
+                          <input 
+                            type="checkbox" 
+                            checked={col.isVisible !== false} 
+                            onChange={() => {
+                              const newCols = columns.map(c => c.id === col.id ? { ...c, isVisible: c.isVisible === false } : c);
+                              setColumns(newCols);
+                              saveHistory(undefined, newCols, undefined);
+                            }} 
+                            className="w-4 h-4 text-blue-600 rounded" 
+                          />
+                          <div className={`w-4 h-4 rounded-sm border border-gray-300 ${col.isVisible === false ? 'opacity-50' : ''}`} style={{ backgroundColor: col.bgColor }}></div>
+                          <span className={`text-sm font-medium ${col.isVisible === false ? 'text-gray-400' : 'text-gray-700'}`}>{col.name}</span>
+                        </label>
+                      </div>
+                      <button onClick={() => { setEditingColumn(col); setIsSettingsOpen(false); }} className="p-1.5 text-gray-500 hover:text-blue-600"><Settings className="w-4 h-4" /></button>
+                    </div>
+                  ))}
+                  <button onClick={addColumn} className="mt-3 w-full py-2.5 border-2 border-dashed border-gray-300 rounded-md text-sm text-gray-600 font-medium hover:border-blue-500 hover:text-blue-600 flex items-center justify-center gap-1 bg-gray-50"><Plus className="w-4 h-4" /> 新しい列を追加</button>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 border-t flex justify-end items-center">
+                  <button onClick={() => setIsSettingsOpen(false)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium">閉じる</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    // --- Reactアプリのレンダリング ---
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
