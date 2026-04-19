@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Web Apps Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        // ==========================================
+        // 【設定項目】ここを編集してアプリを追加・変更できます
+        // ==========================================
+        const APPS_CONFIG = [
+            {
+                title: "中学校データ分布バブルマップ",
+                description: "全国の中学校の統計データを地図上にバブルチャート形式で可視化したインタラクティブなマップです。",
+                link: "https://ysetou.github.io/School-Data-Mapping-App/",
+                gradient: "from-indigo-500 to-purple-600",
+                hoverText: "text-blue-600",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/><path d="M12 2v2"/><path d="M12 18v2"/></svg>`
+            },
+            {
+                title: "Task Planner",
+                description: "直感的に操作できるカンバン方式のタスク管理ツール。日々の進捗を視覚化します。",
+                link: "#",
+                gradient: "from-emerald-500 to-teal-600",
+                hoverText: "text-emerald-600",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>`
+            },
+            {
+                title: "Unit Converter",
+                description: "重さ、長さ、温度などを素早く変換できるコンバーターアプリです。",
+                link: "#",
+                gradient: "from-orange-500 to-rose-600",
+                hoverText: "text-orange-600",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-3-3-3 3"/><path d="m9 15 3 3 3-3"/><path d="M12 3v18"/><path d="m15 6 3 3-3 3"/><path d="m9 6-3 3 3 3"/><path d="M3 9h18"/></svg>`
+            },
+            {
+                title: "Calorie Tracker",
+                description: "食事内容を記録して、日々の摂取カロリーを管理。グラフで推移を確認できます。",
+                link: "#",
+                gradient: "from-pink-500 to-rose-500",
+                hoverText: "text-rose-600",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2c0 1.1.9 2 2 2h5v5c0 1.1.9 2 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2h-2z"/></svg>`
+            },
+            {
+                title: "Markdown Pad",
+                description: "リアルタイムプレビュー機能を備えた、ブラウザで動くMarkdownエディタ。",
+                link: "#",
+                gradient: "from-blue-400 to-cyan-500",
+                hoverText: "text-cyan-600",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`
+            },
+            {
+                title: "Finance Manager",
+                description: "支出をカテゴリ別に分類。家計のバランスを把握するためのシンプル帳簿アプリ。",
+                link: "#",
+                gradient: "from-amber-400 to-orange-500",
+                hoverText: "text-amber-600",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`
+            }
+        ];
+
+        // ページ読み込み時にカードを生成
+        window.onload = () => {
+            const grid = document.getElementById('projects-grid');
+            const totalCount = document.getElementById('total-count');
+            
+            totalCount.textContent = `Total: ${APPS_CONFIG.length} Apps`;
+
+            APPS_CONFIG.forEach(app => {
+                const card = `
+                    <a href="${app.link}" class="app-card block group border border-slate-100 rounded-3xl overflow-hidden bg-white shadow-sm hover:shadow-2xl">
+                        <div class="h-52 bg-gradient-to-br ${app.gradient} flex items-center justify-center p-6 text-white text-4xl">
+                            <div class="group-hover:scale-110 transition-transform duration-300">
+                                ${app.icon}
+                            </div>
+                        </div>
+                        <div class="p-8">
+                            <h3 class="text-xl font-bold mb-3 group-hover:${app.hoverText} transition-colors">${app.title}</h3>
+                            <p class="text-slate-500 text-sm leading-relaxed">${app.description}</p>
+                        </div>
+                    </a>
+                `;
+                grid.insertAdjacentHTML('beforeend', card);
+            });
+        };
+    </script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            scroll-behavior: smooth;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .app-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .app-card:hover {
+            transform: translateY(-8px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+
+    <!-- ナビゲーション -->
+    <nav class="fixed w-full z-50 glass shadow-sm">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                My Lab
+            </div>
+        </div>
+    </nav>
+
+    <!-- ヒーローセクション -->
+    <section id="home" class="pt-32 pb-16 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
+                Webアプリケーション <br>
+                <span class="text-blue-600">ショーケース</span>
+            </h1>
+            <p class="text-lg text-slate-600 leading-relaxed">
+                自作のWebアプリやツールを公開しているポートフォリオサイトです。<br>
+                GitHub Pagesを利用してホスティングしています。
+            </p>
+        </div>
+    </section>
+
+    <!-- プロジェクト（Webアプリ一覧） -->
+    <section id="projects" class="py-20 px-6 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex items-center justify-between mb-12">
+                <h2 class="text-3xl font-bold">My Apps</h2>
+                <span id="total-count" class="text-slate-400 text-sm">Total: 0 Apps</span>
+            </div>
+            
+            <!-- JavaScriptでここにカードが挿入されます -->
+            <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            </div>
+        </div>
+    </section>
+
+</body>
+</html>
