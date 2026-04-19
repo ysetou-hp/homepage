@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中学校データ分布バブルマップ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* マップの高さを800pxに変更 */
+        #map { height: 800px; width: 100%; border-radius: 0.75rem; z-index: 1; }
+        .leaflet-tile-pane { filter: grayscale(100%) brightness(105%) contrast(90%); }
+        
+        .bubble-label-container {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; pointer-events: none !important;
+        }
+        
+        .school-name-label, .history-row-label, .breakdown-label, .stats-summary-label {
+            font-size: 13px; font-weight: 800; color: #111827;
+            text-shadow: -1.5px -1.5px 0 #fff, 1.5px -1.5px 0 #fff, -1.5px 1.5px 0 #fff, -1.5px 1.5px 0 #fff;
+            white-space: nowrap;
+        }
+        .school-name-label { margin-bottom: 1px; }
+
+        .hide-name .school-name-label { display: none; }
+        .hide-value .value-label, 
+        .hide-value .breakdown-label, 
+        .hide-value .history-row-label,
+        .hide-value .stats-summary-label { display: none; }
+
+        .value-label {
+            font-size: 20px; font-weight: 900;
+            text-shadow: -2.5px -2.5px 0 #fff, 2.5px -2.5px 0 #fff, -2.5px 2.5px 0 #fff, -2.5px 2.5px 0 #fff;
+            line-height: 1; margin: 2px 0;
+        }
+        
+        .breakdown-label { margin-top: 2px; letter-spacing: -0.01em; }
+        .stats-summary-label { display: flex; gap: 5px; margin-top: 1px; }
+
+        .custom-popup .leaflet-popup-content-wrapper { border-radius: 12px; padding: 4px; }
+        #loading-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 9999; align-items: center; justify-content: center; flex-direction: column;
+        }
+        .table-container { max-height: 600px; overflow-y: auto; overflow-x: auto; }
+        thead th { position: sticky; top: 0; z-index: 10; background: white; }
+        .highlight-col { background-color: #f8fafc !important; }
+        .highlight-text { color: #111827 !important; font-weight: 800; }
+        .sort-icon { font-size: 10px; margin-left: 2px; opacity: 0.5; }
+
+        .stat-display { display: flex; align-items: center; gap: 1.5rem; }
+        .stat-item { display: flex; flex-direction: column; }
+    </style>
+</head>
+<body class="bg-white min-h-screen text-gray-800 font-sans">
+    <div id="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
+        <p id="loading-text" class="text-sm font-bold text-gray-600 italic">データを読み込んでいます...</p>
+    </div>
+
+    <div class="max-w-[1600px] mx-auto p-4 md:p-8">
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-end gap-6">
+            <div class="w-full md:w-auto">
+                <h1 class="text-2xl font-black text-gray-900 tracking-tight mb-3">中学校別データ</h1>
+                <div id="current-mode-desc" class="stat-display"></div>
+            </div>
+            <div id="drop-zone" class="relative group bg-gray-50 p-2 rounded-lg border border-gray-200 w-full md:w-48 cursor-pointer text-center hover:bg-gray-100 transition-all">
+                <input type="file" id="file-input" accept=".xlsx, .xls, .csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Excelファイルを読込</p>
+            </div>
+        </header>
+
+        <div id="controls" class="mb-6 flex flex-col items-start gap-3 border-t border-gray-100 pt-6">
+            <div class="flex items-center gap-3 w-full">
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">地区</span>
+                <div id="district-btn-group" class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
+                    <!-- JSで動的にボタンを追加 -->
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full">
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学年</span>
+                <div id="year-btn-group" class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
+                    <button onclick="updateYear('total')" id="year-btn-total" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-emerald-500 text-white shadow-sm">全学年</button>
+                    <button onclick="updateYear(0)" id="year-btn-0" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">１年</button>
+                    <button onclick="updateYear(1)" id="year-btn-1" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">２年</button>
+                    <button onclick="updateYear(2)" id="year-btn-2" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">３年</button>
+                    <button onclick="updateYear(3)" id="year-btn-3" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">４年</button>
+                    <button onclick="updateYear(4)" id="year-btn-4" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">５年</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full">
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学科</span>
+                <div class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
+                    <button onclick="updateDisplayMode('students')" id="btn-students" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-emerald-500 text-white">中学3年生</button>
+                    <button onclick="updateDisplayMode('sci')" id="btn-sci" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">SCI</button>
+                    <button onclick="updateDisplayMode('s')" id="btn-s" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">S</button>
+                    <button onclick="updateDisplayMode('c')" id="btn-c" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">C</button>
+                    <button onclick="updateDisplayMode('i')" id="btn-i" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">I</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 pt-1 pl-19" style="padding-left: 4.75rem;">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="toggle-names" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500">
+                    <span class="text-[10px] font-bold text-gray-500">学校名</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="toggle-values" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500">
+                    <span class="text-[10px] font-bold text-gray-500">数値</span>
+                </label>
+            </div>
+        </div>
+
+        <div id="map" class="border border-gray-200 bg-gray-50 mb-8 shadow-sm"></div>
+
+        <div id="data-table-section" class="border border-gray-100 rounded-lg overflow-hidden shadow-sm">
+            <div class="table-container">
+                <table class="min-w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-[9px] font-bold uppercase">
+                            <th rowspan="2" class="px-4 py-3 text-left border-r border-b cursor-pointer hover:bg-gray-100" onclick="handleSort('district')">地区<span class="sort-icon">⇅</span></th>
+                            <th rowspan="2" class="px-4 py-3 text-left border-r border-b cursor-pointer hover:bg-gray-100" onclick="handleSort('name')">学校名<span class="sort-icon">⇅</span></th>
+                            <th rowspan="2" class="px-2 py-3 text-center border-r border-b cursor-pointer hover:bg-gray-100" onclick="handleSort('students')">中3<span class="sort-icon">⇅</span></th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">１年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">２年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">３年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">４年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center">５年</th>
+                        </tr>
+                        <tr class="bg-white text-gray-500 text-[8px] font-bold border-b">
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1">I</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-[11px] font-medium"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let schoolData = [];
+        let map, layerGroup = L.layerGroup();
+        let currentMode = 'students';
+        let currentYearIdx = 'total';
+        let currentDistrict = 'all'; // 現在選択されている地区
+        let currentSort = { key: 'students', direction: 'desc' };
+        
+        const AUTO_LOAD_FILE = '近隣中学校.xlsx'; 
+        const themeColors = {
+            students: { border: '#10b981', fill: '#34d399', bg: 'bg-emerald-500', text: 'text-emerald-700', label: '中学3年生' },
+            s: { border: '#06b6d4', fill: '#67e8f9', bg: 'bg-cyan-500', text: 'text-cyan-700', label: 'S' },
+            c: { border: '#8b5cf6', fill: '#c4b5fd', bg: 'bg-violet-500', text: 'text-violet-700', label: 'C' },
+            i: { border: '#f472b6', fill: '#fbcfe8', bg: 'bg-pink-500', text: 'text-pink-700', label: 'I' },
+            sci: { border: '#f97316', fill: '#fdba74', bg: 'bg-orange-500', text: 'text-orange-700', label: 'SCI' }
+        };
+
+        async function getCoords(address) {
+            try {
+                const res = await fetch(`https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(address)}`);
+                const json = await res.json();
+                return json.length > 0 ? { lat: json[0].geometry.coordinates[1], lng: json[0].geometry.coordinates[0] } : null;
+            } catch { return null; }
+        }
+
+        async function processWorkbook(arrayBuffer) {
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(firstSheet);
+            const processed = [];
+            for (const rawRow of json) {
+                // ヘッダー名に含まれるスペースを除去し、安全に数値化する
+                const row = {};
+                Object.keys(rawRow).forEach(key => row[key.trim()] = rawRow[key]);
+                const p = (val) => parseInt(val) || 0;
+
+                const hS = [p(row['R8_S']), p(row['R7_S']), p(row['R6_S']), p(row['R5_S']), p(row['R4_S'])];
+                const hC = [
+                    p(row['R8_C']) + p(row['R8_M']) + p(row['R8_C/M']),
+                    p(row['R7_C']) + p(row['R7_M']) + p(row['R7_C/M']),
+                    p(row['R6_C']) + p(row['R6_M']) + p(row['R6_C/M']),
+                    p(row['R5_C']) + p(row['R5_M']) + p(row['R5_C/M']),
+                    p(row['R4_C']) + p(row['R4_M']) + p(row['R4_C/M'])
+                ];
+                const hI = [p(row['R8_I']), p(row['R7_I']), p(row['R6_I']), p(row['R5_I']), p(row['R4_I'])];
+                const hSCI = hS.map((val, idx) => val + hC[idx] + hI[idx]);
+                const history = {
+                    s: hS, c: hC, i: hI, sci: hSCI,
+                    s_total: hS.reduce((a, b) => a + b, 0),
+                    c_total: hC.reduce((a, b) => a + b, 0),
+                    i_total: hI.reduce((a, b) => a + b, 0),
+                    sci_total: hSCI.reduce((a, b) => a + b, 0)
+                };
+                
+                // エクセルデータの「緯度」「経度」を取得
+                let lat = parseFloat(row['緯度']);
+                let lng = parseFloat(row['経度']);
+                
+                // データに緯度経度がない場合のみAPIで取得する（大幅な時間短縮）
+                if (isNaN(lat) || isNaN(lng)) {
+                    const coords = await getCoords(row['住所']);
+                    if (coords) {
+                        lat = coords.lat;
+                        lng = coords.lng;
+                    }
+                }
+
+                // 最終的に緯度経度が取得できた場合のみデータに追加
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    processed.push({
+                        district: row['地区'], name: row['学校名'], address: row['住所'],
+                        students: parseInt(row['中学3年生'] || 0), lat: lat, lng: lng,
+                        history, s_total: history.s_total, c_total: history.c_total,
+                        i_total: history.i_total, sci_total: history.sci_total
+                    });
+                }
+            }
+            return processed;
+        }
+
+        async function loadInitialData() {
+            try {
+                document.getElementById('loading-overlay').style.display = 'flex';
+                const response = await fetch(AUTO_LOAD_FILE);
+                if (!response.ok) throw new Error('File not found');
+                const buffer = await response.arrayBuffer();
+                schoolData = await processWorkbook(buffer);
+                initUI();
+            } catch (err) {
+                document.getElementById('current-mode-desc').innerHTML = `
+                    <div class="stat-item">
+                        <span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">表示中</span>
+                        <span class="text-sm font-black text-gray-900">0 <span class="text-[15px] font-bold text-gray-400">校</span></span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="text-xs text-gray-400 mt-2">Excelファイルを読み込んでください</span>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        }
+
+        function initUI() {
+            updateDistrictButtons();
+            refreshUI(true);
+        }
+
+        document.getElementById('file-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('loading-overlay').style.display = 'flex';
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                schoolData = await processWorkbook(event.target.result);
+                initUI();
+                document.getElementById('loading-overlay').style.display = 'none';
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // 動的に地区ボタンを生成・更新する関数
+        function updateDistrictButtons() {
+            const rawDistricts = schoolData ? [...new Set(schoolData.map(s => s.district))] : [];
+            
+            // 指定された並び順の定義
+            const order = ["福山市", "尾道市", "三原市", "松山市", "今治市", "上島町"];
+            const allDistricts = [...new Set([...order, ...rawDistricts])];
+            
+            const districts = allDistricts.sort((a, b) => {
+                const indexA = order.indexOf(a);
+                const indexB = order.indexOf(b);
+                // 両方とも指定リストにある場合はその順序に従う
+                if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+                // aだけが指定リストにある場合
+                if (indexA !== -1) return -1;
+                // bだけが指定リストにある場合
+                if (indexB !== -1) return 1;
+                // どちらも指定リストにない場合は文字コード順（あいうえお順）
+                return a.localeCompare(b, 'ja');
+            });
+
+            const container = document.getElementById('district-btn-group');
+            
+            let html = `<button onclick="updateDistrict('all')" id="dist-btn-all" class="dist-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all ${currentDistrict === 'all' ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50'}">すべて</button>`;
+            
+            districts.forEach((d, i) => {
+                html += `<button onclick="updateDistrict('${d}')" id="dist-btn-${i}" class="dist-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all ${currentDistrict === d ? 'bg-emerald-500 text-white shadow-sm' : 'bg-white text-gray-400 border border-gray-100 hover:bg-gray-50'}">${d}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // 地区ボタンがクリックされた時の処理
+        function updateDistrict(district) {
+            currentDistrict = district;
+            updateDistrictButtons(); // ボタンのスタイル（色）を再描画して更新
+            refreshUI(true);
+        }
+
+        function handleSort(key) {
+            if (currentSort.key !== key) {
+                currentSort.key = key;
+                currentSort.direction = (key === 'district' || key === 'name') ? 'asc' : 'desc';
+            } else {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            }
+            refreshUI(false);
+        }
+
+        function updateYear(yearVal) {
+            currentYearIdx = yearVal;
+            document.querySelectorAll('.year-btn').forEach(btn => {
+                const isSelected = btn.id === `year-btn-${yearVal}`;
+                btn.className = "year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all " + 
+                    (isSelected ? "bg-emerald-500 text-white shadow-sm" : "bg-white text-gray-400 border border-gray-100 hover:bg-gray-50");
+            });
+            refreshUI(false);
+        }
+
+        function updateDisplayMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                const btnId = btn.id.replace('btn-', '');
+                const theme = themeColors[btnId];
+                btn.className = "mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all " + 
+                    (btnId === mode ? `${theme.bg} text-white` : "bg-white text-gray-400 border border-gray-100");
+            });
+            refreshUI(false);
+        }
+
+        function refreshUI(shouldFitBounds = false) {
+            // 選択された地区変数を使用してフィルタリング
+            const filtered = currentDistrict === 'all' ? schoolData : schoolData.filter(s => s.district === currentDistrict);
+            
+            let totalValue = 0;
+            const activeData = [];
+            
+            if (schoolData && schoolData.length > 0) {
+                filtered.forEach(s => {
+                    let val = 0;
+                    if (currentMode === 'students') val = s.students;
+                    else if (currentYearIdx === 'total') val = s.history[`${currentMode}_total`];
+                    else val = s.history[currentMode][currentYearIdx];
+                    
+                    if (currentMode === 'students' || val > 0) {
+                        totalValue += val;
+                        activeData.push(s);
+                    }
+                });
+            }
+
+            const theme = themeColors[currentMode];
+            const yearLabels = ["１年", "２年", "３年", "４年", "５年"];
+            const yearLabel = currentYearIdx === 'total' ? '全学年' : yearLabels[currentYearIdx];
+
+            document.getElementById('current-mode-desc').innerHTML = `
+                <div class="stat-item">
+                    <span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">表示中</span>
+                    <span class="text-sm font-black text-gray-900">${activeData.length} <span class="text-[15px] font-bold text-gray-400">校</span></span>
+                </div>
+                <div class="stat-item">
+                    <span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">総計</span>
+                    <span class="text-sm font-black text-gray-900">${totalValue.toLocaleString()} <span class="text-[15px] font-bold text-gray-400">名</span></span>
+                </div>
+            `;
+
+            if (!schoolData || schoolData.length === 0) return;
+
+            const sorted = [...filtered].sort((a, b) => {
+                const factor = currentSort.direction === 'asc' ? 1 : -1;
+                let valA = a[currentSort.key]; let valB = b[currentSort.key];
+                if (typeof valA === 'number' && typeof valB === 'number') return factor * (valA - valB);
+                valA = String(valA || ""); valB = String(valB || "");
+                return factor * (valA.localeCompare(valB, 'ja'));
+            });
+
+            renderMap(filtered, shouldFitBounds);
+            renderTable(sorted);
+        }
+
+        function renderMap(data, shouldFitBounds) {
+            layerGroup.clearLayers();
+            const showNames = document.getElementById('toggle-names').checked;
+            const showValues = document.getElementById('toggle-values').checked;
+            let labelClasses = "bubble-label-container";
+            if (!showNames) labelClasses += " hide-name";
+            if (!showValues) labelClasses += " hide-value";
+
+            data.forEach(s => {
+                let displayValue;
+                let bubbleCalculationValue; 
+                if (currentMode === 'students') {
+                    displayValue = s.students;
+                    bubbleCalculationValue = s.students;
+                } else if (currentYearIdx === 'total') {
+                    displayValue = s.history[`${currentMode}_total`];
+                    bubbleCalculationValue = displayValue;
+                } else {
+                    displayValue = s.history[currentMode][currentYearIdx];
+                    bubbleCalculationValue = displayValue;
+                }
+                
+                if (currentMode !== 'students' && (displayValue === 0 || !displayValue)) return; 
+
+                const baseMultiplier = currentMode === 'students' ? 1.0 : 4.0;
+                const radius = Math.sqrt(bubbleCalculationValue || 0.5) * 180 * baseMultiplier;
+
+                const curYear = currentYearIdx === 'total' ? 'total' : currentYearIdx;
+                let valS, valC, valI, valSCI;
+                if (curYear === 'total') {
+                    valS = s.history.s_total; valC = s.history.c_total; valI = s.history.i_total; valSCI = s.history.sci_total;
+                } else {
+                    valS = s.history.s[curYear]; valC = s.history.c[curYear]; valI = s.history.i[curYear]; valSCI = s.history.sci[curYear];
+                }
+
+                const theme = themeColors[currentMode];
+                let labelHtml = "";
+
+                if (currentMode === 'students') {
+                    labelHtml = `<div class="${labelClasses}">
+                        <div class="school-name-label">${s.name}</div>
+                        <div class="value-label" style="color:${theme.border}">${displayValue}</div>
+                        <div class="breakdown-label">
+                            S:${valS} C:${valC} I:${valI}
+                        </div>
+                        <div class="stats-summary-label">
+                            合計:${valSCI}
+                        </div>
+                    </div>`;
+                } else {
+                    let historyRowHtml = "";
+                    // 全学年が選択されている時のみ内訳を生成
+                    if (currentYearIdx === 'total') {
+                        const historyArray = s.history[currentMode === 'sci' ? 'sci' : currentMode];
+                        const labels = ["１年", "２年", "３年", "４年", "５年"];
+                        const historyLabels = historyArray.map((v, i) => {
+                            return `<span>${labels[i]}:${v}</span>`;
+                        }).join(' ');
+                        
+                        historyRowHtml = `
+                        <div class="history-row-label">
+                            ${historyLabels}
+                        </div>`;
+                    }
+
+                    labelHtml = `<div class="${labelClasses}">
+                        <div class="school-name-label">${s.name}</div>
+                        <div class="value-label" style="color:${theme.border}">${displayValue}</div>
+                        ${historyRowHtml}
+                    </div>`;
+                }
+
+                const popup = `
+                    <div class="p-2 custom-popup min-w-[200px]">
+                        <div class="font-black text-sm mb-2 border-b pb-1 text-gray-900">${s.name}</div>
+                        <div class="grid grid-cols-2 gap-2 text-center mb-2 border-b pb-2">
+                             <div><div class="text-[8px] text-gray-400 font-bold uppercase">中3生</div><div class="text-xs font-black text-emerald-600">${s.students}</div></div>
+                             <div><div class="text-[8px] text-gray-400 font-bold uppercase">SCI</div><div class="text-xs font-black text-orange-600">${valSCI}</div></div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                            <div><div class="text-[8px] text-gray-400 font-bold">S</div><div class="text-xs font-black text-cyan-600">${valS}</div></div>
+                            <div><div class="text-[8px] text-gray-400 font-bold">C</div><div class="text-xs font-black text-violet-600">${valS}</div></div>
+                            <div><div class="text-[8px] text-gray-400 font-bold">I</div><div class="text-xs font-black text-pink-600">${valI}</div></div>
+                        </div>
+                    </div>
+                `;
+
+                L.circle([s.lat, s.lng], {
+                    radius: radius, color: theme.border, fillColor: theme.fill, fillOpacity: 0.4, weight: 1.5
+                }).bindPopup(popup).addTo(layerGroup);
+
+                L.marker([s.lat, s.lng], {
+                    icon: L.divIcon({ className: '', html: labelHtml, iconSize: [260, 100], iconAnchor: [130, 50] })
+                }).addTo(layerGroup);
+            });
+            layerGroup.addTo(map);
+            if (shouldFitBounds) {
+                const circles = layerGroup.getLayers().filter(l => l instanceof L.Circle);
+                if (circles.length > 0) map.fitBounds(new L.featureGroup(circles).getBounds().pad(0.1));
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            data.forEach(s => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="map.setView([${s.lat}, ${s.lng}], 14); window.scrollTo({top: 0, behavior: 'smooth'});">
+                        <td class="px-4 py-2 border-r text-gray-400">${s.district}</td>
+                        <td class="px-4 py-2 border-r font-bold">${s.name}</td>
+                        <td class="px-2 py-2 border-r text-center ${currentMode==='students'?'highlight-col highlight-text':''}">${s.students}</td>
+                        ${[0,1,2,3,4].map(i => `
+                            <td class="px-1 py-2 border-r text-center ${currentYearIdx===i&&currentMode==='s'?'highlight-col highlight-text':''}">${s.history.s[i]}</td>
+                            <td class="px-1 py-2 border-r text-center ${currentYearIdx===i&&currentMode==='c'?'highlight-col highlight-text':''}">${s.history.c[i]}</td>
+                            <td class="px-1 py-2 border-r text-center ${currentYearIdx===i&&currentMode==='i'?'highlight-col highlight-text':''}">${s.history.i[i]}</td>
+                        `).join('')}
+                    </tr>
+                `;
+            });
+        }
+
+        window.onload = () => {
+            map = L.map('map', { zoomControl: false }).setView([34.40, 133.20], 10);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            
+            // データのロード前にUIを初期化して表示
+            updateDistrictButtons();
+            refreshUI(false);
+
+            loadInitialData();
+        };
+    </script>
+</body>
+</html>
