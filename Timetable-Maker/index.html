@@ -810,13 +810,13 @@
         localStorage.setItem('timetable_save_data', JSON.stringify(data));
       }, [columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity]);
 
-      // JSONとして保存 (ファイル名を.txtに変更)
+      // テキストファイルとして保存
       const handleExport = () => {
         const data = { columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity };
         const json = JSON.stringify(data, null, 2);
         
         try {
-          const blob = new Blob([json], { type: 'text/plain' }); // MIMEタイプもテキストに変更
+          const blob = new Blob([json], { type: 'text/plain' }); 
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -832,7 +832,7 @@
         }
       };
 
-      // JSONからの読み込み
+      // テキストファイルからの読み込み
       const fileInputRef = useRef(null);
 
       // アプリ起動時の自動読み込み処理
@@ -844,11 +844,11 @@
                throw new Error("This environment does not support relative fetches.");
             }
 
-            // 拡張子を .txt に変更してフェッチ
+            // テキストファイルをフェッチ
             const response = await fetch('タイムテーブル.txt');
             
             if (response.ok) {
-              // サーバーのContent-Type設定に依存しないよう、テキストとして読み込んでからJSONパースする
+              // サーバーのContent-Type設定に依存しないよう、テキストとして読み込んでからパースする
               const textData = await response.text();
               const data = JSON.parse(textData);
               
@@ -1523,8 +1523,7 @@
                     <button onClick={() => fileInputRef.current.click()} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
                       <Upload className="w-4 h-4" /> データ読込
                     </button>
-                    {/* accept属性に .txt を追加 */}
-                    <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json,.txt" className="hidden" />
+                    <input type="file" ref={fileInputRef} onChange={handleImport} accept=".txt" className="hidden" />
                   </div>
                 </div>
                 
