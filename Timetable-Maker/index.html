@@ -810,17 +810,17 @@
         localStorage.setItem('timetable_save_data', JSON.stringify(data));
       }, [columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity]);
 
-      // JSONとして保存
+      // テキストファイルとして保存
       const handleExport = () => {
         const data = { columns, events, titleConfig, startMin, endMin, isZoomed, showBlockCapacity };
         const json = JSON.stringify(data, null, 2);
         
         try {
-          const blob = new Blob([json], { type: 'application/json' });
+          const blob = new Blob([json], { type: 'text/plain' }); 
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = 'タイムテーブル.json';
+          a.download = 'タイムテーブル.txt';
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -832,7 +832,7 @@
         }
       };
 
-      // JSONからの読み込み
+      // テキストファイルからの読み込み
       const fileInputRef = useRef(null);
 
       // アプリ起動時の自動読み込み処理
@@ -844,12 +844,14 @@
                throw new Error("This environment does not support relative fetches.");
             }
 
-            // 日本語ファイル名を安全に通信するためURLエンコードを行う
-            const fileName = encodeURIComponent('タイムテーブル.json');
-            // キャッシュ対策としてクエリパラメータを付与して取得
-            const response = await fetch(`./${fileName}?t=` + new Date().getTime());
+            // テキストファイルをフェッチ
+            const response = await fetch('タイムテーブル.txt');
+            
             if (response.ok) {
-              const data = await response.json();
+              // サーバーのContent-Type設定に依存しないよう、テキストとして読み込んでからパースする
+              const textData = await response.text();
+              const data = JSON.parse(textData);
+              
               if (data.columns) setColumns(data.columns);
               if (data.events) setEvents(data.events);
               if (data.titleConfig) setTitleConfig(data.titleConfig);
@@ -874,8 +876,6 @@
             }
           } catch (error) {
             // ローカルのHTMLファイルを直接開いている場合（CORS制約等）やネットワークエラー時もファイル選択を開く
-            // コンソールに不要なエラーログを出さないようにコメントアウト
-            // console.error("初期データの読み込みに失敗しました:", error);
             if (fileInputRef.current) {
               fileInputRef.current.click();
             }
@@ -1523,7 +1523,7 @@
                     <button onClick={() => fileInputRef.current.click()} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
                       <Upload className="w-4 h-4" /> データ読込
                     </button>
-                    <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" className="hidden" />
+                    <input type="file" ref={fileInputRef} onChange={handleImport} accept=".txt" className="hidden" />
                   </div>
                 </div>
                 
