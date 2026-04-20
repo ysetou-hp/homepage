@@ -845,7 +845,7 @@
             }
 
             // 中学校アプリと同様に、余計なパラメータを一切つけずにシンプルなfetchを行う
-            const response = await fetch('タイムテーブル.json');
+            const response = await fetch('タイムテーブル.txt');
             
             if (response.ok) {
               const data = await response.json();
