@@ -844,10 +844,9 @@
                throw new Error("This environment does not support relative fetches.");
             }
 
-            // 日本語ファイル名を安全に通信するためURLエンコードを行う
-            const fileName = encodeURIComponent('タイムテーブル.json');
-            // キャッシュ対策としてクエリパラメータを付与して取得
-            const response = await fetch(`./${fileName}?t=` + new Date().getTime());
+            // 中学校アプリと同様に、余計なパラメータを一切つけずにシンプルなfetchを行う
+            const response = await fetch('タイムテーブル.json');
+            
             if (response.ok) {
               const data = await response.json();
               if (data.columns) setColumns(data.columns);
@@ -874,8 +873,6 @@
             }
           } catch (error) {
             // ローカルのHTMLファイルを直接開いている場合（CORS制約等）やネットワークエラー時もファイル選択を開く
-            // コンソールに不要なエラーログを出さないようにコメントアウト
-            // console.error("初期データの読み込みに失敗しました:", error);
             if (fileInputRef.current) {
               fileInputRef.current.click();
             }
