@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Web Apps Portfolio</title>
+    <title>広報主事室 Web Apps</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,7 @@
     
     <script>
         // ==========================================
-        // 【設定項目】ここを編集してアプリを追加・変更できますtessssksjdfh
+        // 【設定項目】ここを編集してアプリを追加・変更できます
         // ==========================================
         const APPS_CONFIG = [
             {
@@ -30,7 +30,6 @@
                 gradient: "from-emerald-500 to-teal-600",
                 hoverText: "text-emerald-600",
                 status: "available",
-                // シンプルな時計アイコンに変更
                 icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`
             },
             {
@@ -40,7 +39,6 @@
                 gradient: "from-slate-300 to-slate-400",
                 hoverText: "text-slate-600",
                 status: "coming-soon",
-                // 工事中・開発中をイメージしたツールアイコンに変更
                 icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`
             },
             {
@@ -144,12 +142,11 @@
     <section id="home" class="pt-32 pb-16 px-6">
         <div class="max-w-4xl mx-auto text-center">
             <h1 class="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
-                Webアプリケーション <br>
-                <span class="text-blue-600">ショーケース</span>
+                広報主事室<span class="text-blue-600">Webアプリ</span>
             </h1>
             <p class="text-lg text-slate-600 leading-relaxed">
-                自作のWebアプリやツールを公開しているポートフォリオサイトです。<br>
-                GitHub Pagesを利用してホスティングしています。
+                広報活動を効率化し、情報を分かりやすく届けるためのWebツール集です。<br>
+                データの可視化やイベント運営のサポートに活用いただけます。
             </p>
         </div>
     </section>
@@ -158,7 +155,7 @@
     <section id="projects" class="py-20 px-6 bg-white">
         <div class="max-w-6xl mx-auto">
             <div class="flex items-center justify-between mb-12">
-                <h2 class="text-3xl font-bold">My Apps</h2>
+                <h2 class="text-3xl font-bold">Project Tools</h2>
                 <span id="total-count" class="text-slate-400 text-sm">Total: 0 Apps</span>
             </div>
             
@@ -166,6 +163,20 @@
             </div>
         </div>
     </section>
+
+    <!-- フッター（注意事項の改行位置を調整） -->
+    <footer class="py-16 bg-slate-50 border-t border-slate-100">
+        <div class="max-w-4xl mx-auto px-6 text-center">
+            <div class="inline-flex items-center space-x-2 text-slate-400 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span class="text-sm font-semibold uppercase tracking-widest">Privacy & Security</span>
+            </div>
+            <p class="text-slate-500 text-sm leading-loose max-w-2xl mx-auto">
+                当サイトで提供される各ツールは、お使いのブラウザ上でローカルに動作します。<br>
+                読み込んだデータや作成中のファイルがサーバーにアップロードされたり、<br class="hidden md:block">外部に送信されることはありません。
+            </p>
+        </div>
+    </footer>
 
 </body>
 </html>
