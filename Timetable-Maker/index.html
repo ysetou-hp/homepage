@@ -5,14 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>タイムテーブルメーカー</title>
   
-  <!-- Tailwind CSSの読み込み -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- ReactとReactDOMの読み込み -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <!-- Babelの読み込み (ブラウザ内でJSXをコンパイルするため) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <style>
@@ -29,25 +26,21 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    // useMemo と useCallback を追加
     const { useState, useRef, useEffect, useMemo, useCallback } = React;
 
-    // --- アイコンコンポーネント (lucide-reactの代替) ---
+    // --- アイコンコンポーネント ---
     const Plus = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
     const Copy = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
     const Trash2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
     const X = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
     const Settings = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
-    const Columns = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7m0-18H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7m0-18v18"></path></svg>;
     const AlignLeft = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="21" y1="6" x2="3" y2="6"></line><line x1="15" y1="12" x2="3" y2="12"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>;
-    const GripVertical = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="9" cy="12" r="1"></circle><circle cx="9" cy="5" r="1"></circle><circle cx="9" cy="19" r="1"></circle><circle cx="15" cy="12" r="1"></circle><circle cx="15" cy="5" r="1"></circle><circle cx="15" cy="19" r="1"></circle></svg>;
     const Download = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
     const Save = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
     const Upload = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
     const Users = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
 
     // --- 定数と初期データ ---
-
     const STEP_MIN = 5; 
 
     const PALETTE = [
@@ -58,6 +51,7 @@
       { bg: '#FEFCE8', border: '#FACC15', text: '#713F12', name: '黄' },
       { bg: '#F3F4F6', border: '#9CA3AF', text: '#1F2937', name: 'グレー' },
       { bg: '#FFFFFF', border: '#D1D5DB', text: '#374151', name: '白' },
+      { bg: 'transparent', border: 'transparent', text: '#1F2937', name: '背景無し' },
     ];
 
     const COLUMN_PALETTE = [
@@ -68,6 +62,7 @@
       { bg: '#FDE047', text: '#000000', name: '黄' },
       { bg: '#6B7280', text: '#FFFFFF', name: 'グレー' },
       { bg: '#000000', text: '#FFFFFF', name: '黒' },
+      { bg: 'transparent', text: '#1F2937', name: '背景無し' },
     ];
 
     const INITIAL_COLUMNS = [
@@ -95,7 +90,6 @@
     ];
 
     // --- ユーティリティ ---
-
     const generateId = () => Math.random().toString(36).substr(2, 9);
 
     const formatTime = (minutes) => {
@@ -120,9 +114,7 @@
     };
 
     // --- メインコンポーネント ---
-
     function App() {
-      // 最適化: 初回マウント時のみローカルストレージからデータを読み込む (遅延初期化)
       const [initialData] = useState(() => loadSavedData());
 
       const [startMin, setStartMin] = useState(initialData?.startMin !== undefined ? initialData.startMin : 8 * 60);
@@ -232,16 +224,13 @@
       }, []);
       // === 履歴管理ここまで ===
 
-      // 最適化: 派生データのメモ化。columnsが変化した時だけ再計算
       const visibleColumns = useMemo(() => columns.filter(col => col.isVisible !== false), [columns]);
 
-      // 最適化: useCallbackで関数の不要な再生成を防止
       const getEventStartIndex = useCallback((ev) => {
         if (ev.startColIdx !== undefined) return ev.startColIdx;
         return visibleColumns.findIndex(c => c.id === ev.colId);
       }, [visibleColumns]);
 
-      // ブロックの人数を計算する処理（複数列にまたがる場合は合計）
       const calculateEventCapacity = useCallback((evt) => {
         const startIndex = getEventStartIndex(evt);
         if (startIndex === -1) return null;
@@ -257,7 +246,6 @@
         for (let i = 0; i < renderColSpan; i++) {
           const col = visibleColumns[startIndex + i];
           if (col && col.capacity) {
-            // 全角数字を半角に変換して数値を抽出
             const normalizedCapacity = String(col.capacity).replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
             const match = normalizedCapacity.match(/\d+/);
             if (match) {
@@ -732,7 +720,6 @@
         window.print();
       };
 
-      // 最適化: キーボードショートカットのリスナー登録最適化
       const latestTargetEvent = useRef(null);
       useEffect(() => {
         latestTargetEvent.current = hoveredEvent || editingEvent;
@@ -802,7 +789,7 @@
           window.removeEventListener('keydown', handleKeyDown);
           window.removeEventListener('keyup', handleKeyUp);
         };
-      }, []); // 依存配列を空にしてマウント時のみ登録するように改善
+      }, []); 
 
       // データの自動保存
       useEffect(() => {
@@ -839,16 +826,13 @@
       useEffect(() => {
         const fetchInitialData = async () => {
           try {
-            // Canvasなどの特殊な環境(blob:等)では相対URLのfetchがパースエラーになるためスキップ
             if (window.location.protocol === 'blob:' || window.location.protocol === 'data:' || window.location.protocol === 'about:') {
                throw new Error("This environment does not support relative fetches.");
             }
 
-            // テキストファイルをフェッチ
             const response = await fetch('タイムテーブル.txt');
             
             if (response.ok) {
-              // サーバーのContent-Type設定に依存しないよう、テキストとして読み込んでからパースする
               const textData = await response.text();
               const data = JSON.parse(textData);
               
@@ -860,7 +844,6 @@
               if (data.isZoomed !== undefined) setIsZoomed(data.isZoomed);
               if (data.showBlockCapacity !== undefined) setShowBlockCapacity(data.showBlockCapacity);
               
-              // 読込時に履歴もリセット
               const initialHistoryState = {
                 events: data.events || [],
                 columns: data.columns || [],
@@ -869,13 +852,11 @@
               setHistory([initialHistoryState]);
               setHistoryIndex(0);
             } else {
-              // ファイルが存在しない場合はファイル選択ダイアログを開く
               if (fileInputRef.current) {
                 fileInputRef.current.click();
               }
             }
           } catch (error) {
-            // ローカルのHTMLファイルを直接開いている場合（CORS制約等）やネットワークエラー時もファイル選択を開く
             if (fileInputRef.current) {
               fileInputRef.current.click();
             }
@@ -901,7 +882,6 @@
             if (data.isZoomed !== undefined) setIsZoomed(data.isZoomed);
             if (data.showBlockCapacity !== undefined) setShowBlockCapacity(data.showBlockCapacity);
             
-            // 読込時に履歴もリセット
             const initialHistoryState = {
               events: data.events || [],
               columns: data.columns || [],
@@ -928,15 +908,14 @@
         }
 
         const currentScrollTop = mainEl.scrollTop;
-        const oldRowHeight = isZoomed ? 30 : 12;
-        const newRowHeight = isZoomed ? 12 : 30;
+        // 5分あたりの高さを変更 (ズーム時: 40px, 標準時: 16px)
+        const oldRowHeight = isZoomed ? 40 : 16;
+        const newRowHeight = isZoomed ? 16 : 40;
         
-        // クリックした行の高さの差分を計算
         const deltaScroll = (newRowHeight - oldRowHeight) * row;
         
         setIsZoomed(prev => !prev);
 
-        // ReactのDOM更新が完了した直後にスクロール位置を調整する
         setTimeout(() => {
           if (mainRef.current) {
             mainRef.current.scrollTop = currentScrollTop + deltaScroll;
@@ -944,7 +923,6 @@
         }, 0);
       }, [isZoomed]);
 
-      // 最適化: 重いグリッド描画処理をメモ化
       const gridBackgroundCells = useMemo(() => {
         const cells = [];
         for (let row = 0; row < rows; row++) {
@@ -1031,7 +1009,6 @@
             </div>
           </header>
 
-          {/* 余白(padding-top)をなくし、スクロール時の見えを修正 */}
           <main ref={mainRef} className="flex-1 overflow-auto px-6 pb-6 pt-0 print:overflow-visible print:p-0">
             <div className="inline-block min-w-full bg-white shadow-md border border-gray-300 rounded-sm">
               <div 
@@ -1040,7 +1017,8 @@
                 style={{
                   display: 'grid',
                   gridTemplateColumns: `60px ${visibleColumns.length > 0 ? visibleColumns.map(c => `minmax(calc(160px * ${c.width || 1}), ${c.width || 1}fr)`).join(' ') : '1fr'} 60px`,
-                  gridTemplateRows: `60px 44px repeat(${rows}, minmax(${isZoomed ? '30px' : '12px'}, 1fr))` 
+                  // こちらも設定を合わせる
+                  gridTemplateRows: `60px 44px repeat(${rows}, minmax(${isZoomed ? '40px' : '16px'}, 1fr))` 
                 }}
               >
                 <div 
@@ -1073,12 +1051,16 @@
                       onDragOver={(e) => handleHeaderDragOver(e, col.id)}
                       onDragEnd={handleHeaderDragEnd}
                       className={`w-full h-full rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:shadow-md transition-all relative text-sm font-bold ${draggedColId === col.id ? 'opacity-40 scale-95 ring-2 ring-blue-500 ring-offset-1' : ''}`}
-                      style={{ backgroundColor: col.bgColor || '#6B7280', color: col.textColor || '#FFFFFF' }}
+                      style={{ 
+                        backgroundColor: col.bgColor === 'transparent' ? 'transparent' : (col.bgColor || '#6B7280'), 
+                        color: col.textColor || '#FFFFFF',
+                        border: col.bgColor === 'transparent' ? '2px solid #9CA3AF' : 'none'
+                      }}
                       onClick={() => setEditingColumn(col)}
                       title="ドラッグで移動 / クリックで編集"
                     >
                       <span className="leading-tight text-center truncate px-1">
-                        {col.name}{col.capacity && <span className="font-normal ml-0.5">（{col.capacity}）</span>}
+                        {col.name}{col.capacity && <span className="font-normal text-xs ml-0.5">（{col.capacity}）</span>}
                       </span>
                     </div>
                   </div>
@@ -1109,17 +1091,14 @@
                   const isTopOverlapping = events.some((otherEvt, otherIdx) => {
                     if (evt.id === otherEvt.id) return false;
                     
-                    // 時間の重なり
                     if (evt.end <= otherEvt.start || evt.start >= otherEvt.end) return false;
                     
-                    // 列の重なり
                     const colIdx2 = getEventStartIndex(otherEvt);
                     if (colIdx2 === -1) return false;
                     const endCol1 = colIndex + renderColSpan - 1;
                     const endCol2 = colIdx2 + (otherEvt.colSpan || 1) - 1;
                     if (endCol1 < colIdx2 || colIndex > endCol2) return false;
                     
-                    // Zインデックスの比較（同じ場合は後から描画される配列の後ろのものが上になる）
                     const z1 = evt.zIndex !== undefined ? evt.zIndex : 10;
                     const z2 = otherEvt.zIndex !== undefined ? otherEvt.zIndex : 10;
                     if (z1 > z2) return true;
@@ -1141,7 +1120,6 @@
                       onMouseDown={(e) => {
                         if (e.target.classList.contains('resize-handle')) return;
                         
-                        // シフトキーが押されている場合は選択のトグルのみ行う（ドラッグは開始しない）
                         if (e.shiftKey) {
                           e.stopPropagation();
                           e.preventDefault();
@@ -1151,31 +1129,24 @@
                           return;
                         }
                         
-                        // シフトキーが押されていない場合はドラッグ開始判定
                         handleDragStart(e, evt.id);
                       }}
                       onClick={(e) => {
                         if (e.target.classList.contains('resize-handle')) return;
                         if (justResized.current) return; 
-                        if (dragInfo.current.hasMoved) return; // ドラッグした後のクリックは無視する
+                        if (dragInfo.current.hasMoved) return; 
                         
-                        // シフトキーが押されていない単なるクリックの場合
                         if (!e.shiftKey) {
-                          setSelectedEventIds([evt.id]); // まずブロックを選択状態にする
+                          setSelectedEventIds([evt.id]); 
                           
-                          // テキスト部分がクリックされた場合のみ編集モーダルを開く
                           if (e.target.closest('.text-content')) {
                             setEditingEvent(evt);
                             setHoveredEvent(null);
                           }
                         }
                       }}
-                      onMouseEnter={() => {
-                        setHoveredEvent(evt);
-                      }}
-                      onMouseLeave={() => {
-                        setHoveredEvent(null);
-                      }}
+                      onMouseEnter={() => setHoveredEvent(evt)}
+                      onMouseLeave={() => setHoveredEvent(null)}
                       style={{
                         gridRowStart: startRow,
                         gridRowEnd: endRow,
@@ -1192,11 +1163,10 @@
                         ${isTopOverlapping ? 'm-[3px]' : 'm-[2px]'} rounded-md overflow-hidden
                         transition-all duration-75 group relative select-none
                         ${isShiftPressed ? 'cursor-pointer' : 'cursor-move'}
-                        ${isDraggingThis ? 'opacity-90 shadow-xl scale-[1.02] ring-2 ring-blue-400 ring-offset-1' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md hover:-translate-y-[1px] opacity-100'}
+                        ${isDraggingThis ? 'opacity-90 shadow-xl scale-[1.02] ring-2 ring-blue-400 ring-offset-1' : (evt.bgColor === 'transparent' ? 'hover:-translate-y-[1px] opacity-100 hover:bg-black/5' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md hover:-translate-y-[1px] opacity-100')}
                         ${isSelected && !isDraggingThis ? 'ring-[3px] ring-blue-600 ring-offset-2 shadow-md brightness-95' : ''}
                       `}
                     >
-                      {/* pointer-events-none を削除してテキスト要素をクリック可能にする */}
                       <div className="absolute inset-0 p-1 flex flex-col items-center justify-center overflow-hidden">
                         {evt.showTime !== false && (
                           <div className={`text-content cursor-pointer hover:opacity-60 transition-opacity font-semibold ${evt.timeFontSize || 'text-sm'} tracking-wider opacity-90 whitespace-nowrap mb-0.5 truncate max-w-full text-center px-1`} title="クリックして編集">
@@ -1423,9 +1393,22 @@
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">ブロックのカラー</label>
                     <div className="flex flex-wrap gap-2">
-                      {PALETTE.map((color, idx) => (
-                        <button key={idx} onClick={() => setEditingEvent({...editingEvent, bgColor: color.bg, borderColor: color.border})} className={`w-8 h-8 rounded-full border-2 ${editingEvent.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: color.bg, borderColor: color.border }} title={color.name} />
-                      ))}
+                      {PALETTE.map((color, idx) => {
+                        const isTransparent = color.bg === 'transparent';
+                        return (
+                          <button 
+                            key={idx} 
+                            onClick={() => setEditingEvent({...editingEvent, bgColor: color.bg, borderColor: color.border})} 
+                            className={`w-8 h-8 rounded-full border-2 ${editingEvent.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} 
+                            style={{ 
+                              backgroundColor: isTransparent ? '#F3F4F6' : color.bg, 
+                              borderColor: isTransparent ? '#9CA3AF' : color.border,
+                              borderStyle: 'solid'
+                            }} 
+                            title={color.name} 
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1485,9 +1468,21 @@
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">列ブロックのカラー</label>
                      <div className="flex flex-wrap gap-2">
-                      {COLUMN_PALETTE.map((color, idx) => (
-                        <button key={idx} onClick={() => setEditingColumn({...editingColumn, bgColor: color.bg, textColor: color.text})} className={`w-8 h-8 rounded-md ${editingColumn.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} style={{ backgroundColor: color.bg }} />
-                      ))}
+                      {COLUMN_PALETTE.map((color, idx) => {
+                        const isTransparent = color.bg === 'transparent';
+                        return (
+                          <button 
+                            key={idx} 
+                            onClick={() => setEditingColumn({...editingColumn, bgColor: color.bg, textColor: color.text})} 
+                            className={`w-8 h-8 rounded-md ${editingColumn.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} 
+                            style={{ 
+                              backgroundColor: isTransparent ? '#F3F4F6' : color.bg,
+                              border: isTransparent ? '2px solid #9CA3AF' : 'none'
+                            }} 
+                            title={color.name} 
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1581,7 +1576,7 @@
                             }} 
                             className="w-4 h-4 text-blue-600 rounded" 
                           />
-                          <div className={`w-4 h-4 rounded-sm border border-gray-300 ${col.isVisible === false ? 'opacity-50' : ''}`} style={{ backgroundColor: col.bgColor }}></div>
+                          <div className={`w-4 h-4 rounded-sm border ${col.bgColor === 'transparent' ? 'border-gray-400 border-solid bg-gray-100' : 'border-gray-300'} ${col.isVisible === false ? 'opacity-50' : ''}`} style={{ backgroundColor: col.bgColor === 'transparent' ? 'transparent' : col.bgColor }}></div>
                           <span className={`text-sm font-medium ${col.isVisible === false ? 'text-gray-400' : 'text-gray-700'}`}>{col.name}</span>
                         </label>
                       </div>
@@ -1601,7 +1596,6 @@
       );
     }
 
-    // --- Reactアプリのレンダリング ---
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
