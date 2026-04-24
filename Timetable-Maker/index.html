@@ -11,6 +11,8 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- html2canvasを削除し、文字ズレが起きにくい html-to-image に変更 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   
   <style>
     /* 印刷時に背景色を正確に出力するための設定 */
@@ -19,6 +21,11 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
+    }
+    
+    /* html2canvasの文字見切れバグを防ぐため、基本フォントを安定したものに固定 */
+    #root {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
     }
   </style>
 </head>
@@ -39,6 +46,9 @@
     const Save = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
     const Upload = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>;
     const Users = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+    const BusFront = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4 6 5 2.1C5.4 1.5 6.1 1 7 1h10c.9 0 1.6.5 2 1.1L20 6"/><path d="M4 6h16v11c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V6Z"/><path d="M8 2h8"/><path d="M4 11h16"/><path d="M8 15h.01"/><path d="M16 15h.01"/><path d="M6 19v2"/><path d="M18 19v2"/></svg>;
+    const ImageIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>;
+    const Clock = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
 
     // --- 定数と初期データ ---
     const STEP_MIN = 5; 
@@ -51,7 +61,6 @@
       { bg: '#FEFCE8', border: '#FACC15', text: '#713F12', name: '黄' },
       { bg: '#F3F4F6', border: '#9CA3AF', text: '#1F2937', name: 'グレー' },
       { bg: '#FFFFFF', border: '#D1D5DB', text: '#374151', name: '白' },
-      { bg: 'transparent', border: 'transparent', text: '#1F2937', name: '背景無し' },
     ];
 
     const COLUMN_PALETTE = [
@@ -60,33 +69,102 @@
       { bg: '#F59E0B', text: '#FFFFFF', name: 'オレンジ' },
       { bg: '#10B981', text: '#FFFFFF', name: '緑' },
       { bg: '#FDE047', text: '#000000', name: '黄' },
-      { bg: '#6B7280', text: '#FFFFFF', name: 'グレー' },
-      { bg: '#000000', text: '#FFFFFF', name: '黒' },
+      { bg: '#A855F7', text: '#FFFFFF', name: '紫' },
+      { bg: '#EC4899', text: '#FFFFFF', name: 'ピンク' },
       { bg: 'transparent', text: '#1F2937', name: '背景無し' },
     ];
 
     const INITIAL_COLUMNS = [
-      { id: 'c1', name: '赤組', bgColor: '#EF4444', textColor: '#FFFFFF', width: 1, capacity: '' },
-      { id: 'c2', name: '青組', bgColor: '#3B82F6', textColor: '#FFFFFF', width: 1, capacity: '' },
-      { id: 'c3', name: '黄組', bgColor: '#FDE047', textColor: '#000000', width: 1, capacity: '' },
-      { id: 'c4', name: '緑組', bgColor: '#10B981', textColor: '#FFFFFF', width: 1, capacity: '' },
+      {
+        "id": "c1",
+        "name": "創造工学科",
+        "bgColor": "#10B981",
+        "textColor": "#FFFFFF",
+        "width": 1,
+        "capacity": "20",
+        "subtitle": "午前"
+      },
+      {
+        "id": "c2",
+        "name": "午前・情報工学科",
+        "bgColor": "#F59E0B",
+        "textColor": "#FFFFFF",
+        "width": 1,
+        "capacity": ""
+      },
+      {
+        "id": "ubt26xnu1",
+        "name": "その他イベント",
+        "bgColor": "#3B82F6",
+        "textColor": "#FFFFFF",
+        "width": 1,
+        "isVisible": true,
+        "capacity": ""
+      },
+      {
+        "id": "c3",
+        "name": "午後・創造工学科",
+        "bgColor": "#10B981",
+        "textColor": "#FFFFFF",
+        "width": 1,
+        "capacity": ""
+      },
+      {
+        "id": "c4",
+        "name": "午後・情報工学科",
+        "bgColor": "#F59E0B",
+        "textColor": "#FFFFFF",
+        "width": 1,
+        "capacity": ""
+      },
+      {
+        "id": "5z3pxg0xk",
+        "name": "大型",
+        "bgColor": "#6B7280",
+        "textColor": "#FFFFFF",
+        "width": 1,
+        "isVisible": true,
+        "capacity": "",
+        "isBus": true,
+        "busType": 1
+      }
     ];
 
     const INITIAL_EVENTS = [
-      { id: 'ev1', title: '組み分けはこちらでさせていただきます', start: 480, end: 500, startColIdx: 0, colSpan: 4, bgColor: '#FEFCE8', borderColor: '#FACC15', borderStyle: 'solid', showTime: false, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev2', title: '受 付', start: 500, end: 540, startColIdx: 0, colSpan: 4, bgColor: '#EBF4FF', borderColor: '#60A5FA', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev3', title: '全体説明', start: 540, end: 570, startColIdx: 0, colSpan: 4, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev4', title: '学科イベント1', start: 570, end: 600, colId: 'c1', colSpan: 1, bgColor: '#F0FDF4', borderColor: '#4ADE80', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev5', title: '学寮見学', start: 600, end: 660, colId: 'c2', colSpan: 1, bgColor: '#FEF2F2', borderColor: '#F87171', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev6', title: '学科イベント2', start: 600, end: 660, colId: 'c1', colSpan: 1, bgColor: '#F0FDF4', borderColor: '#4ADE80', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev7', title: '練習船\n「弓削丸」\n体験航海', start: 570, end: 690, colId: 'c3', colSpan: 1, bgColor: '#EBF4FF', borderColor: '#60A5FA', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev8', title: '練習船\n「弓削丸」\n体験航海', start: 570, end: 690, colId: 'c4', colSpan: 1, bgColor: '#EBF4FF', borderColor: '#60A5FA', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev9', title: '学寮見学', start: 660, end: 720, colId: 'c1', colSpan: 1, bgColor: '#FEF2F2', borderColor: '#F87171', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev10', title: '学科イベント2', start: 660, end: 720, colId: 'c2', colSpan: 1, bgColor: '#F0FDF4', borderColor: '#4ADE80', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev11', title: 'お昼休み\n進路相談', start: 690, end: 750, colId: 'c3', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev12', title: 'お昼休み\n進路相談', start: 690, end: 750, colId: 'c4', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev13', title: 'お昼休み\n進路相談', start: 720, end: 780, colId: 'c1', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
-      { id: 'ev14', title: 'お昼休み\n進路相談', start: 720, end: 780, colId: 'c2', colSpan: 1, bgColor: '#FFF7ED', borderColor: '#FB923C', borderStyle: 'solid', showTime: true, titleFontSize: 'text-sm', timeFontSize: 'text-sm' },
+      { "id": "ev2", "title": "受 付", "start": 510, "end": 540, "startColIdx": 0, "colSpan": 2, "bgColor": "#EBF4FF", "borderColor": "#60A5FA", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "ev3", "title": "全体説明", "start": 540, "end": 570, "startColIdx": 0, "colSpan": 2, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "ev6", "title": "情報工学科\nイベント", "start": 570, "end": 650, "colId": "c2", "colSpan": 1, "bgColor": "#FFF7ED", "borderColor": "#FB923C", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "ev13", "title": "進路相談", "start": 700, "end": 750, "colSpan": 1, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "c1" },
+      { "id": "krei1awtn", "title": "学寮見学", "start": 660, "end": 690, "colId": "c1", "colSpan": 1, "bgColor": "#FEF2F2", "borderColor": "#F87171", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "g56hbtq34", "title": "学校→寮", "start": 650, "end": 660, "colId": "c1", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "fxew2d3z5", "title": "寮→学校", "start": 690, "end": 700, "colId": "c1", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "e82extnv8", "title": "寮→学校（回送）", "start": 660, "end": 675, "colId": "c1", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "zIndex": 0, "isBus": true, "busType": 1 },
+      { "id": "elnvq1kii", "title": "創造工学科\nイベント", "start": 570, "end": 650, "colId": "c1", "colSpan": 1, "bgColor": "#F0FDF4", "borderColor": "#4ADE80", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "u4ltxvgh7", "title": "寮→学校", "start": 720, "end": 730, "colId": "c2", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "9ydoxt8kj", "title": "学校→寮", "start": 680, "end": 690, "colId": "c2", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "g0okyl4jm", "title": "学寮見学", "start": 690, "end": 720, "colId": "c2", "colSpan": 1, "bgColor": "#FEF2F2", "borderColor": "#F87171", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "f05p5ysug", "title": "進路相談", "start": 650, "end": 680, "colSpan": 1, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "c2" },
+      { "id": "j3x5utiuq", "title": "進路相談", "start": 730, "end": 750, "colSpan": 1, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "c2" },
+      { "id": "1x5f109im", "title": "学校→寮（回送）", "start": 705, "end": 720, "colId": "c2", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1, "zIndex": 0 },
+      { "id": "azdhespq5", "title": "受 付", "start": 750, "end": 780, "startColIdx": 3, "colSpan": 2, "bgColor": "#EBF4FF", "borderColor": "#60A5FA", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "zm1nj8s30", "title": "全体説明", "start": 780, "end": 810, "startColIdx": 3, "colSpan": 2, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "7s8kl00i0", "title": "創造工学科\nイベント", "start": 810, "end": 890, "colId": "c3", "colSpan": 1, "bgColor": "#F0FDF4", "borderColor": "#4ADE80", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "r0oet8bah", "title": "情報工学科\nイベント", "start": 810, "end": 890, "colId": "c4", "colSpan": 1, "bgColor": "#FFF7ED", "borderColor": "#FB923C", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "oro4nqzsz", "title": "学寮見学", "start": 900, "end": 930, "colId": "c3", "colSpan": 1, "bgColor": "#FEF2F2", "borderColor": "#F87171", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "lg6anuh3a", "title": "学校→寮", "start": 890, "end": 900, "colId": "c3", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "9thfq3buu", "title": "寮→学校", "start": 930, "end": 940, "colId": "c3", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "7xcgshkyh", "title": "寮→学校", "start": 960, "end": 970, "colId": "c4", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "qkbn3hys8", "title": "学校→寮", "start": 920, "end": 930, "colId": "c4", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1 },
+      { "id": "fp72vi8kk", "title": "学寮見学", "start": 930, "end": 960, "colId": "c4", "colSpan": 1, "bgColor": "#FEF2F2", "borderColor": "#F87171", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm" },
+      { "id": "mrt8ju1jj", "title": "進路相談", "start": 890, "end": 920, "colSpan": 1, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "c4" },
+      { "id": "085w41uct", "title": "進路相談", "start": 940, "end": 990, "colSpan": 1, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "c3" },
+      { "id": "mp1mceuy0", "title": "進路相談", "start": 970, "end": 990, "colSpan": 1, "bgColor": "#FEFCE8", "borderColor": "#FACC15", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "c4" },
+      { "id": "ss70fom6q", "title": "午前・午後両方参加の方\nお昼休み", "start": 750, "end": 810, "colSpan": 2, "bgColor": "#F3F4F6", "borderColor": "#9CA3AF", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "startColIdx": 0 },
+      { "id": "ur24yvnpa", "title": "学校→寮", "start": 890, "end": 900, "colId": "5z3pxg0xk", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm" },
+      { "id": "lhvja7n1e", "title": "寮→学校（回送）", "start": 900, "end": 915, "colId": "c3", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1, "zIndex": 0 },
+      { "id": "sn0904lvk", "title": "学校→寮（回送）", "start": 945, "end": 960, "colId": "c4", "colSpan": 1, "bgColor": "#FFFFFF", "borderColor": "#D1D5DB", "borderStyle": "solid", "showTime": false, "titleFontSize": "text-xs", "timeFontSize": "text-sm", "isBus": true, "busType": 1, "zIndex": 0 },
+      { "id": "69yg83mbh", "title": "女子生徒向け 座談会", "start": 650, "end": 710, "colSpan": 1, "bgColor": "#EBF4FF", "borderColor": "#60A5FA", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "ubt26xnu1", "zIndex": 20 },
+      { "id": "2evbee5g2", "title": "女子生徒向け 座談会", "start": 890, "end": 950, "colSpan": 1, "bgColor": "#EBF4FF", "borderColor": "#60A5FA", "borderStyle": "solid", "showTime": true, "titleFontSize": "text-sm", "timeFontSize": "text-sm", "colId": "ubt26xnu1", "zIndex": 20 }
     ];
 
     // --- ユーティリティ ---
@@ -117,14 +195,14 @@
     function App() {
       const [initialData] = useState(() => loadSavedData());
 
-      const [startMin, setStartMin] = useState(initialData?.startMin !== undefined ? initialData.startMin : 8 * 60);
-      const [endMin, setEndMin] = useState(initialData?.endMin !== undefined ? initialData.endMin : 16 * 60 + 30); 
+      const [startMin, setStartMin] = useState(initialData?.startMin !== undefined ? initialData.startMin : 475);
+      const [endMin, setEndMin] = useState(initialData?.endMin !== undefined ? initialData.endMin : 995); 
       const rows = (endMin - startMin) / STEP_MIN;
 
       const [columns, setColumns] = useState(initialData?.columns || INITIAL_COLUMNS);
       const [events, setEvents] = useState(initialData?.events || INITIAL_EVENTS);
-      const [titleConfig, setTitleConfig] = useState(initialData?.titleConfig || { text: '7月11日（土）、12日（日）　※商船学科のみ', fontSize: 'text-xl', color: '#1F2937' });
-      const [isZoomed, setIsZoomed] = useState(initialData?.isZoomed || false);
+      const [titleConfig, setTitleConfig] = useState(initialData?.titleConfig || { text: '7月18日（土）、19日（日）　創造工学科・情報工学科', fontSize: 'text-xl', color: '#1F2937' });
+      const [isZoomed, setIsZoomed] = useState(initialData?.isZoomed !== undefined ? initialData.isZoomed : false);
       const [showBlockCapacity, setShowBlockCapacity] = useState(initialData?.showBlockCapacity !== undefined ? initialData.showBlockCapacity : true);
       const [selectedEventIds, setSelectedEventIds] = useState([]);
       const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -133,6 +211,8 @@
       const [editingEvent, setEditingEvent] = useState(null);
       const [editingColumn, setEditingColumn] = useState(null);
       const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
+      const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
+      const [isTimeSettingsOpen, setIsTimeSettingsOpen] = useState(false);
       const [resizing, setResizing] = useState(null);
       const [dragging, setDragging] = useState(null); 
       const [draggedColId, setDraggedColId] = useState(null); 
@@ -226,10 +306,50 @@
 
       const visibleColumns = useMemo(() => columns.filter(col => col.isVisible !== false), [columns]);
 
+      // サブタイトルが設定されている列が一つでもあるか判定
+      const hasSubtitle = visibleColumns.some(col => col.subtitle && col.subtitle.trim() !== '');
+      // サブタイトルがある場合はヘッダーを広くする
+      const headerHeight = hasSubtitle ? '64px' : '44px';
+
       const getEventStartIndex = useCallback((ev) => {
         if (ev.startColIdx !== undefined) return ev.startColIdx;
         return visibleColumns.findIndex(c => c.id === ev.colId);
       }, [visibleColumns]);
+
+      // --- バスの自動複製ブロックを生成 ---
+      const renderEvents = useMemo(() => {
+        const result = [];
+        events.forEach(ev => {
+          // オリジナルの実体を追加
+          result.push({ ...ev, isClone: false, originalId: ev.id });
+
+          // バスブロックの場合、対応するバス列を探してクローンを生成
+          if (ev.isBus && ev.busType) {
+            const currentStartIdx = getEventStartIndex(ev);
+            if (currentStartIdx === -1) return;
+            const originalEndIdx = currentStartIdx + (ev.colSpan || 1) - 1;
+
+            visibleColumns.forEach((col, colIdx) => {
+              // オリジナルが占有している列の範囲内なら複製しない
+              if (colIdx >= currentStartIdx && colIdx <= originalEndIdx) return;
+
+              // バスの種類が一致する列にクローンを追加
+              if (col.isBus && col.busType === ev.busType) {
+                result.push({
+                  ...ev,
+                  id: ev.id + '_clone_' + col.id, // クローン用の一意なID
+                  colId: col.id,
+                  startColIdx: colIdx,
+                  colSpan: 1, // クローンは対象の1列のみに表示
+                  isClone: true,
+                  originalId: ev.id
+                });
+              }
+            });
+          }
+        });
+        return result;
+      }, [events, visibleColumns, getEventStartIndex]);
 
       const calculateEventCapacity = useCallback((evt) => {
         const startIndex = getEventStartIndex(evt);
@@ -385,8 +505,13 @@
         const handleMouseUp = () => {
           if (dragInfo.current.hasMoved) {
             justResized.current = true;
-            setTimeout(() => { justResized.current = false; }, 100);
+            setTimeout(() => { 
+              justResized.current = false; 
+              dragInfo.current.hasMoved = false;
+            }, 100);
             saveHistory(); // ドラッグ確定時に履歴保存
+          } else {
+            dragInfo.current.hasMoved = false;
           }
           setDragging(null);
         };
@@ -556,8 +681,13 @@
         const handleMouseUp = () => {
           if (dragInfo.current.hasMoved) {
             justResized.current = true;
-            setTimeout(() => { justResized.current = false; }, 100);
+            setTimeout(() => { 
+              justResized.current = false; 
+              dragInfo.current.hasMoved = false;
+            }, 100);
             saveHistory(); // リサイズ確定時に履歴保存
+          } else {
+            dragInfo.current.hasMoved = false;
           }
           setResizing(null);
         };
@@ -578,12 +708,14 @@
           end: startMin + 60,
           colId: visibleColumns[0]?.id || columns[0]?.id,
           colSpan: 1,
-          bgColor: PALETTE[6].bg,
-          borderColor: PALETTE[6].border,
+          bgColor: '#FFFFFF',
+          borderColor: '#9CA3AF',
           borderStyle: 'solid',
           showTime: true,
           titleFontSize: 'text-sm',
           timeFontSize: 'text-sm',
+          isBus: false,
+          busType: 1,
         };
         const newEvents = [...events, newEvent];
         setEvents(newEvents);
@@ -629,11 +761,16 @@
         const newCol = {
           id: generateId(),
           name: '新規列',
+          subtitle: '',
+          subtitleFontSize: 'text-xs',
           bgColor: '#6B7280',
           textColor: '#FFFFFF',
           width: 1, 
           isVisible: true,
           capacity: '',
+          isBus: false,
+          busType: 1,
+          fontSize: 'text-sm',
         };
         const resetColumns = columns.map(c => ({ ...c, width: 1 }));
         const newColumns = [...resetColumns, newCol];
@@ -718,6 +855,52 @@
 
       const handlePrint = () => {
         window.print();
+      };
+
+      const handleImageExport = () => {
+        setIsSaveMenuOpen(false);
+        setTimeout(async () => {
+          try {
+            const mainEl = mainRef.current;
+            const targetElement = mainEl.querySelector('.inline-block');
+            if (!targetElement) return;
+
+            const originalScrollTop = mainEl.scrollTop;
+            const originalScrollLeft = mainEl.scrollLeft;
+            const originalWindowScrollX = window.scrollX;
+            const originalWindowScrollY = window.scrollY;
+            
+            mainEl.scrollTop = 0;
+            mainEl.scrollLeft = 0;
+            window.scrollTo(0, 0);
+
+            // html-to-image ライブラリを使用して画像を生成
+            // SVGの仕組みを利用してDOMを描画するため、文字のベースラインのズレや見切れが起きにくい
+            const dataUrl = await window.htmlToImage.toPng(targetElement, {
+              pixelRatio: 3, // 高精細化（3倍）
+              backgroundColor: '#ffffff',
+              style: {
+                transform: 'scale(1)',
+                transformOrigin: 'top left'
+              }
+            });
+            
+            // スクロール位置を復元
+            mainEl.scrollTop = originalScrollTop;
+            mainEl.scrollLeft = originalScrollLeft;
+            window.scrollTo(originalWindowScrollX, originalWindowScrollY);
+
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'タイムテーブル.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          } catch (err) {
+            console.error('画像出力エラー:', err);
+            alert('画像出力に失敗しました。');
+          }
+        }, 300);
       };
 
       const latestTargetEvent = useRef(null);
@@ -812,7 +995,7 @@
           a.click();
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
-          setIsSettingsOpen(false);
+          setIsSaveMenuOpen(false);
         } catch (err) {
           console.error('保存エラー:', err);
           alert('保存に失敗しました。');
@@ -891,7 +1074,7 @@
             setHistoryIndex(0);
 
             alert('データを読み込みました。');
-            setIsSettingsOpen(false);
+            setIsSaveMenuOpen(false);
           } catch (error) {
             alert('ファイルの読み込みに失敗しました。');
           }
@@ -999,12 +1182,23 @@
               タイムテーブルメーカー
             </h1>
             <div className="flex gap-3 items-center">
+              <button onClick={addEvent} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors shadow-sm font-medium text-sm" title="ブロックを追加">
+                <Plus className="w-4 h-4" /> Block
+              </button>
+              <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors shadow-sm font-medium text-sm" title="列の設定">
+                <Settings className="w-4 h-4" /> Column
+              </button>
+              <div className="w-px h-6 bg-gray-300 mx-1"></div>
               <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 transition-colors select-none" title="ブロック内の人数表示を切り替え">
                 <Users className="w-4 h-4" />
                 <input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" checked={showBlockCapacity} onChange={(e) => setShowBlockCapacity(e.target.checked)} />
               </label>
-              <button onClick={() => setIsSettingsOpen(true)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors" title="設定メニュー">
-                <Settings className="w-5 h-5" />
+              <button onClick={() => setIsTimeSettingsOpen(true)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors" title="表示時間の設定">
+                <Clock className="w-5 h-5" />
+              </button>
+              <div className="w-px h-6 bg-gray-300 mx-1"></div>
+              <button onClick={() => setIsSaveMenuOpen(true)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors" title="保存・出力・読込">
+                <Save className="w-5 h-5" />
               </button>
             </div>
           </header>
@@ -1017,8 +1211,8 @@
                 style={{
                   display: 'grid',
                   gridTemplateColumns: `60px ${visibleColumns.length > 0 ? visibleColumns.map(c => `minmax(calc(160px * ${c.width || 1}), ${c.width || 1}fr)`).join(' ') : '1fr'} 60px`,
-                  // こちらも設定を合わせる
-                  gridTemplateRows: `60px 44px repeat(${rows}, minmax(${isZoomed ? '40px' : '16px'}, 1fr))` 
+                  // サブタイトルの有無でヘッダーの高さを自動調整
+                  gridTemplateRows: `60px ${headerHeight} repeat(${rows}, minmax(${isZoomed ? '40px' : '16px'}, 1fr))` 
                 }}
               >
                 <div 
@@ -1050,7 +1244,7 @@
                       onDragStart={(e) => handleHeaderDragStart(e, col.id)}
                       onDragOver={(e) => handleHeaderDragOver(e, col.id)}
                       onDragEnd={handleHeaderDragEnd}
-                      className={`w-full h-full rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:shadow-md transition-all relative text-sm font-bold ${draggedColId === col.id ? 'opacity-40 scale-95 ring-2 ring-blue-500 ring-offset-1' : ''}`}
+                      className={`w-full h-full rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:shadow-md transition-all relative ${col.fontSize || 'text-sm'} font-bold ${draggedColId === col.id ? 'opacity-40 scale-95 ring-2 ring-blue-500 ring-offset-1' : ''}`}
                       style={{ 
                         backgroundColor: col.bgColor === 'transparent' ? 'transparent' : (col.bgColor || '#6B7280'), 
                         color: col.textColor || '#FFFFFF',
@@ -1059,16 +1253,30 @@
                       onClick={() => setEditingColumn(col)}
                       title="ドラッグで移動 / クリックで編集"
                     >
-                      <span className="leading-tight text-center truncate px-1">
-                        {col.name}{col.capacity && <span className="font-normal text-xs ml-0.5">（{col.capacity}）</span>}
-                      </span>
+                      {/* 行間を leading-tight から leading-snug に変更し、見切れを防ぐ */}
+                      <div className="leading-snug text-center px-1 py-0.5 overflow-hidden w-full h-full flex flex-col items-center justify-center">
+                        <div className="whitespace-pre-wrap">
+                          {col.isBus && (
+                            <span className="inline-flex items-center align-text-bottom mr-1 bg-black/10 rounded-sm px-0.5">
+                              <BusFront className="w-[1.2em] h-[1.2em]" />
+                              {col.busType && <span className="text-[0.8em] font-black ml-0.5 mr-0.5 leading-none">{col.busType}</span>}
+                            </span>
+                          )}
+                          {col.name}{!col.subtitle && col.capacity && <span className="font-normal text-xs ml-0.5">（{String(col.capacity).trim().match(/[名人]$/) ? col.capacity : `${col.capacity}名`}）</span>}
+                        </div>
+                        {col.subtitle && (
+                          <div className={`whitespace-pre-wrap mt-0.5 font-normal opacity-90 ${col.subtitleFontSize || 'text-xs'}`}>
+                            {col.subtitle}{col.capacity && <span className="font-normal text-xs ml-0.5">（{String(col.capacity).trim().match(/[名人]$/) ? col.capacity : `${col.capacity}名`}）</span>}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
 
                 {gridBackgroundCells}
 
-                {events.map((evt, evtIndex) => {
+                {renderEvents.map((evt, evtIndex) => {
                   let startRow = (evt.start - startMin) / STEP_MIN + 3; 
                   let endRow = (evt.end - startMin) / STEP_MIN + 3; 
 
@@ -1088,7 +1296,7 @@
                   // ------------------------------
                   // 重なり判定 (自分が上になっているか)
                   // ------------------------------
-                  const isTopOverlapping = events.some((otherEvt, otherIdx) => {
+                  const isTopOverlapping = renderEvents.some((otherEvt, otherIdx) => {
                     if (evt.id === otherEvt.id) return false;
                     
                     if (evt.end <= otherEvt.start || evt.start >= otherEvt.end) return false;
@@ -1107,12 +1315,15 @@
                     return false;
                   });
 
-                  const isResizingThis = resizing?.id === evt.id;
-                  const isDraggingThis = dragging?.ids?.includes(evt.id);
-                  const isSelected = selectedEventIds.includes(evt.id);
+                  const isResizingThis = resizing?.id === evt.originalId;
+                  const isDraggingThis = dragging?.ids?.includes(evt.originalId);
+                  const isSelected = selectedEventIds.includes(evt.originalId);
                   const isInteracting = isResizingThis || isDraggingThis;
                   const baseZIndex = evt.zIndex !== undefined ? evt.zIndex : 10;
-                  const capacityText = calculateEventCapacity(evt);
+                  
+                  // クローンの場合はオリジナルのブロックを基準に人数を計算し、同じ数を表示する
+                  const originalEvt = evt.isClone ? events.find(e => e.id === evt.originalId) : evt;
+                  const capacityText = calculateEventCapacity(originalEvt || evt);
 
                   return (
                     <div
@@ -1124,12 +1335,13 @@
                           e.stopPropagation();
                           e.preventDefault();
                           setSelectedEventIds(prev => 
-                            prev.includes(evt.id) ? prev.filter(id => id !== evt.id) : [...prev, evt.id]
+                            prev.includes(evt.originalId) ? prev.filter(id => id !== evt.originalId) : [...prev, evt.originalId]
                           );
                           return;
                         }
                         
-                        handleDragStart(e, evt.id);
+                        if (evt.isClone) return; // クローンはドラッグ無効
+                        handleDragStart(e, evt.originalId);
                       }}
                       onClick={(e) => {
                         if (e.target.classList.contains('resize-handle')) return;
@@ -1137,16 +1349,24 @@
                         if (dragInfo.current.hasMoved) return; 
                         
                         if (!e.shiftKey) {
-                          setSelectedEventIds([evt.id]); 
+                          setSelectedEventIds([evt.originalId]); 
                           
-                          if (e.target.closest('.text-content')) {
-                            setEditingEvent(evt);
+                          // クローンの場合は編集画面を開かない
+                          if (!evt.isClone && e.target.closest('.text-content')) {
+                            const originalEvt = events.find(e => e.id === evt.originalId);
+                            setEditingEvent(originalEvt || evt);
                             setHoveredEvent(null);
                           }
                         }
                       }}
-                      onMouseEnter={() => setHoveredEvent(evt)}
-                      onMouseLeave={() => setHoveredEvent(null)}
+                      onMouseEnter={() => {
+                        if (evt.isClone) return;
+                        setHoveredEvent(evt);
+                      }}
+                      onMouseLeave={() => {
+                        if (evt.isClone) return;
+                        setHoveredEvent(null);
+                      }}
                       style={{
                         gridRowStart: startRow,
                         gridRowEnd: endRow,
@@ -1162,39 +1382,48 @@
                       className={`
                         ${isTopOverlapping ? 'm-[3px]' : 'm-[2px]'} rounded-md overflow-hidden
                         transition-all duration-75 group relative select-none
-                        ${isShiftPressed ? 'cursor-pointer' : 'cursor-move'}
-                        ${isDraggingThis ? 'opacity-90 shadow-xl scale-[1.02] ring-2 ring-blue-400 ring-offset-1' : (evt.bgColor === 'transparent' ? 'hover:-translate-y-[1px] opacity-100 hover:bg-black/5' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md hover:-translate-y-[1px] opacity-100')}
+                        ${isShiftPressed ? 'cursor-pointer' : (evt.isClone ? 'cursor-pointer' : 'cursor-move')}
+                        ${isDraggingThis ? 'opacity-90 shadow-xl scale-[1.02] ring-2 ring-blue-400 ring-offset-1' : 'shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:shadow-md hover:-translate-y-[1px] opacity-100'}
                         ${isSelected && !isDraggingThis ? 'ring-[3px] ring-blue-600 ring-offset-2 shadow-md brightness-95' : ''}
                       `}
                     >
                       <div className="absolute inset-0 p-1 flex flex-col items-center justify-center overflow-hidden">
+                        {/* 常に文字が見切れないように leading-snug (行間1.375) を適用 */}
                         {evt.showTime !== false && (
-                          <div className={`text-content cursor-pointer hover:opacity-60 transition-opacity font-semibold ${evt.timeFontSize || 'text-sm'} tracking-wider opacity-90 whitespace-nowrap mb-0.5 truncate max-w-full text-center px-1`} title="クリックして編集">
+                          <div className={`text-content w-full ${evt.isClone ? '' : 'cursor-pointer hover:opacity-60 transition-opacity'} font-semibold ${evt.timeFontSize || 'text-sm'} tracking-wider whitespace-nowrap mb-0.5 truncate text-center px-1`} title={evt.isClone ? '' : 'クリックして編集'}>
                             {formatTime(evt.start)} <span className="text-[0.75em] mx-0.5 pointer-events-none">▶</span> {formatTime(evt.end)}
                           </div>
                         )}
-                        <div className={`text-content cursor-pointer hover:opacity-60 transition-opacity font-bold whitespace-pre-wrap leading-tight drop-shadow-sm ${evt.titleFontSize || 'text-sm'} text-center overflow-hidden max-w-full text-ellipsis px-1`} title="クリックして編集">
+                        {/* leading-tight を leading-snug に変更 */}
+                        <div className={`text-content w-full ${evt.isClone ? '' : 'cursor-pointer hover:opacity-60 transition-opacity'} font-bold whitespace-pre-wrap leading-snug drop-shadow-sm ${evt.titleFontSize || 'text-sm'} text-center overflow-hidden max-w-full text-ellipsis px-1`} title={evt.isClone ? '' : 'クリックして編集'}>
+                          {evt.isBus && (
+                            <span className="inline-flex items-center align-text-bottom mr-1 bg-black/5 rounded-sm px-0.5">
+                              <BusFront className="w-[1.2em] h-[1.2em]" />
+                              {evt.busType && <span className="text-[0.8em] font-black ml-0.5 mr-0.5 leading-none">{evt.busType}</span>}
+                            </span>
+                          )}
                           {evt.title}{showBlockCapacity && capacityText && <span className="font-normal text-[0.85em] ml-0.5 whitespace-nowrap">{capacityText}</span>}
                         </div>
                       </div>
 
-                      {!isShiftPressed && (
+                      {/* クローンにはリサイズハンドルを一切表示しない */}
+                      {!isShiftPressed && !evt.isClone && (
                         <>
                           <div 
                             className="resize-handle absolute top-0 left-4 right-4 h-3 cursor-ns-resize z-20"
-                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'top')}
+                            onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'top')}
                           />
                           <div 
                             className="resize-handle absolute bottom-0 left-4 right-4 h-3 cursor-ns-resize z-20"
-                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'bottom')}
+                            onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'bottom')}
                           />
                           <div 
                             className="resize-handle absolute top-3 bottom-3 left-0 w-3 cursor-ew-resize z-20"
-                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'left')}
+                            onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'left')}
                           />
                           <div 
                             className="resize-handle absolute top-3 bottom-3 right-0 w-3 cursor-ew-resize z-20"
-                            onMouseDown={(e) => handleResizeStart(e, evt.id, 'right')}
+                            onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'right')}
                           />
                         </>
                       )}
@@ -1207,7 +1436,7 @@
 
           {/* --- 各種モーダル --- */}
           {editingTitle && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
               <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
                  <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
                   <h2 className="text-lg font-bold text-gray-800">タイトル設定</h2>
@@ -1262,7 +1491,7 @@
           )}
 
           {editingEvent && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
               <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col">
                 <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
                   <h2 className="text-lg font-bold text-gray-800">ブロックの編集</h2>
@@ -1270,7 +1499,35 @@
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="p-4 flex flex-col gap-5">
+                <div className="p-4 flex flex-col gap-4">
+                  
+                  {/* ブロックの種類の選択 */}
+                  <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">ブロックの種類</label>
+                    <div className="flex gap-6 items-center">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" checked={!editingEvent.isBus} onChange={() => setEditingEvent({...editingEvent, isBus: false})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                        <span className="text-sm font-medium text-gray-700">標準</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" checked={editingEvent.isBus} onChange={() => setEditingEvent({...editingEvent, isBus: true, busType: editingEvent.busType || 1})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-1"><BusFront className="w-4 h-4 text-gray-600" /> バス</span>
+                        </label>
+                        {editingEvent.isBus && (
+                          <div className="flex items-center gap-2 ml-2 bg-white px-2 py-1 rounded border border-gray-200">
+                            {[1, 2, 3, 4, 5, 6].map(num => (
+                              <label key={num} className="flex items-center gap-1 cursor-pointer">
+                                <input type="radio" checked={editingEvent.busType === num} onChange={() => setEditingEvent({...editingEvent, busType: num})} className="text-blue-600 focus:ring-blue-500" />
+                                <span className="text-xs font-bold text-gray-700">{num}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
                     <label className="block text-sm font-bold text-gray-700 mb-2">タイトル / 内容</label>
                     <textarea
@@ -1393,22 +1650,19 @@
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">ブロックのカラー</label>
                     <div className="flex flex-wrap gap-2">
-                      {PALETTE.map((color, idx) => {
-                        const isTransparent = color.bg === 'transparent';
-                        return (
-                          <button 
-                            key={idx} 
-                            onClick={() => setEditingEvent({...editingEvent, bgColor: color.bg, borderColor: color.border})} 
-                            className={`w-8 h-8 rounded-full border-2 ${editingEvent.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} 
-                            style={{ 
-                              backgroundColor: isTransparent ? '#F3F4F6' : color.bg, 
-                              borderColor: isTransparent ? '#9CA3AF' : color.border,
-                              borderStyle: 'solid'
-                            }} 
-                            title={color.name} 
-                          />
-                        );
-                      })}
+                      {PALETTE.map((color, idx) => (
+                        <button 
+                          key={idx} 
+                          onClick={() => setEditingEvent({...editingEvent, bgColor: color.bg, borderColor: color.border})} 
+                          className={`w-8 h-8 rounded-full border-2 ${editingEvent.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} 
+                          style={{ 
+                            backgroundColor: color.bg, 
+                            borderColor: color.border,
+                            borderStyle: 'solid'
+                          }} 
+                          title={color.name} 
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -1427,16 +1681,74 @@
           )}
 
           {editingColumn && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
               <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
                  <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
                   <h2 className="text-lg font-bold text-gray-800">列の編集</h2>
                   <button onClick={() => setEditingColumn(null)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
                 </div>
                 <div className="p-4 flex flex-col gap-4">
+                  <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">列の種類</label>
+                    <div className="flex gap-6 items-center">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" checked={!editingColumn.isBus} onChange={() => setEditingColumn({...editingColumn, isBus: false})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                        <span className="text-sm font-medium text-gray-700">標準</span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="radio" checked={editingColumn.isBus} onChange={() => setEditingColumn({...editingColumn, isBus: true, busType: editingColumn.busType || 1})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                          <span className="text-sm font-medium text-gray-700 flex items-center gap-1"><BusFront className="w-4 h-4 text-gray-600" /> バス</span>
+                        </label>
+                        {editingColumn.isBus && (
+                          <div className="flex items-center gap-2 ml-2 bg-white px-2 py-1 rounded border border-gray-200">
+                            {[1, 2, 3, 4, 5, 6].map(num => (
+                              <label key={num} className="flex items-center gap-1 cursor-pointer">
+                                <input type="radio" checked={editingColumn.busType === num} onChange={() => setEditingColumn({...editingColumn, busType: num})} className="text-blue-600 focus:ring-blue-500" />
+                                <span className="text-xs font-bold text-gray-700">{num}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">列の名前</label>
-                    <input type="text" value={editingColumn.name} onChange={e => setEditingColumn({...editingColumn, name: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                    <textarea value={editingColumn.name} onChange={e => setEditingColumn({...editingColumn, name: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none h-16" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">文字サイズ (名前)</label>
+                    <select 
+                      value={editingColumn.fontSize || 'text-sm'} 
+                      onChange={e => setEditingColumn({...editingColumn, fontSize: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
+                    >
+                      <option value="text-[10px]">極小</option>
+                      <option value="text-xs">小</option>
+                      <option value="text-sm">中 (標準)</option>
+                      <option value="text-base">大</option>
+                      <option value="text-lg">特大</option>
+                      <option value="text-xl">超特大</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">サブタイトル (任意)</label>
+                    <textarea value={editingColumn.subtitle || ''} onChange={e => setEditingColumn({...editingColumn, subtitle: e.target.value})} className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none h-12" placeholder="サブタイトルを入力" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">文字サイズ (サブタイトル)</label>
+                    <select 
+                      value={editingColumn.subtitleFontSize || 'text-xs'} 
+                      onChange={e => setEditingColumn({...editingColumn, subtitleFontSize: e.target.value})} 
+                      className="w-full border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
+                    >
+                      <option value="text-[10px]">極小</option>
+                      <option value="text-xs">小</option>
+                      <option value="text-sm">中 (標準)</option>
+                      <option value="text-base">大</option>
+                      <option value="text-lg">特大</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">人数（任意）</label>
@@ -1494,70 +1806,50 @@
             </div>
           )}
 
-          {isSettingsOpen && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 print:hidden">
+          {isSaveMenuOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
               <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
                 <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Settings className="w-5 h-5" /> 設定メニュー</h2>
-                  <button onClick={() => setIsSettingsOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Save className="w-5 h-5" /> 保存・出力・読込</h2>
+                  <button onClick={() => setIsSaveMenuOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
                 </div>
 
                 <div className="p-4 border-b border-gray-200 bg-white flex flex-col gap-2">
                   <div className="flex gap-2">
-                    <button onClick={() => { addEvent(); setIsSettingsOpen(false); }} className="flex-1 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <Plus className="w-4 h-4" /> ブロック追加
+                    <button onClick={() => fileInputRef.current.click()} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
+                      <Upload className="w-4 h-4" /> データ読込
                     </button>
-                    <button onClick={() => { setIsSettingsOpen(false); setTimeout(handlePrint, 300); }} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
+                    <button onClick={() => { setIsSaveMenuOpen(false); setTimeout(handlePrint, 300); }} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
                       <Download className="w-4 h-4" /> PDF出力
                     </button>
                   </div>
                   <div className="flex gap-2 mt-1">
+                    <button onClick={handleImageExport} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
+                      <ImageIcon className="w-4 h-4" /> 画像出力
+                    </button>
                     <button onClick={handleExport} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
                       <Save className="w-4 h-4" /> データ保存
-                    </button>
-                    <button onClick={() => fileInputRef.current.click()} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <Upload className="w-4 h-4" /> データ読込
                     </button>
                     <input type="file" ref={fileInputRef} onChange={handleImport} accept=".txt" className="hidden" />
                   </div>
                 </div>
                 
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-sm font-bold text-gray-700 mb-2">タイムテーブルの表示時間</h3>
-                  <div className="flex gap-2 items-center">
-                    <select 
-                      value={startMin} 
-                      onChange={e => {
-                        const val = Number(e.target.value);
-                        if (val >= endMin) {
-                          alert("開始時間は終了時間より前に設定してください。");
-                          return;
-                        }
-                        setStartMin(val);
-                      }}
-                      className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
-                    >
-                      {globalTimeOptions.slice(0, -1).map(opt => <option key={`s-${opt.value}`} value={opt.value}>{opt.label}</option>)}
-                    </select>
-                    <span className="text-gray-400">〜</span>
-                    <select 
-                      value={endMin} 
-                      onChange={e => {
-                        const val = Number(e.target.value);
-                        if (val <= startMin) {
-                          alert("終了時間は開始時間より後に設定してください。");
-                          return;
-                        }
-                        setEndMin(val);
-                      }}
-                      className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white"
-                    >
-                      {globalTimeOptions.slice(1).map(opt => <option key={`e-${opt.value}`} value={opt.value}>{opt.label}</option>)}
-                    </select>
-                  </div>
+                <div className="bg-gray-50 px-4 py-3 border-t flex justify-end items-center">
+                  <button onClick={() => setIsSaveMenuOpen(false)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium">閉じる</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSettingsOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+                <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Settings className="w-5 h-5" /> 列の設定メニュー</h2>
+                  <button onClick={() => setIsSettingsOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
                 </div>
 
-                <div className="p-4 flex flex-col gap-2 max-h-[35vh] overflow-y-auto">
+                <div className="p-4 flex flex-col gap-2 max-h-[45vh] overflow-y-auto bg-white">
                   <h3 className="text-sm font-bold text-gray-700 mb-1">列の表示・追加</h3>
                   {columns.map((col, idx) => (
                     <div 
@@ -1587,6 +1879,56 @@
                 </div>
                 <div className="bg-gray-50 px-4 py-3 border-t flex justify-end items-center">
                   <button onClick={() => setIsSettingsOpen(false)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium">閉じる</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isTimeSettingsOpen && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
+              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+                <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Clock className="w-5 h-5" /> 表示時間の設定</h2>
+                  <button onClick={() => setIsTimeSettingsOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+                </div>
+                
+                <div className="p-4 border-b border-gray-200 bg-white">
+                  <h3 className="text-sm font-bold text-gray-700 mb-2">タイムテーブルの表示時間</h3>
+                  <div className="flex gap-2 items-center">
+                    <select 
+                      value={startMin} 
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        if (val >= endMin) {
+                          alert("開始時間は終了時間より前に設定してください。");
+                          return;
+                        }
+                        setStartMin(val);
+                      }}
+                      className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      {globalTimeOptions.slice(0, -1).map(opt => <option key={`s-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                    <span className="text-gray-400">〜</span>
+                    <select 
+                      value={endMin} 
+                      onChange={e => {
+                        const val = Number(e.target.value);
+                        if (val <= startMin) {
+                          alert("終了時間は開始時間より後に設定してください。");
+                          return;
+                        }
+                        setEndMin(val);
+                      }}
+                      className="flex-1 border border-gray-300 rounded-md p-2 text-sm outline-none bg-white focus:ring-2 focus:ring-blue-500"
+                    >
+                      {globalTimeOptions.slice(1).map(opt => <option key={`e-${opt.value}`} value={opt.value}>{opt.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 px-4 py-3 border-t flex justify-end items-center">
+                  <button onClick={() => setIsTimeSettingsOpen(false)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium">閉じる</button>
                 </div>
               </div>
             </div>
