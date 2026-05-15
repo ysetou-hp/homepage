@@ -155,6 +155,416 @@
             to { opacity: 1; transform: translateX(0); }
         }
     </style>
+
+    <!-- ★ 人が編集しやすいようにスクリプトと設定を上部に移動しました -->
+    <script>
+        // ==========================================
+        // ★ システム設定（編集エリア）
+        // ==========================================
+        // ここにある数値を変更するだけで、システムの初期設定を変えられます
+        const SETTINGS = {
+            // [モデル設定]
+            MODEL_OFFSET_Y: 1.2,          // モデルのY軸初期オフセット(高さの調整)
+            MODEL_OFFSET_Z: 0.2,          // モデルのZ軸初期オフセット(前後の調整)
+            DEFAULT_MODEL_URL: 'yuge_shousen_v10.glb',        // 起動時に自動で読み込むGLBファイル (例: 'yugemaru.glb')
+            
+            // [カメラ初期設定]
+            CAMERA_INIT_POS: { x: -4, y: 3.5, z: -11 }, // カメラの初期方向
+            CAMERA_INIT_ZOOM: 12.5,       // カメラの初期距離 (ZOOM)
+            
+            // [UI・システム設定]
+            MAX_LOGS: 25,                 // ログの最大表示行数
+            GRAPH_UPDATE_MS: 100          // リアルタイムグラフ・ログの更新間隔(ミリ秒)
+        };
+
+        // ==========================================
+        // ★ メインシステムロジック
+        // ==========================================
+        // HTML要素(DOM)の読み込みが完了してから実行されます
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- Three.js の基本セットアップ ---
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            // 背面のDOM要素（HUDやログ）を透かして見せるため、sceneの背景色塗りつぶしを削除(null)
+            scene.background = null; 
+            scene.fog = new THREE.Fog(0x050811, 20, 150);
+
+            // 宇宙/サイバー空間の底面に薄いシアンのグリッドを敷く
+            const bgGrid = new THREE.GridHelper(200, 100, 0x00ffff, 0x00ffff);
+            bgGrid.position.y = 0; // XZ平面に一致させる
+            bgGrid.material.opacity = 0.2; // 濃くする
+            bgGrid.material.transparent = true;
+            scene.add(bgGrid);
+
+            // カメラ設定 (SETTINGSの値を適用)
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(SETTINGS.CAMERA_INIT_POS.x, SETTINGS.CAMERA_INIT_POS.y, SETTINGS.CAMERA_INIT_POS.z).setLength(SETTINGS.CAMERA_INIT_ZOOM);
+
+            // レンダラー設定
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setClearColor(0x000000, 0); // 透過色設定
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 0.7;
+            container.appendChild(renderer.domElement);
+
+            // カメラコントローラー
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = false;
+            controls.autoRotateSpeed = 0.2; 
+            controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN };
+
+            // --- ライティング ---
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+            hemiLight.position.set(0, 20, 0);
+            scene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(20, 30, 10);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            scene.add(dirLight);
+            const bottomLight = new THREE.DirectionalLight(0xffffff, 0.6);
+            bottomLight.position.set(0, -30, 0);
+            scene.add(bottomLight);
+
+            // --- 中心からの垂直線 ---
+            const verticalLineMat = new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 });
+            const verticalLineGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 5.2, 0) 
+            ]);
+            const verticalLine = new THREE.Line(verticalLineGeo, verticalLineMat);
+            scene.add(verticalLine);
+
+            // --- HUD コンパスの描画 ---
+            function initHudCompass() {
+                const bgCanvas = document.getElementById('hud-compass-bg');
+                const bgCtx = bgCanvas.getContext('2d');
+                const w = bgCanvas.width, h = bgCanvas.height;
+                const center = w / 2, radius = 480; 
+
+                bgCtx.clearRect(0, 0, w, h);
+                bgCtx.shadowColor = '#00ffff';
+                bgCtx.shadowBlur = 8;
+
+                bgCtx.beginPath(); bgCtx.arc(center, center, radius + 45, 0, 2 * Math.PI);
+                bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.15)'; bgCtx.stroke();
+
+                bgCtx.beginPath(); bgCtx.arc(center, center, radius, 0, 2 * Math.PI);
+                bgCtx.lineWidth = 2; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)'; bgCtx.stroke();
+
+                bgCtx.setLineDash([3, 8]);
+                bgCtx.beginPath(); bgCtx.arc(center, center, radius - 35, 0, 2 * Math.PI);
+                bgCtx.lineWidth = 6; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; bgCtx.stroke();
+                bgCtx.setLineDash([]); 
+
+                bgCtx.beginPath(); bgCtx.arc(center, center, radius - 55, 0, 2 * Math.PI);
+                bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.25)'; bgCtx.stroke();
+
+                bgCtx.setLineDash([15, 20]);
+                bgCtx.beginPath(); bgCtx.arc(center, center, radius - 70, 0, 2 * Math.PI);
+                bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)'; bgCtx.stroke();
+                bgCtx.setLineDash([]);
+
+                bgCtx.translate(center, center);
+                bgCtx.textAlign = 'center'; bgCtx.textBaseline = 'middle';
+
+                for (let i = 0; i < 360; i += 2.5) { 
+                    bgCtx.save();
+                    bgCtx.rotate((i - 90) * Math.PI / 180);
+                    bgCtx.beginPath();
+                    if (i % 90 === 0) {
+                        bgCtx.moveTo(radius - 5, 0); bgCtx.lineTo(radius + 15, 0);
+                        bgCtx.lineWidth = 3; bgCtx.strokeStyle = '#00ffff'; bgCtx.stroke();
+                        let text = i === 0 ? 'N' : i === 90 ? 'E' : i === 180 ? 'S' : 'W';
+                        bgCtx.translate(radius + 32, 0); bgCtx.rotate(-(i - 90) * Math.PI / 180); 
+                        bgCtx.font = 'bold 20px "Share Tech Mono", monospace';
+                        bgCtx.fillStyle = '#ffffff'; bgCtx.shadowBlur = 10;
+                        bgCtx.fillText(text, 0, 0);
+                    } else if (i % 30 === 0) {
+                        bgCtx.moveTo(radius, 0); bgCtx.lineTo(radius + 10, 0);
+                        bgCtx.lineWidth = 2; bgCtx.strokeStyle = '#00ffff'; bgCtx.stroke();
+                        bgCtx.translate(radius + 24, 0); bgCtx.rotate(-(i - 90) * Math.PI / 180);
+                        bgCtx.font = '10px "Share Tech Mono", monospace';
+                        bgCtx.fillStyle = 'rgba(0, 255, 255, 0.9)'; bgCtx.shadowBlur = 4;
+                        bgCtx.fillText(i.toString().padStart(3, '0'), 0, 0);
+                    } else if (i % 10 === 0) {
+                        bgCtx.moveTo(radius, 0); bgCtx.lineTo(radius + 6, 0);
+                        bgCtx.lineWidth = 1.5; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.6)'; bgCtx.stroke();
+                    } else {
+                        bgCtx.moveTo(radius, 0); bgCtx.lineTo(radius + 3, 0);
+                        bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.25)'; bgCtx.stroke();
+                    }
+                    bgCtx.restore();
+                }
+
+                const indCanvas = document.getElementById('hud-compass-indicator');
+                const indCtx = indCanvas.getContext('2d');
+                indCtx.clearRect(0, 0, w, h);
+                indCtx.translate(center, center);
+                indCtx.shadowColor = 'rgba(255, 165, 0, 0.8)'; 
+                indCtx.shadowBlur = 15; indCtx.fillStyle = 'rgba(255, 165, 0, 0.6)';
+                indCtx.beginPath();
+                indCtx.moveTo(0, -(radius + 10)); 
+                indCtx.lineTo(-15, -(radius + 35)); 
+                indCtx.lineTo(15, -(radius + 35)); 
+                indCtx.closePath(); indCtx.fill();
+            }
+            initHudCompass();
+
+            // --- モデル管理 ---
+            const shipGroup = new THREE.Group(); shipGroup.rotation.order = "YXZ"; scene.add(shipGroup);
+            let currentModel = null;
+            const loader = new THREE.GLTFLoader();
+
+            function createDefaultShip() {
+                const group = new THREE.Group();
+                const hull = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 10), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
+                hull.position.y = 0.75; hull.castShadow = true; group.add(hull);
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 3), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
+                bridge.position.set(0, 2.25, 2); bridge.castShadow = true; group.add(bridge);
+                const bow = new THREE.Mesh(new THREE.BoxGeometry(3.1, 1.6, 0.5), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
+                bow.position.set(0, 0.75, -5.0); group.add(bow);
+                return group;
+            }
+
+            function loadModel(fileUrl, fileName) {
+                loader.load(fileUrl, (gltf) => {
+                    if (currentModel) shipGroup.remove(currentModel);
+                    const loadedScene = gltf.scene;
+                    const box = new THREE.Box3().setFromObject(loadedScene);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const scale = 10 / Math.max(size.x, size.y, size.z);
+                    loadedScene.scale.set(scale, scale, scale);
+                    loadedScene.position.sub(center.multiplyScalar(scale));
+                    
+                    // SETTINGS のオフセット値を適用
+                    loadedScene.position.y += SETTINGS.MODEL_OFFSET_Y;
+                    loadedScene.position.z += SETTINGS.MODEL_OFFSET_Z;
+
+                    const wrapper = new THREE.Group(); wrapper.add(loadedScene);
+                    wrapper.rotation.y = Math.PI;
+                    currentModel = wrapper;
+                    currentModel.traverse(n => { if(n.isMesh) { n.castShadow = n.receiveShadow = true; }});
+                    shipGroup.add(currentModel);
+
+                    if (fileName !== "初期モデル") {
+                        const fileNameElem = document.getElementById('file-name');
+                        fileNameElem.textContent = `読み込み完了: ${fileName}`;
+                        fileNameElem.classList.remove('hidden');
+                        addLog(`MODEL IMPORTED: ${fileName}`, "INFO");
+                    } else {
+                        addLog(`DEFAULT MODEL IMPORTED`, "INFO");
+                    }
+                }, undefined, (e) => {
+                    console.warn(`モデル読み込み失敗 (${fileName}):`, e);
+                    if (fileName !== "初期モデル") {
+                        alert("ファイルの読み込みに失敗しました。CORS設定やファイル形式を確認してください。");
+                        addLog(`IMPORT FAILED: ${fileName}`, "ERR");
+                    } else {
+                        addLog(`DEFAULT MODEL NOT FOUND. FALLBACK TO BASIC.`, "WARN");
+                    }
+                });
+            }
+
+            currentModel = createDefaultShip();
+            shipGroup.add(currentModel);
+
+            // SETTINGS のデフォルトモデルURLを使用
+            if (SETTINGS.DEFAULT_MODEL_URL) {
+                loadModel(SETTINGS.DEFAULT_MODEL_URL, "初期モデル");
+            }
+
+            // --- UIとループ ---
+            const yawSlider = document.getElementById('yaw-slider'), pitchSlider = document.getElementById('pitch-slider'), rollSlider = document.getElementById('roll-slider');
+            const yawVal = document.getElementById('yaw-val'), pitchVal = document.getElementById('pitch-val'), rollVal = document.getElementById('roll-val');
+
+            function updateRotation() {
+                const y = parseFloat(yawSlider.value), p = parseFloat(pitchSlider.value), r = parseFloat(rollSlider.value);
+                yawVal.textContent = `${y.toFixed(1)}°`; pitchVal.textContent = `${p.toFixed(1)}°`; rollVal.textContent = `${r.toFixed(1)}°`;
+                shipGroup.rotation.y = 0; 
+                shipGroup.rotation.x = THREE.MathUtils.degToRad(p);
+                shipGroup.rotation.z = -THREE.MathUtils.degToRad(r);
+                const indicatorContainer = document.getElementById('hud-indicator-container');
+                if (indicatorContainer) indicatorContainer.style.transform = `rotate(${y}deg)`;
+            }
+
+            [yawSlider, pitchSlider, rollSlider].forEach(s => s.addEventListener('input', updateRotation));
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                [yawSlider, pitchSlider, rollSlider].forEach(s => s.value = 0);
+                updateRotation(); 
+                // SETTINGS の初期カメラ値を使用
+                camera.position.set(SETTINGS.CAMERA_INIT_POS.x, SETTINGS.CAMERA_INIT_POS.y, SETTINGS.CAMERA_INIT_POS.z).setLength(SETTINGS.CAMERA_INIT_ZOOM); 
+                controls.target.set(0, 0, 0);
+                addLog("POSTURE & CAMERA RESET", "WARN");
+            });
+
+            document.getElementById('file-upload').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) loadModel(URL.createObjectURL(file), file.name);
+            });
+
+            // --- ログシステム ---
+            const logContent = document.getElementById('log-content');
+
+            function addLog(msg, type = "INFO") {
+                const now = new Date();
+                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
+                                String(now.getMinutes()).padStart(2, '0') + ':' + 
+                                String(now.getSeconds()).padStart(2, '0') + '.' + 
+                                String(now.getMilliseconds()).padStart(3, '0');
+                let color = 'text-cyan-400';
+                if(type === 'WARN') color = 'text-fuchsia-400';
+                else if(type === 'ERR') color = 'text-red-500';
+
+                const p = document.createElement('div');
+                p.className = `log-line ${color}`;
+                p.innerHTML = `<span class="opacity-50">[${timeStr}]</span> <span class="font-bold">${type}</span> : ${msg}`;
+                
+                logContent.appendChild(p);
+                // SETTINGS の最大ログ数を使用
+                if (logContent.children.length > SETTINGS.MAX_LOGS) {
+                    logContent.removeChild(logContent.firstChild);
+                }
+            }
+
+            addLog("SYSTEM BOOT SEQUENCE INITIATED", "INFO");
+            addLog("HUD.COMPASS ... ONLINE", "INFO");
+            addLog("DATA.METRICS ... STANDBY", "INFO");
+
+            document.getElementById('show-log-cb').addEventListener('change', (e) => document.getElementById('log-panel').style.display = e.target.checked ? 'flex' : 'none');
+            document.getElementById('show-hud-cb').addEventListener('change', (e) => document.getElementById('hud-compass-wrapper').style.display = e.target.checked ? 'block' : 'none');
+            document.getElementById('show-posture-cb').addEventListener('change', (e) => document.getElementById('posture-panel').style.display = e.target.checked ? 'block' : 'none');
+            document.getElementById('show-graph-cb').addEventListener('change', (e) => document.getElementById('graph-panel').style.display = e.target.checked ? 'block' : 'none');
+            document.getElementById('show-vline-cb').addEventListener('change', (e) => verticalLine.visible = e.target.checked);
+
+            const toggleBtn = document.getElementById('toggle-panel-btn'), panelContent = document.getElementById('panel-content'), toggleIcon = document.getElementById('toggle-icon');
+            let isPanelOpen = true;
+            toggleBtn.addEventListener('click', () => {
+                isPanelOpen = !isPanelOpen;
+                panelContent.classList.toggle('hidden', !isPanelOpen);
+                toggleIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+            });
+
+            let isDemoMode = false; const clock = new THREE.Clock();
+            document.getElementById('demo-btn').addEventListener('click', (e) => {
+                isDemoMode = !isDemoMode;
+                e.target.textContent = isDemoMode ? 'HALT // DEMO.SEQ' : 'INITIATE // DEMO.SEQ';
+                e.target.classList.toggle('btn-alert', isDemoMode);
+                const badge = document.getElementById('sensor-status-badge');
+
+                if (isDemoMode) {
+                    clock.start();
+                    addLog("DEMO.SEQUENCE ... STARTED", "WARN");
+                    addLog("SENSOR LINK ... ONLINE", "INFO");
+                    controls.autoRotate = true; 
+                    badge.textContent = 'ONLINE';
+                    badge.className = 'text-[9px] text-red-400 bg-red-900/30 px-1 border border-red-500/50 transition-colors';
+                } else {
+                    clock.stop();
+                    addLog("DEMO.SEQUENCE ... HALTED", "INFO");
+                    addLog("SENSOR LINK ... OFFLINE", "WARN");
+                    controls.autoRotate = false; 
+                    badge.textContent = 'STANDBY';
+                    badge.className = 'text-[9px] text-cyan-400 bg-cyan-900/30 px-1 border border-cyan-500/50 transition-colors';
+                }
+            });
+
+            const yawData = new Array(100).fill(0), pitchData = new Array(100).fill(0), rollData = new Array(100).fill(0);
+            
+            function hexToRgba(hex, alpha) {
+                let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
+            function drawGraph(id, data, min, max, colorHex) {
+                const c = document.getElementById(id); if (!c) return;
+                const ctx = c.getContext('2d'), w = c.width, h = c.height;
+                ctx.clearRect(0,0,w,h); 
+                
+                ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; 
+                ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+                ctx.beginPath(); let zy = h - ((0-min)/(max-min))*h; 
+                ctx.moveTo(0,zy); ctx.lineTo(w,zy); ctx.stroke();
+                ctx.setLineDash([]); 
+
+                ctx.strokeStyle = colorHex; ctx.lineWidth = 2; ctx.beginPath();
+                for(let i=0; i<100; i++) {
+                    let y = h - ((Math.min(Math.max(data[i], min), max)-min)/(max-min))*h;
+                    if(i===0) ctx.moveTo(0,y); else ctx.lineTo(i*(w/99),y);
+                }
+                ctx.stroke();
+
+                ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+                let grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, hexToRgba(colorHex, 0.4)); 
+                grad.addColorStop(1, hexToRgba(colorHex, 0.0)); 
+                ctx.fillStyle = grad; ctx.fill();
+
+                let lastY = h - ((Math.min(Math.max(data[99], min), max)-min)/(max-min))*h;
+                ctx.fillStyle = '#fff'; ctx.shadowColor = colorHex; ctx.shadowBlur = 8;
+                ctx.beginPath(); ctx.arc(w - 2, lastY, 3, 0, Math.PI*2); ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            drawGraph('yaw-canvas', yawData, 0, 360, '#00ffff');
+            drawGraph('pitch-canvas', pitchData, -15, 15, '#00ffff');
+            drawGraph('roll-canvas', rollData, -15, 15, '#00ffff');
+
+            // SETTINGS のインターバルを使用
+            setInterval(() => {
+                if (!isDemoMode) return;
+                const y = parseFloat(yawSlider.value), p = parseFloat(pitchSlider.value), r = parseFloat(rollSlider.value);
+                [yawData, pitchData, rollData].forEach((d, i) => { d.push([y,p,r][i]); d.shift(); });
+                
+                drawGraph('yaw-canvas', yawData, 0, 360, '#00ffff');
+                drawGraph('pitch-canvas', pitchData, -15, 15, '#00ffff');
+                drawGraph('roll-canvas', rollData, -15, 15, '#00ffff');
+                
+                document.getElementById('yaw-graph-val').textContent = `${y.toFixed(1)}°`;
+                document.getElementById('pitch-graph-val').textContent = `${p.toFixed(1)}°`;
+                document.getElementById('roll-graph-val').textContent = `${r.toFixed(1)}°`;
+
+                const strY = y.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
+                const strP = p.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
+                const strR = r.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
+                addLog(`SENSOR.RECV [Y:${strY} P:${strP} R:${strR}]`, "INFO");
+            }, SETTINGS.GRAPH_UPDATE_MS);
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (isDemoMode) {
+                    let t = clock.getElapsedTime(), amp = 5;
+                    yawSlider.value = (parseFloat(yawSlider.value) + 0.15) % 360;
+                    pitchSlider.value = Math.sin(t) * amp;
+                    rollSlider.value = Math.cos(t) * amp;
+                    updateRotation();
+                }
+                controls.update(); renderer.render(scene, camera);
+                
+                document.getElementById('cam-x').textContent = camera.position.x.toFixed(1);
+                document.getElementById('cam-y').textContent = camera.position.y.toFixed(1);
+                document.getElementById('cam-z').textContent = camera.position.z.toFixed(1);
+                document.getElementById('cam-zoom').textContent = camera.position.distanceTo(controls.target).toFixed(1);
+            }
+            updateRotation(); animate();
+            window.addEventListener('resize', () => { 
+                camera.aspect = window.innerWidth/window.innerHeight; 
+                camera.updateProjectionMatrix(); 
+                renderer.setSize(window.innerWidth, window.innerHeight); 
+            });
+        });
+    </script>
 </head>
 <!-- ★ w-full と h-screen を追加して画面サイズを固定 -->
 <body class="m-0 p-0 overflow-hidden text-white w-full h-screen relative">
@@ -350,530 +760,5 @@
         </div>
     </div>
 
-    <script>
-        // ==========================================
-        // ★ モデル設定変数
-        // ==========================================
-        // 読み込んだモデルの重心を基準とした初期位置の微調整を行います。
-        const MODEL_OFFSET_Y = 1.2; 
-        const MODEL_OFFSET_Z = 0.2; 
-
-        // 起動時に自動で読み込むGLBファイルのURL
-        // 例: 'models/yugemaru.glb'
-        // ※ 外部URLを指定する場合、CORSエラーが発生する可能性があります。
-        const DEFAULT_MODEL_URL = ''; 
-        // ==========================================
-
-        // --- Three.js の基本セットアップ ---
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        // ★ 背面のDOM要素（HUDやログ）を透かして見せるため、sceneの背景色塗りつぶしを削除(null)
-        scene.background = null; 
-        scene.fog = new THREE.Fog(0x050811, 20, 150);
-
-        // ★ 宇宙/サイバー空間の底面に薄いシアンのグリッドを敷く
-        // カメラが近づいた分、分割数を増やして（40 -> 100）マス目の間隔を調整
-        const bgGrid = new THREE.GridHelper(200, 100, 0x00ffff, 0x00ffff);
-        bgGrid.position.y = 0; // XZ平面に一致させる
-        bgGrid.material.opacity = 0.2; // 濃くする
-        bgGrid.material.transparent = true;
-        scene.add(bgGrid);
-
-        // カメラ設定
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // ★初期位置：指定された方向(-4, 3.5, -11)で、距離(ZOOM)が12.5になるように設定
-        camera.position.set(-4, 3.5, -11).setLength(12.5);
-
-        // レンダラー設定 (★ alpha: true を追加して背景を透過)
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setClearColor(0x000000, 0); // 透過色設定
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        
-        renderer.outputEncoding = THREE.sRGBEncoding;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 0.7;
-        
-        container.appendChild(renderer.domElement);
-
-        // カメラコントローラー
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        // ★ デモモード用の自動回転設定（初期状態はオフ）
-        controls.autoRotate = false;
-        controls.autoRotateSpeed = 0.2; // ゆっくり回転させる
-
-        controls.mouseButtons = {
-            LEFT: THREE.MOUSE.ROTATE,
-            MIDDLE: THREE.MOUSE.ROTATE,
-            RIGHT: THREE.MOUSE.PAN
-        };
-
-        // --- ライティング ---
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-        hemiLight.position.set(0, 20, 0);
-        scene.add(hemiLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        dirLight.position.set(20, 30, 10);
-        dirLight.castShadow = true;
-        dirLight.shadow.mapSize.width = 2048;
-        dirLight.shadow.mapSize.height = 2048;
-        scene.add(dirLight);
-
-        const bottomLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        bottomLight.position.set(0, -30, 0);
-        scene.add(bottomLight);
-
-        // --- 中心からの垂直線 ---
-        // グリッド平面の原点から垂直（Y軸上方向）に直線を伸ばす
-        const verticalLineMat = new THREE.LineBasicMaterial({ 
-            color: 0x00ffff, // グリッドと同じシアン系
-            transparent: true, 
-            opacity: 0.6 
-        });
-        const verticalLineGeo = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, 0, 0),
-            // ★ 長さを20から6に短縮（画面を突き抜けずHUDリング付近に収まるように調整）
-            new THREE.Vector3(0, 5.2, 0) 
-        ]);
-        const verticalLine = new THREE.Line(verticalLineGeo, verticalLineMat);
-        scene.add(verticalLine);
-
-        // --- HUD コンパスの描画関数 ---
-        function initHudCompass() {
-            const bgCanvas = document.getElementById('hud-compass-bg');
-            const bgCtx = bgCanvas.getContext('2d');
-            const w = bgCanvas.width;
-            const h = bgCanvas.height;
-            const center = w / 2;
-            // ★ 円の基準半径を拡大 (380 -> 480)
-            const radius = 480; 
-
-            bgCtx.clearRect(0, 0, w, h);
-            
-            // 全体的なシアンの光彩
-            bgCtx.shadowColor = '#00ffff';
-            bgCtx.shadowBlur = 8;
-
-            // --- 1. 最外周の薄いリング ---
-            bgCtx.beginPath();
-            bgCtx.arc(center, center, radius + 45, 0, 2 * Math.PI);
-            bgCtx.lineWidth = 1;
-            bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.15)';
-            bgCtx.stroke();
-
-            // ※視認性を下げる装飾アークは削除しました
-
-            // --- 2. メインの目盛りベースリング ---
-            bgCtx.beginPath();
-            bgCtx.arc(center, center, radius, 0, 2 * Math.PI);
-            bgCtx.lineWidth = 2;
-            bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
-            bgCtx.stroke();
-
-            // --- 3. 内側の破線/ドットリング ---
-            bgCtx.setLineDash([3, 8]);
-            bgCtx.beginPath();
-            bgCtx.arc(center, center, radius - 35, 0, 2 * Math.PI);
-            bgCtx.lineWidth = 6;
-            bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
-            bgCtx.stroke();
-            bgCtx.setLineDash([]); // リセット
-
-            // --- 4. さらに内側の細いリング群 ---
-            bgCtx.beginPath();
-            bgCtx.arc(center, center, radius - 55, 0, 2 * Math.PI);
-            bgCtx.lineWidth = 1;
-            bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.25)';
-            bgCtx.stroke();
-
-            bgCtx.setLineDash([15, 20]);
-            bgCtx.beginPath();
-            bgCtx.arc(center, center, radius - 70, 0, 2 * Math.PI);
-            bgCtx.lineWidth = 1;
-            bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
-            bgCtx.stroke();
-            bgCtx.setLineDash([]);
-
-            // --- HUDテキストと引き出し線の描画を削除 ---
-
-            // --- 目盛りと文字の描画 ---
-            bgCtx.translate(center, center);
-            bgCtx.textAlign = 'center';
-            bgCtx.textBaseline = 'middle';
-
-            // 画像のように細かく（2.5度刻み）
-            for (let i = 0; i < 360; i += 2.5) { 
-                bgCtx.save();
-                // 北(0度)を上にするため -90度回転して描画スタート
-                bgCtx.rotate((i - 90) * Math.PI / 180);
-                
-                bgCtx.beginPath();
-                if (i % 90 === 0) {
-                    // 主方位 (N, E, S, W)
-                    bgCtx.moveTo(radius - 5, 0);
-                    bgCtx.lineTo(radius + 15, 0);
-                    bgCtx.lineWidth = 3;
-                    bgCtx.strokeStyle = '#00ffff';
-                    bgCtx.stroke();
-                    
-                    let text = i === 0 ? 'N' : i === 90 ? 'E' : i === 180 ? 'S' : 'W';
-                    bgCtx.translate(radius + 32, 0);
-                    bgCtx.rotate(-(i - 90) * Math.PI / 180); 
-                    bgCtx.font = 'bold 20px "Share Tech Mono", monospace';
-                    bgCtx.fillStyle = '#ffffff';
-                    bgCtx.shadowBlur = 10;
-                    bgCtx.fillText(text, 0, 0);
-                } else if (i % 30 === 0) {
-                    // 30度ごとの目盛り
-                    bgCtx.moveTo(radius, 0);
-                    bgCtx.lineTo(radius + 10, 0);
-                    bgCtx.lineWidth = 2;
-                    bgCtx.strokeStyle = '#00ffff';
-                    bgCtx.stroke();
-                    
-                    bgCtx.translate(radius + 24, 0);
-                    bgCtx.rotate(-(i - 90) * Math.PI / 180);
-                    bgCtx.font = '10px "Share Tech Mono", monospace';
-                    bgCtx.fillStyle = 'rgba(0, 255, 255, 0.9)';
-                    bgCtx.shadowBlur = 4;
-                    bgCtx.fillText(i.toString().padStart(3, '0'), 0, 0);
-                } else if (i % 10 === 0) {
-                    // 10度ごとの少し長い線
-                    bgCtx.moveTo(radius, 0);
-                    bgCtx.lineTo(radius + 6, 0);
-                    bgCtx.lineWidth = 1.5;
-                    bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
-                    bgCtx.stroke();
-                } else {
-                    // 2.5度ごとの細かい目盛り
-                    bgCtx.moveTo(radius, 0);
-                    bgCtx.lineTo(radius + 3, 0);
-                    bgCtx.lineWidth = 1;
-                    bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.25)';
-                    bgCtx.stroke();
-                }
-                bgCtx.restore();
-            }
-
-            // --- インジケーター（現在方位マーク）の描画 ---
-            const indCanvas = document.getElementById('hud-compass-indicator');
-            const indCtx = indCanvas.getContext('2d');
-            indCtx.clearRect(0, 0, w, h);
-            indCtx.translate(center, center);
-            
-            // ★ 半透明のオレンジとオレンジの光彩に変更
-            indCtx.shadowColor = 'rgba(255, 165, 0, 0.8)'; 
-            indCtx.shadowBlur = 15;
-            indCtx.fillStyle = 'rgba(255, 165, 0, 0.6)';
-
-            // 外周にある三角マーク
-            indCtx.beginPath();
-            indCtx.moveTo(0, -(radius + 10)); // 先端（内側）
-            indCtx.lineTo(-15, -(radius + 35)); // 左外
-            indCtx.lineTo(15, -(radius + 35)); // 右外
-            indCtx.closePath();
-            indCtx.fill();
-        }
-
-        // 初期化実行
-        initHudCompass();
-
-        // --- モデル管理 ---
-        const shipGroup = new THREE.Group(); shipGroup.rotation.order = "YXZ"; scene.add(shipGroup);
-        let currentModel = null;
-        const loader = new THREE.GLTFLoader();
-
-        function createDefaultShip() {
-            const group = new THREE.Group();
-            const hull = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 10), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
-            hull.position.y = 0.75; hull.castShadow = true; group.add(hull);
-            const bridge = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 3), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
-            bridge.position.set(0, 2.25, 2); bridge.castShadow = true; group.add(bridge);
-            const bow = new THREE.Mesh(new THREE.BoxGeometry(3.1, 1.6, 0.5), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-            bow.position.set(0, 0.75, -5.0); group.add(bow);
-            return group;
-        }
-
-        function loadModel(fileUrl, fileName) {
-            loader.load(fileUrl, (gltf) => {
-                // 読み込みに成功した場合のみ現在のモデルを差し替える
-                if (currentModel) shipGroup.remove(currentModel);
-                const loadedScene = gltf.scene;
-                const box = new THREE.Box3().setFromObject(loadedScene);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                const scale = 10 / Math.max(size.x, size.y, size.z);
-                loadedScene.scale.set(scale, scale, scale);
-                loadedScene.position.sub(center.multiplyScalar(scale));
-                loadedScene.position.y += MODEL_OFFSET_Y;
-                loadedScene.position.z += MODEL_OFFSET_Z;
-
-                const wrapper = new THREE.Group(); wrapper.add(loadedScene);
-                wrapper.rotation.y = Math.PI;
-                currentModel = wrapper;
-                currentModel.traverse(n => { if(n.isMesh) { n.castShadow = n.receiveShadow = true; }});
-                shipGroup.add(currentModel);
-
-                if (fileName !== "初期モデル") {
-                    const fileNameElem = document.getElementById('file-name');
-                    fileNameElem.textContent = `読み込み完了: ${fileName}`;
-                    fileNameElem.classList.remove('hidden');
-                    addLog(`MODEL IMPORTED: ${fileName}`, "INFO");
-                }
-            }, undefined, (e) => {
-                console.warn(`モデル読み込み失敗 (${fileName}):`, e);
-                if (fileName !== "初期モデル") {
-                    alert("ファイルの読み込みに失敗しました。CORS設定やファイル形式を確認してください。");
-                    addLog(`IMPORT FAILED: ${fileName}`, "ERR");
-                }
-            });
-        }
-
-        // --- 初期ロード実行 ---
-        // まずはデフォルトの船を表示
-        currentModel = createDefaultShip();
-        shipGroup.add(currentModel);
-
-        // URLが指定されている場合は読み込みを試行
-        if (DEFAULT_MODEL_URL) {
-            loadModel(DEFAULT_MODEL_URL, "初期モデル");
-        }
-
-        // --- UIとループ ---
-        const yawSlider = document.getElementById('yaw-slider'), pitchSlider = document.getElementById('pitch-slider'), rollSlider = document.getElementById('roll-slider');
-        const yawVal = document.getElementById('yaw-val'), pitchVal = document.getElementById('pitch-val'), rollVal = document.getElementById('roll-val');
-
-        function updateRotation() {
-            const y = parseFloat(yawSlider.value), p = parseFloat(pitchSlider.value), r = parseFloat(rollSlider.value);
-            yawVal.textContent = `${y.toFixed(1)}°`; pitchVal.textContent = `${p.toFixed(1)}°`; rollVal.textContent = `${r.toFixed(1)}°`;
-            
-            // 船モデルの姿勢を更新（方位の追従を無効化し、ピッチとロールのみ適用）
-            shipGroup.rotation.y = 0; 
-            shipGroup.rotation.x = THREE.MathUtils.degToRad(p);
-            shipGroup.rotation.z = -THREE.MathUtils.degToRad(r);
-            
-            // HUDのインジケーターをCSSで回転させる
-            const indicatorContainer = document.getElementById('hud-indicator-container');
-            if (indicatorContainer) {
-                indicatorContainer.style.transform = `rotate(${y}deg)`;
-            }
-        }
-
-        [yawSlider, pitchSlider, rollSlider].forEach(s => s.addEventListener('input', updateRotation));
-        document.getElementById('reset-btn').addEventListener('click', () => {
-            [yawSlider, pitchSlider, rollSlider].forEach(s => s.value = 0);
-            updateRotation(); 
-            // ★リセット時のカメラ位置も変更 (指定の方向でZOOM=12.5)
-            camera.position.set(-4, 3.5, -11).setLength(12.5); 
-            controls.target.set(0, 0, 0);
-            addLog("POSTURE & CAMERA RESET", "WARN");
-        });
-
-        document.getElementById('file-upload').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) loadModel(URL.createObjectURL(file), file.name);
-        });
-
-        // --- ログシステム ---
-        const logContent = document.getElementById('log-content');
-        // ★ 高速で流れるため、DOMに保持しておく最大ログ件数を少し増やす
-        const MAX_LOGS = 25; 
-
-        function addLog(msg, type = "INFO") {
-            const now = new Date();
-            const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
-                            String(now.getMinutes()).padStart(2, '0') + ':' + 
-                            String(now.getSeconds()).padStart(2, '0') + '.' + 
-                            String(now.getMilliseconds()).padStart(3, '0');
-            
-            let color = 'text-cyan-400';
-            if(type === 'WARN') color = 'text-fuchsia-400';
-            else if(type === 'ERR') color = 'text-red-500';
-
-            const p = document.createElement('div');
-            p.className = `log-line ${color}`;
-            p.innerHTML = `<span class="opacity-50">[${timeStr}]</span> <span class="font-bold">${type}</span> : ${msg}`;
-            
-            logContent.appendChild(p);
-            // 行数があふれたら古いものを消す
-            if (logContent.children.length > MAX_LOGS) {
-                logContent.removeChild(logContent.firstChild);
-            }
-        }
-
-        // 初期ログ
-        addLog("SYSTEM BOOT SEQUENCE INITIATED", "INFO");
-        addLog("HUD.COMPASS ... ONLINE", "INFO");
-        addLog("DATA.METRICS ... STANDBY", "INFO");
-
-        // パネルと軸の表示切り替えイベント
-        document.getElementById('show-log-cb').addEventListener('change', (e) => {
-            document.getElementById('log-panel').style.display = e.target.checked ? 'flex' : 'none';
-        });
-        document.getElementById('show-hud-cb').addEventListener('change', (e) => {
-            document.getElementById('hud-compass-wrapper').style.display = e.target.checked ? 'block' : 'none';
-        });
-        document.getElementById('show-posture-cb').addEventListener('change', (e) => {
-            document.getElementById('posture-panel').style.display = e.target.checked ? 'block' : 'none';
-        });
-        document.getElementById('show-graph-cb').addEventListener('change', (e) => {
-            document.getElementById('graph-panel').style.display = e.target.checked ? 'block' : 'none';
-        });
-        // ★ 垂直線の表示/非表示を切り替えるイベントリスナー
-        document.getElementById('show-vline-cb').addEventListener('change', (e) => {
-            verticalLine.visible = e.target.checked;
-        });
-
-        const toggleBtn = document.getElementById('toggle-panel-btn'), panelContent = document.getElementById('panel-content'), toggleIcon = document.getElementById('toggle-icon');
-        let isPanelOpen = true;
-        toggleBtn.addEventListener('click', () => {
-            isPanelOpen = !isPanelOpen;
-            panelContent.classList.toggle('hidden', !isPanelOpen);
-            toggleIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-        });
-
-        let isDemoMode = false; const clock = new THREE.Clock();
-        document.getElementById('demo-btn').addEventListener('click', (e) => {
-            isDemoMode = !isDemoMode;
-            e.target.textContent = isDemoMode ? 'HALT // DEMO.SEQ' : 'INITIATE // DEMO.SEQ';
-            e.target.classList.toggle('btn-alert', isDemoMode);
-            
-            const badge = document.getElementById('sensor-status-badge');
-
-            if (isDemoMode) {
-                clock.start();
-                addLog("DEMO.SEQUENCE ... STARTED", "WARN");
-                addLog("SENSOR LINK ... ONLINE", "INFO");
-                controls.autoRotate = true; 
-
-                // ★ デモ開始時にバッジを赤色の ONLINE に変更
-                badge.textContent = 'ONLINE';
-                badge.className = 'text-[9px] text-red-400 bg-red-900/30 px-1 border border-red-500/50 transition-colors';
-            } else {
-                clock.stop();
-                addLog("DEMO.SEQUENCE ... HALTED", "INFO");
-                addLog("SENSOR LINK ... OFFLINE", "WARN");
-                controls.autoRotate = false; 
-
-                // ★ デモ停止時にバッジをシアンの STANDBY に戻す
-                badge.textContent = 'STANDBY';
-                badge.className = 'text-[9px] text-cyan-400 bg-cyan-900/30 px-1 border border-cyan-500/50 transition-colors';
-            }
-        });
-
-        const yawData = new Array(100).fill(0), pitchData = new Array(100).fill(0), rollData = new Array(100).fill(0);
-        
-        // ★ HEXからRGBAへの変換関数（グラデーション用）
-        function hexToRgba(hex, alpha) {
-            let r = parseInt(hex.slice(1, 3), 16),
-                g = parseInt(hex.slice(3, 5), 16),
-                b = parseInt(hex.slice(5, 7), 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        }
-
-        function drawGraph(id, data, min, max, colorHex) {
-            const c = document.getElementById(id); if (!c) return;
-            const ctx = c.getContext('2d'), w = c.width, h = c.height;
-            ctx.clearRect(0,0,w,h); 
-            
-            // 中央の基準線（点線でSFっぽく）
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; 
-            ctx.lineWidth = 1; 
-            ctx.setLineDash([2, 4]);
-            ctx.beginPath();
-            let zy = h - ((0-min)/(max-min))*h; 
-            ctx.moveTo(0,zy); ctx.lineTo(w,zy); 
-            ctx.stroke();
-            ctx.setLineDash([]); // 点線リセット
-
-            // グラフ本体の描画
-            ctx.strokeStyle = colorHex; 
-            ctx.lineWidth = 2; 
-            ctx.beginPath();
-            for(let i=0; i<100; i++) {
-                let y = h - ((Math.min(Math.max(data[i], min), max)-min)/(max-min))*h;
-                if(i===0) ctx.moveTo(0,y); else ctx.lineTo(i*(w/99),y);
-            }
-            ctx.stroke();
-
-            // ★ 画像のようなグラデーション塗りつぶしを追加
-            ctx.lineTo(w, h); // 右下へ
-            ctx.lineTo(0, h); // 左下へ
-            ctx.closePath();
-            let grad = ctx.createLinearGradient(0, 0, 0, h);
-            grad.addColorStop(0, hexToRgba(colorHex, 0.4)); // 上部は半透明の色
-            grad.addColorStop(1, hexToRgba(colorHex, 0.0)); // 下部は完全透明
-            ctx.fillStyle = grad;
-            ctx.fill();
-
-            // 先端の光る点
-            let lastY = h - ((Math.min(Math.max(data[99], min), max)-min)/(max-min))*h;
-            ctx.fillStyle = '#fff';
-            ctx.shadowColor = colorHex;
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.arc(w - 2, lastY, 3, 0, Math.PI*2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-        }
-
-        // ★ 初期状態の静止したグラフを一度描画しておく (すべてシアン色に統一)
-        drawGraph('yaw-canvas', yawData, 0, 360, '#00ffff');
-        drawGraph('pitch-canvas', pitchData, -15, 15, '#00ffff');
-        drawGraph('roll-canvas', rollData, -15, 15, '#00ffff');
-
-        setInterval(() => {
-            // ★ デモモード(センサー受信シミュレート)時のみ、グラフとログを動作させる
-            if (!isDemoMode) return;
-
-            const y = parseFloat(yawSlider.value), p = parseFloat(pitchSlider.value), r = parseFloat(rollSlider.value);
-            [yawData, pitchData, rollData].forEach((d, i) => { d.push([y,p,r][i]); d.shift(); });
-            
-            // ★ 画像の描画色をすべてシアン色に統一
-            drawGraph('yaw-canvas', yawData, 0, 360, '#00ffff');
-            drawGraph('pitch-canvas', pitchData, -15, 15, '#00ffff');
-            drawGraph('roll-canvas', rollData, -15, 15, '#00ffff');
-            
-            document.getElementById('yaw-graph-val').textContent = `${y.toFixed(1)}°`;
-            document.getElementById('pitch-graph-val').textContent = `${p.toFixed(1)}°`;
-            document.getElementById('roll-graph-val').textContent = `${r.toFixed(1)}°`;
-
-            // ★ グラフと同じタイミング(100ms)で、入力されたすべてのデータをログに表示
-            // 見た目を綺麗に揃えるために桁数を合わせ、空白をHTMLの特殊文字(&nbsp;)で埋める
-            const strY = y.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
-            const strP = p.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
-            const strR = r.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
-            addLog(`SENSOR.RECV [Y:${strY} P:${strP} R:${strR}]`, "INFO");
-            
-        }, 100);
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (isDemoMode) {
-                let t = clock.getElapsedTime(), amp = 5;
-                yawSlider.value = (parseFloat(yawSlider.value) + 0.15) % 360;
-                pitchSlider.value = Math.sin(t) * amp;
-                rollSlider.value = Math.cos(t) * amp;
-                updateRotation();
-            }
-            controls.update(); renderer.render(scene, camera);
-            
-            // UIへの座標とズーム値の反映
-            document.getElementById('cam-x').textContent = camera.position.x.toFixed(1);
-            document.getElementById('cam-y').textContent = camera.position.y.toFixed(1);
-            document.getElementById('cam-z').textContent = camera.position.z.toFixed(1);
-            // ★ 中心(ターゲット)からカメラまでの距離をZOOM値として表示
-            document.getElementById('cam-zoom').textContent = camera.position.distanceTo(controls.target).toFixed(1);
-        }
-        updateRotation(); animate();
-        window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
-    </script>
 </body>
 </html>
