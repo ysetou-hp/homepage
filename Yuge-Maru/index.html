@@ -59,22 +59,27 @@
         /* スライダーのカスタムスタイル (HUD風) */
         input[type=range] {
             -webkit-appearance: none !important;
+            -moz-appearance: none !important;
             appearance: none !important;
             width: 100%;
+            height: 20px !important; /* Firefoxでトラックとツマミを正しく表示・配置するための高さ確保 */
             background: transparent !important;
             margin: 8px 0;
+            cursor: pointer;
         }
         input[type=range]:focus {
             outline: none;
+        }
+        input[type=range]::-moz-focus-outer {
+            border: 0;
         }
         
         /* WebKit (Chrome, Safari, Edge) */
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
             height: 2px !important;
-            cursor: pointer;
             background: rgba(0, 255, 255, 0.5) !important;
-            border: none;
+            border: none !important;
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none !important;
@@ -83,7 +88,6 @@
             width: 6px !important;
             background: #0ff !important;
             box-shadow: 0 0 10px #0ff !important;
-            cursor: pointer;
             margin-top: -7px !important;
             border-radius: 0 !important;
             border: none !important;
@@ -93,18 +97,22 @@
         input[type=range]::-moz-range-track {
             width: 100%;
             height: 2px !important;
-            cursor: pointer;
             background: rgba(0, 255, 255, 0.5) !important;
-            border: none;
+            border: none !important;
         }
         input[type=range]::-moz-range-thumb {
+            -moz-appearance: none !important;
+            appearance: none !important;
             height: 16px !important;
             width: 6px !important;
             background: #0ff !important;
             box-shadow: 0 0 10px #0ff !important;
-            cursor: pointer;
             border-radius: 0 !important;
             border: none !important;
+        }
+        input[type=range]::-moz-range-progress {
+            background: rgba(0, 255, 255, 0.5) !important;
+            height: 2px !important;
         }
 
         /* ボタン */
