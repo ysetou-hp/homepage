@@ -58,33 +58,53 @@
 
         /* スライダーのカスタムスタイル (HUD風) */
         input[type=range] {
-            -webkit-appearance: none;
+            -webkit-appearance: none !important;
+            appearance: none !important;
             width: 100%;
-            background: transparent;
+            background: transparent !important;
+            margin: 8px 0;
         }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 14px;
-            width: 6px;
-            background: #0ff;
-            box-shadow: 0 0 8px #0ff;
-            cursor: pointer;
-            margin-top: -6px;
+        input[type=range]:focus {
+            outline: none;
         }
+        
+        /* WebKit (Chrome, Safari, Edge) */
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            height: 2px;
+            height: 2px !important;
             cursor: pointer;
-            background: rgba(0, 255, 255, 0.2);
+            background: rgba(0, 255, 255, 0.5) !important;
+            border: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            height: 16px !important;
+            width: 6px !important;
+            background: #0ff !important;
+            box-shadow: 0 0 10px #0ff !important;
+            cursor: pointer;
+            margin-top: -7px !important;
+            border-radius: 0 !important;
+            border: none !important;
         }
 
-        /* マゼンタ系スライダー (Pitch等に適用) */
-        input[type=range].slider-magenta::-webkit-slider-thumb {
-            background: #f0f;
-            box-shadow: 0 0 8px #f0f;
+        /* Firefox */
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 2px !important;
+            cursor: pointer;
+            background: rgba(0, 255, 255, 0.5) !important;
+            border: none;
         }
-        input[type=range].slider-magenta::-webkit-slider-runnable-track {
-            background: rgba(255, 0, 255, 0.2);
+        input[type=range]::-moz-range-thumb {
+            height: 16px !important;
+            width: 6px !important;
+            background: #0ff !important;
+            box-shadow: 0 0 10px #0ff !important;
+            cursor: pointer;
+            border-radius: 0 !important;
+            border: none !important;
         }
 
         /* ボタン */
