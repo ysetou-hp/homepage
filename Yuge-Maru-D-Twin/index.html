@@ -166,7 +166,7 @@
             // [モデル設定]
             MODEL_OFFSET_Y: 1.2,          // モデルのY軸初期オフセット(高さの調整)
             MODEL_OFFSET_Z: 0.2,          // モデルのZ軸初期オフセット(前後の調整)
-            DEFAULT_MODEL_URL: 'yuge_shousen_v10.glb',        // 起動時に自動で読み込むGLBファイル (例: 'yugemaru.glb')
+            DEFAULT_MODEL_URL: '',        // 起動時に自動で読み込むGLBファイル (例: 'yugemaru.glb')
             
             // [カメラ初期設定]
             CAMERA_INIT_POS: { x: -4, y: 3.5, z: -11 }, // カメラの初期方向
@@ -183,6 +183,32 @@
         // HTML要素(DOM)の読み込みが完了してから実行されます
         document.addEventListener('DOMContentLoaded', () => {
             
+            // --- ログシステム (エラー回避のため最初に定義) ---
+            const logContent = document.getElementById('log-content');
+
+            function addLog(msg, type = "INFO") {
+                const now = new Date();
+                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
+                                String(now.getMinutes()).padStart(2, '0') + ':' + 
+                                String(now.getSeconds()).padStart(2, '0') + '.' + 
+                                String(now.getMilliseconds()).padStart(3, '0');
+                let color = 'text-cyan-400';
+                if(type === 'WARN') color = 'text-fuchsia-400';
+                else if(type === 'ERR') color = 'text-red-500';
+
+                const p = document.createElement('div');
+                p.className = `log-line ${color}`;
+                p.innerHTML = `<span class="opacity-50">[${timeStr}]</span> <span class="font-bold">${type}</span> : ${msg}`;
+                
+                logContent.appendChild(p);
+                // SETTINGS の最大ログ数を使用
+                if (logContent.children.length > SETTINGS.MAX_LOGS) {
+                    logContent.removeChild(logContent.firstChild);
+                }
+            }
+
+            addLog("SYSTEM BOOT SEQUENCE INITIATED", "INFO");
+
             // --- Three.js の基本セットアップ ---
             const container = document.getElementById('canvas-container');
             const scene = new THREE.Scene();
@@ -320,6 +346,7 @@
                 indCtx.closePath(); indCtx.fill();
             }
             initHudCompass();
+            addLog("HUD.COMPASS ... ONLINE", "INFO");
 
             // --- モデル管理 ---
             const shipGroup = new THREE.Group(); shipGroup.rotation.order = "YXZ"; scene.add(shipGroup);
@@ -339,6 +366,7 @@
 
             function loadModel(fileUrl, fileName) {
                 loader.load(fileUrl, (gltf) => {
+                    // 読み込み成功時、古いモデルがあれば削除して差し替え
                     if (currentModel) shipGroup.remove(currentModel);
                     const loadedScene = gltf.scene;
                     const box = new THREE.Box3().setFromObject(loadedScene);
@@ -372,17 +400,24 @@
                         alert("ファイルの読み込みに失敗しました。CORS設定やファイル形式を確認してください。");
                         addLog(`IMPORT FAILED: ${fileName}`, "ERR");
                     } else {
+                        // ★ 初期読み込みに失敗した時だけ、簡易モデルを生成して表示する
                         addLog(`DEFAULT MODEL NOT FOUND. FALLBACK TO BASIC.`, "WARN");
+                        if (currentModel) shipGroup.remove(currentModel);
+                        currentModel = createDefaultShip();
+                        shipGroup.add(currentModel);
                     }
                 });
             }
 
-            currentModel = createDefaultShip();
-            shipGroup.add(currentModel);
-
-            // SETTINGS のデフォルトモデルURLを使用
-            if (SETTINGS.DEFAULT_MODEL_URL) {
+            // ★ 初期状態では簡易モデルを表示せず、URLの指定状況に応じて処理を分ける
+            if (SETTINGS.DEFAULT_MODEL_URL && SETTINGS.DEFAULT_MODEL_URL.trim() !== '') {
+                // URLが指定されている場合は読み込みを試行（失敗すればloadModel内で簡易モデルにフォールバック）
                 loadModel(SETTINGS.DEFAULT_MODEL_URL, "初期モデル");
+            } else {
+                // URLが空の場合は読み込みに行かず、直接簡易モデルを表示
+                currentModel = createDefaultShip();
+                shipGroup.add(currentModel);
+                addLog("BASIC MODEL INITIALIZED", "INFO");
             }
 
             // --- UIとループ ---
@@ -414,32 +449,6 @@
                 if (file) loadModel(URL.createObjectURL(file), file.name);
             });
 
-            // --- ログシステム ---
-            const logContent = document.getElementById('log-content');
-
-            function addLog(msg, type = "INFO") {
-                const now = new Date();
-                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
-                                String(now.getMinutes()).padStart(2, '0') + ':' + 
-                                String(now.getSeconds()).padStart(2, '0') + '.' + 
-                                String(now.getMilliseconds()).padStart(3, '0');
-                let color = 'text-cyan-400';
-                if(type === 'WARN') color = 'text-fuchsia-400';
-                else if(type === 'ERR') color = 'text-red-500';
-
-                const p = document.createElement('div');
-                p.className = `log-line ${color}`;
-                p.innerHTML = `<span class="opacity-50">[${timeStr}]</span> <span class="font-bold">${type}</span> : ${msg}`;
-                
-                logContent.appendChild(p);
-                // SETTINGS の最大ログ数を使用
-                if (logContent.children.length > SETTINGS.MAX_LOGS) {
-                    logContent.removeChild(logContent.firstChild);
-                }
-            }
-
-            addLog("SYSTEM BOOT SEQUENCE INITIATED", "INFO");
-            addLog("HUD.COMPASS ... ONLINE", "INFO");
             addLog("DATA.METRICS ... STANDBY", "INFO");
 
             document.getElementById('show-log-cb').addEventListener('change', (e) => document.getElementById('log-panel').style.display = e.target.checked ? 'flex' : 'none');
