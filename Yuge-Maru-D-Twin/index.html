@@ -242,7 +242,8 @@
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.autoRotate = false;
+            // ★ 初期状態でカメラを自動回転させる
+            controls.autoRotate = true;
             controls.autoRotateSpeed = 0.2; 
             controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN };
 
@@ -449,7 +450,9 @@
                 if (file) loadModel(URL.createObjectURL(file), file.name);
             });
 
-            addLog("DATA.METRICS ... STANDBY", "INFO");
+            // ★ 初期からデモ状態（オンライン）とする
+            addLog("DATA.METRICS ... ONLINE", "INFO");
+            addLog("DEMO.SEQUENCE ... STARTED", "WARN");
 
             document.getElementById('show-log-cb').addEventListener('change', (e) => document.getElementById('log-panel').style.display = e.target.checked ? 'flex' : 'none');
             document.getElementById('show-hud-cb').addEventListener('change', (e) => document.getElementById('hud-compass-wrapper').style.display = e.target.checked ? 'block' : 'none');
@@ -465,7 +468,11 @@
                 toggleIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)';
             });
 
-            let isDemoMode = false; const clock = new THREE.Clock();
+            // ★ isDemoMode を初期状態で true に設定し、clock をスタート
+            let isDemoMode = true; 
+            const clock = new THREE.Clock();
+            clock.start();
+            
             document.getElementById('demo-btn').addEventListener('click', (e) => {
                 isDemoMode = !isDemoMode;
                 e.target.textContent = isDemoMode ? 'HALT // DEMO.SEQ' : 'INITIATE // DEMO.SEQ';
@@ -617,9 +624,9 @@
                 SYS.RESET // POSTURE
             </button>
 
-            <!-- デモモード切替ボタン -->
-            <button id="demo-btn" class="mt-3 w-full py-2 cyber-btn text-xs">
-                INITIATE // DEMO.SEQ
+            <!-- ★ 初期表示を動作中のテキストとスタイルに変更 -->
+            <button id="demo-btn" class="mt-3 w-full py-2 cyber-btn text-xs btn-alert">
+                HALT // DEMO.SEQ
             </button>
 
             <!-- 各種パネル表示切替チェックボックス -->
@@ -728,8 +735,8 @@
     <div id="graph-panel" class="absolute bottom-4 right-4 w-80 cyber-panel p-4 z-50 pointer-events-none">
         <div class="flex justify-between items-center mb-3 border-b border-cyan-500/30 pb-1">
             <span class="text-xs font-bold cyber-header">DATA.METRICS // SENSORS</span>
-            <!-- ★ 初期状態を STANDBY (シアン) にし、IDを付与 -->
-            <span id="sensor-status-badge" class="text-[9px] text-cyan-400 bg-cyan-900/30 px-1 border border-cyan-500/50 transition-colors">STANDBY</span>
+            <!-- ★ 初期状態を ONLINE (赤) に変更 -->
+            <span id="sensor-status-badge" class="text-[9px] text-red-400 bg-red-900/30 px-1 border border-red-500/50 transition-colors">ONLINE</span>
         </div>
         
         <!-- Yaw グラフ -->
