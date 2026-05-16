@@ -1,777 +1,696 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="industrial">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>船舶姿勢3Dビジュアライザ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Three.js 本体 -->
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        theme: {
+                            accent: 'rgba(var(--c-accent), <alpha-value>)',
+                            bg: 'rgba(var(--c-bg), <alpha-value>)',
+                            panel: 'rgba(var(--c-panel), <alpha-value>)',
+                            text: 'rgba(var(--c-text), <alpha-value>)',
+                            sub: 'rgba(var(--c-sub), <alpha-value>)',
+                            alert: 'rgba(var(--c-alert), <alpha-value>)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <!-- GLTFLoader -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
-    <!-- OrbitControls -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Share+Tech+Mono&family=Roboto:wght@400;700&display=swap');
+
         /* =========================================
-           SF・サイバーパンク風 カスタムCSS
+           テーマ別 カスタムプロパティ (CSS Variables)
            ========================================= */
-        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
+        :root[data-theme="cyber"] {
+            --c-accent: 0, 255, 255; --c-bg: 5, 8, 17; --c-panel: 5, 10, 20;
+            --c-text: 0, 255, 255; --c-sub: 165, 243, 252; --c-alert: 255, 0, 255;
+            --f-main: 'Share Tech Mono', monospace;
+            --panel-border: 1px solid rgba(0, 255, 255, 0.2);
+            --panel-shadow: 0 0 20px rgba(0, 255, 255, 0.05) inset;
+            --panel-radius: 0px; --panel-bg-alpha: 0.85; --panel-blur: 8px; --slider-track-h: 2px;
+            --grid-bg: linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            --c-graph-bg: var(--c-bg); 
+        }
+
+        :root[data-theme="industrial"] {
+            --c-accent: 30, 30, 30; --c-bg: 255, 255, 255; --c-panel: 255, 255, 255;
+            --c-text: 10, 10, 10; --c-sub: 60, 60, 60; --c-alert: 200, 30, 30;
+            --f-main: 'Noto Sans JP', sans-serif;
+            --panel-border: 1px solid rgba(0, 0, 0, 0.3);
+            --panel-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+            --panel-radius: 2px; --panel-bg-alpha: 0.6; --panel-blur: 0px; --slider-track-h: 1px; 
+            --grid-bg: none; --c-graph-bg: 255, 255, 255; 
+        }
+
+        :root[data-theme="modern"] {
+            --c-accent: 59, 130, 246; --c-bg: 248, 250, 252; --c-panel: 255, 255, 255;
+            --c-text: 30, 41, 59; --c-sub: 100, 116, 139; --c-alert: 239, 68, 68;   
+            --f-main: 'Noto Sans JP', sans-serif;
+            --panel-border: 1px solid rgba(0, 0, 0, 0.05);
+            --panel-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); 
+            --panel-radius: 12px; --panel-bg-alpha: 0.9; --panel-blur: 8px; --slider-track-h: 2px;
+            --grid-bg: none; --c-graph-bg: 255, 255, 255;
+        }
+
+        /* =========================================
+           ベーススタイル・UIコンポーネント
+           ========================================= */
         body {
-            font-family: 'Share Tech Mono', monospace;
-            background-color: #050811; /* ディープネイビー */
-            /* 背景のうっすらとしたグリッド線 */
-            background-image: 
-                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
+            font-family: var(--f-main); background-color: rgb(var(--c-bg));
+            background-image: var(--grid-bg); background-size: 40px 40px; color: rgb(var(--c-text));
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* サイバーパネルの共通ベース */
-        .cyber-panel {
-            background: rgba(5, 10, 20, 0.7);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.05) inset;
-            backdrop-filter: blur(4px);
-            position: relative;
+        .system-panel {
+            background: rgba(var(--c-panel), var(--panel-bg-alpha)); border: var(--panel-border);
+            box-shadow: var(--panel-shadow); border-radius: var(--panel-radius); 
+            backdrop-filter: blur(var(--panel-blur)); position: relative; transition: all 0.3s;
         }
 
-        /* 四隅の装飾フレーム */
-        .cyber-panel::before, .cyber-panel::after {
-            content: '';
-            position: absolute;
-            width: 12px; height: 12px;
-            border: 2px solid #0ff;
-            pointer-events: none;
+        :root[data-theme="cyber"] .system-panel::before, :root[data-theme="cyber"] .system-panel::after {
+            content: ''; position: absolute; width: 12px; height: 12px; border: 2px solid rgb(var(--c-accent)); pointer-events: none; border-radius: 0;
         }
-        .cyber-panel::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
-        .cyber-panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        :root[data-theme="cyber"] .system-panel::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        :root[data-theme="cyber"] .system-panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
 
-        /* ヘッダー文字 */
-        .cyber-header {
-            color: #0ff;
-            letter-spacing: 0.1em;
-            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
-            text-transform: uppercase;
-        }
+        .panel-header { color: rgb(var(--c-accent)); letter-spacing: 0.1em; }
+        :root:not([data-theme="modern"]) .panel-header { text-transform: uppercase; }
+        :root[data-theme="cyber"] .panel-header { text-shadow: 0 0 5px rgba(var(--c-accent), 0.5); }
 
-        /* スライダーのカスタムスタイル (HUD風) */
-        input[type=range] {
-            -webkit-appearance: none !important;
-            -moz-appearance: none !important;
-            appearance: none !important;
-            width: 100%;
-            height: 20px !important; /* Firefoxでトラックとツマミを正しく表示・配置するための高さ確保 */
-            background: transparent !important;
-            margin: 8px 0;
-            cursor: pointer;
-        }
-        input[type=range]:focus {
-            outline: none;
-        }
-        input[type=range]::-moz-focus-outer {
-            border: 0;
-        }
-        
-        /* WebKit (Chrome, Safari, Edge) */
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 2px !important;
-            background: rgba(0, 255, 255, 0.5) !important;
-            border: none !important;
-        }
+        input[type=range] { -webkit-appearance: none !important; -moz-appearance: none !important; appearance: none !important; width: 100%; height: 20px !important; background: transparent !important; margin: 8px 0; cursor: pointer; outline: none; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: var(--slider-track-h) !important; background: rgba(var(--c-accent), 0.5) !important; border: none !important; }
+        input[type=range]::-moz-range-track { width: 100%; height: var(--slider-track-h) !important; background: rgba(var(--c-accent), 0.5) !important; border: none !important; }
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none !important;
-            appearance: none !important;
-            height: 16px !important;
-            width: 6px !important;
-            background: #0ff !important;
-            box-shadow: 0 0 10px #0ff !important;
-            margin-top: -7px !important;
-            border-radius: 0 !important;
-            border: none !important;
-        }
-
-        /* Firefox */
-        input[type=range]::-moz-range-track {
-            width: 100%;
-            height: 2px !important;
-            background: rgba(0, 255, 255, 0.5) !important;
-            border: none !important;
+            -webkit-appearance: none !important; appearance: none !important;
+            height: 16px !important; width: 8px !important; background: rgb(var(--c-accent)) !important;
+            margin-top: calc(-8px + (var(--slider-track-h) / 2)) !important; border-radius: var(--panel-radius) !important; border: none !important;
         }
         input[type=range]::-moz-range-thumb {
-            -moz-appearance: none !important;
-            appearance: none !important;
-            height: 16px !important;
-            width: 6px !important;
-            background: #0ff !important;
-            box-shadow: 0 0 10px #0ff !important;
-            border-radius: 0 !important;
-            border: none !important;
-        }
-        input[type=range]::-moz-range-progress {
-            background: rgba(0, 255, 255, 0.5) !important;
-            height: 2px !important;
+            -moz-appearance: none !important; appearance: none !important;
+            height: 16px !important; width: 8px !important; background: rgb(var(--c-accent)) !important;
+            border-radius: var(--panel-radius) !important; border: none !important;
         }
 
-        /* ボタン */
-        .cyber-btn {
-            background: rgba(0, 255, 255, 0.05);
-            border: 1px solid rgba(0, 255, 255, 0.5);
-            color: #0ff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            transition: all 0.2s;
-            position: relative;
-            overflow: hidden;
+        .action-btn {
+            background: rgba(var(--c-accent), 0.05); border: 1px solid rgba(var(--c-accent), 0.5); color: rgb(var(--c-accent));
+            border-radius: var(--panel-radius); letter-spacing: 1px; transition: all 0.2s;
         }
-        .cyber-btn:hover {
-            background: rgba(0, 255, 255, 0.2);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
-            text-shadow: 0 0 5px #0ff;
-        }
-        .cyber-btn.btn-alert {
-            border-color: #f0f; color: #f0f; background: rgba(255, 0, 255, 0.05);
-        }
-        .cyber-btn.btn-alert:hover {
-            background: rgba(255, 0, 255, 0.2); box-shadow: 0 0 10px rgba(255, 0, 255, 0.4); text-shadow: 0 0 5px #f0f;
-        }
+        :root:not([data-theme="modern"]) .action-btn { text-transform: uppercase; }
+        .action-btn:hover { background: rgba(var(--c-accent), 0.2); }
+        :root[data-theme="cyber"] .action-btn:hover { box-shadow: 0 0 10px rgba(var(--c-accent), 0.4); text-shadow: 0 0 5px rgb(var(--c-accent)); }
 
-        /* ログの上部を透過させるマスク */
-        .mask-fade-top {
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
-            mask-image: linear-gradient(to bottom, transparent 0%, black 15%);
-        }
+        .action-btn.btn-alert { border-color: rgb(var(--c-alert)); color: rgb(var(--c-alert)); background: rgba(var(--c-alert), 0.05); }
+        .action-btn.btn-alert:hover { background: rgba(var(--c-alert), 0.2); }
+        :root[data-theme="cyber"] .action-btn.btn-alert:hover { box-shadow: 0 0 10px rgba(var(--c-alert), 0.4); text-shadow: 0 0 5px rgb(var(--c-alert)); }
 
-        /* ログ用フェードインアニメーション */
-        .log-line {
-            /* ★ ログが高速で流れるため、アニメーション時間を短縮 */
-            animation: fadeIn 0.15s ease-out;
-            text-shadow: 0 0 4px rgba(0, 255, 255, 0.4);
+        .styled-select {
+            background-color: transparent; color: rgb(var(--c-accent)); border: 1px solid rgba(var(--c-accent), 0.5);
+            border-radius: var(--panel-radius); font-family: var(--f-main); outline: none; cursor: pointer; transition: all 0.2s;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
+        .styled-select option { background-color: rgb(var(--c-panel)); }
+        .styled-select:hover { border-color: rgb(var(--c-accent)); }
+
+        #hud-compass-wrapper { transition: opacity 0.3s; }
+        :root[data-theme="cyber"] #hud-compass-wrapper { mix-blend-mode: screen; opacity: 0.9; }
+        :root[data-theme="industrial"] #hud-compass-wrapper { mix-blend-mode: normal; opacity: 0.85; }
+        :root[data-theme="modern"] #hud-compass-wrapper { mix-blend-mode: normal; opacity: 0.9; }
+
+        .mask-fade-top { mask-image: linear-gradient(to bottom, transparent 0%, black 15%); -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%); }
+        .log-line { animation: fadeIn 0.15s ease-out; }
+        :root[data-theme="cyber"] .log-line { text-shadow: 0 0 4px rgba(var(--c-accent), 0.4); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
     </style>
 
-    <!-- ★ 人が編集しやすいようにスクリプトと設定を上部に移動しました -->
     <script>
         // ==========================================
-        // ★ システム設定（編集エリア）
+        // ★ 初期モデルデータの設定
         // ==========================================
-        // ここにある数値を変更するだけで、システムの初期設定を変えられます
-        const SETTINGS = {
-            // [モデル設定]
-            MODEL_OFFSET_Y: 1.2,          // モデルのY軸初期オフセット(高さの調整)
-            MODEL_OFFSET_Z: 0.2,          // モデルのZ軸初期オフセット(前後の調整)
-            DEFAULT_MODEL_URL: 'yuge_shousen_v10.glb',        // 起動時に自動で読み込むGLBファイル (例: 'yugemaru.glb')
-            
-            // [カメラ初期設定]
-            CAMERA_INIT_POS: { x: -4, y: 3.5, z: -11 }, // カメラの初期方向
-            CAMERA_INIT_ZOOM: 12.5,       // カメラの初期距離 (ZOOM)
-            
-            // [UI・システム設定]
-            MAX_LOGS: 25,                 // ログの最大表示行数
-            GRAPH_UPDATE_MS: 100          // リアルタイムグラフ・ログの更新間隔(ミリ秒)
+        // 起動時に自動で読み込むGLBファイルのパスを指定します。
+        // ※ ブラウザのプレビュー環境などで相対パスが解決できずエラーになるのを防ぐため、初期値は空文字にしています。
+        const INITIAL_MODEL_FILE = 'yuge_shousen_v10.glb'; 
+
+        // ==========================================
+        // ★ 設定・データ定義
+        // ==========================================
+        const TEXT_DICT = {
+            cyber: {
+                sys_title: "SYSTEM.CORE // UX.FRAME", theme_label: "UI.SKIN // THEME", import_label: "DATA.IMPORT // MODEL",
+                import_placeholder: "CLICK OR DRAG & DROP", import_status: "STATUS: IMPORTED", reset_btn: "SYS.RESET // POSTURE",
+                demo_start_btn: "INITIATE // DEMO.SEQ", demo_stop_btn: "HALT // DEMO.SEQ", vis_log: "VISUALIZE // SYS.LOGS",
+                vis_hud: "VISUALIZE // HUD.COMPASS", vis_posture: "VISUALIZE // POSTURE.CTRL", vis_graph: "VISUALIZE // DATA.METRICS",
+                vis_vline: "VISUALIZE // VERT.LINE", view_coords: "VIEW.COORDS // CAMERA", posture_title: "POSTURE.CTRL // MANUAL",
+                axis_yaw: "YAW.AXIS", axis_pitch: "PITCH.AXIS", axis_roll: "ROLL.AXIS", axis_speed: "SPEED.AXIS",
+                log_title: "YUGEMARU D-TWIN // VISUALIZATION SYS",
+                graph_title: "DATA.METRICS // SENSORS", badge_online: "ONLINE", badge_standby: "STANDBY",
+                trace_yaw: "YAW.TRACE", trace_pitch: "PITCH.TRACE", trace_roll: "ROLL.TRACE", trace_speed: "SPEED.TRACE"
+            },
+            industrial: {
+                sys_title: "システム設定", theme_label: "表示モード", import_label: "3Dモデルデータ取り込み",
+                import_placeholder: "クリック または ドラッグ＆ドロップ", import_status: "状態: 読込完了", reset_btn: "姿勢・視点リセット",
+                demo_start_btn: "テストモード開始", demo_stop_btn: "テストモード停止", vis_log: "システムログ表示",
+                vis_hud: "HUDコンパス表示", vis_posture: "手動パネル表示", vis_graph: "センサーデータ表示",
+                vis_vline: "Z軸表示", view_coords: "カメラ視点座標", posture_title: "手動設定",
+                axis_yaw: "ヨー角 (YAW)", axis_pitch: "ピッチ角 (PITCH)", axis_roll: "ロール角 (ROLL)", axis_speed: "船速 (SPEED)",
+                log_title: "弓削丸デジタルツイン表示システム",
+                graph_title: "センサーデータ測定", badge_online: "稼働中", badge_standby: "待機中",
+                trace_yaw: "ヨー履歴", trace_pitch: "ピッチ履歴", trace_roll: "ロール履歴", trace_speed: "船速履歴"
+            },
+            modern: {
+                sys_title: "Settings", theme_label: "UI Theme", import_label: "Model Import",
+                import_placeholder: "ファイルを選択", import_status: "インポート完了", reset_btn: "カメラと姿勢をリセット",
+                demo_start_btn: "デモモードを開始", demo_stop_btn: "デモモードを停止", vis_log: "ログを表示",
+                vis_hud: "HUDコンパスを表示", vis_posture: "姿勢コントローラーを表示", vis_graph: "リアルタイムグラフを表示",
+                vis_vline: "垂直ガイドラインを表示", view_coords: "カメラ座標 (Camera Coords)", posture_title: "Posture Control",
+                axis_yaw: "Yaw", axis_pitch: "Pitch", axis_roll: "Roll", axis_speed: "Speed",
+                log_title: "Yugemaru Digital Twin",
+                graph_title: "Realtime Metrics", badge_online: "Live", badge_standby: "Standby",
+                trace_yaw: "Yaw", trace_pitch: "Pitch", trace_roll: "Roll", trace_speed: "Speed"
+            }
         };
 
-        // ==========================================
-        // ★ メインシステムロジック
-        // ==========================================
-        // HTML要素(DOM)の読み込みが完了してから実行されます
+        const SETTINGS = {
+            MODEL_OFFSET_Y: 1.2, MODEL_OFFSET_Z: 0.2, DEFAULT_MODEL_URL: INITIAL_MODEL_FILE,
+            CAMERA_INIT_POS: { x: -4, y: 3.5, z: -11 }, CAMERA_INIT_ZOOM: 12.5,
+            MAX_LOGS: 25, GRAPH_UPDATE_MS: 100
+        };
+
+        const THREE_THEMES = {
+            cyber: { bg: 0x050811, fog: 0x050811, grid: 0x00ffff, vline: 0x00ffff, gridOpacity: 0.2 },
+            industrial: { bg: 0xffffff, fog: 0xffffff, grid: 0x222222, vline: 0x222222, gridOpacity: 0.5 }, 
+            modern: { bg: 0xf8fafc, fog: 0xf8fafc, grid: 0x94a3b8, vline: 0x3b82f6, gridOpacity: 0.0 } 
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
-            
-            // --- ログシステム (エラー回避のため最初に定義) ---
+            // --- ログシステム ---
             const logContent = document.getElementById('log-content');
-
-            function addLog(msg, type = "INFO") {
-                const now = new Date();
-                const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
-                                String(now.getMinutes()).padStart(2, '0') + ':' + 
-                                String(now.getSeconds()).padStart(2, '0') + '.' + 
-                                String(now.getMilliseconds()).padStart(3, '0');
-                let color = 'text-cyan-400';
-                if(type === 'WARN') color = 'text-fuchsia-400';
-                else if(type === 'ERR') color = 'text-red-500';
-
+            const addLog = (msg, type = "INFO") => {
+                // ★ ミリ秒表記を3桁(000)に戻す
+                const d = new Date(), t = [d.getHours(), d.getMinutes(), d.getSeconds()].map(v => String(v).padStart(2, '0')).join(':') + '.' + String(d.getMilliseconds()).padStart(3, '0');
+                const colorCls = type === 'WARN' ? 'text-theme-alert' : (type === 'ERR' ? 'text-red-500' : 'text-theme-accent');
                 const p = document.createElement('div');
-                p.className = `log-line ${color}`;
-                p.innerHTML = `<span class="opacity-50">[${timeStr}]</span> <span class="font-bold">${type}</span> : ${msg}`;
-                
+                // ★ 1行に収めるため whitespace-nowrap を追加
+                p.className = `log-line ${colorCls} whitespace-nowrap`; 
+                p.innerHTML = `<span class="opacity-50">[${t}]</span> <span class="font-bold">${type}</span> : ${msg}`;
                 logContent.appendChild(p);
-                // SETTINGS の最大ログ数を使用
-                if (logContent.children.length > SETTINGS.MAX_LOGS) {
-                    logContent.removeChild(logContent.firstChild);
-                }
-            }
-
+                if (logContent.children.length > SETTINGS.MAX_LOGS) logContent.removeChild(logContent.firstChild);
+            };
             addLog("SYSTEM BOOT SEQUENCE INITIATED", "INFO");
 
-            // --- Three.js の基本セットアップ ---
-            const container = document.getElementById('canvas-container');
+            // --- Three.js セットアップ ---
             const scene = new THREE.Scene();
-            // 背面のDOM要素（HUDやログ）を透かして見せるため、sceneの背景色塗りつぶしを削除(null)
-            scene.background = null; 
-            scene.fog = new THREE.Fog(0x050811, 20, 150);
+            scene.background = null; scene.fog = new THREE.Fog(THREE_THEMES.industrial.fog, 20, 150); 
 
-            // 宇宙/サイバー空間の底面に薄いシアンのグリッドを敷く
-            const bgGrid = new THREE.GridHelper(200, 100, 0x00ffff, 0x00ffff);
-            bgGrid.position.y = 0; // XZ平面に一致させる
-            bgGrid.material.opacity = 0.2; // 濃くする
-            bgGrid.material.transparent = true;
-            scene.add(bgGrid);
+            const bgGrid = new THREE.GridHelper(200, 100, 0xffffff, 0xffffff);
+            bgGrid.position.y = 0; bgGrid.material.transparent = true; scene.add(bgGrid);
 
-            // カメラ設定 (SETTINGSの値を適用)
             const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
             camera.position.set(SETTINGS.CAMERA_INIT_POS.x, SETTINGS.CAMERA_INIT_POS.y, SETTINGS.CAMERA_INIT_POS.z).setLength(SETTINGS.CAMERA_INIT_ZOOM);
 
-            // レンダラー設定
             const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-            renderer.setClearColor(0x000000, 0); // 透過色設定
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            renderer.outputEncoding = THREE.sRGBEncoding;
-            renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            renderer.toneMappingExposure = 0.7;
-            container.appendChild(renderer.domElement);
+            renderer.setPixelRatio(window.devicePixelRatio); renderer.setClearColor(0x000000, 0); renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.7;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // カメラコントローラー
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            // ★ 初期状態でカメラを自動回転させる
-            controls.autoRotate = true;
-            controls.autoRotateSpeed = 0.2; 
+            controls.target.set(0, 0, 0); controls.enableDamping = true; controls.dampingFactor = 0.05;
+            controls.autoRotate = true; controls.autoRotateSpeed = 0.2; 
             controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN };
 
-            // --- ライティング ---
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
-            hemiLight.position.set(0, 20, 0);
-            scene.add(hemiLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(20, 30, 10);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            scene.add(dirLight);
-            const bottomLight = new THREE.DirectionalLight(0xffffff, 0.6);
-            bottomLight.position.set(0, -30, 0);
-            scene.add(bottomLight);
+            // ライティング・垂直線
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6); hemiLight.position.set(0, 20, 0); scene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); dirLight.position.set(20, 30, 10); dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048; scene.add(dirLight);
+            const bottomLight = new THREE.DirectionalLight(0xffffff, 0.6); bottomLight.position.set(0, -30, 0); scene.add(bottomLight);
 
-            // --- 中心からの垂直線 ---
-            const verticalLineMat = new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6 });
-            const verticalLineGeo = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(0, 5.2, 0) 
-            ]);
-            const verticalLine = new THREE.Line(verticalLineGeo, verticalLineMat);
+            const verticalLineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+            const verticalLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 3.8, 0)]), verticalLineMat);
             scene.add(verticalLine);
 
-            // --- HUD コンパスの描画 ---
-            function initHudCompass() {
-                const bgCanvas = document.getElementById('hud-compass-bg');
-                const bgCtx = bgCanvas.getContext('2d');
-                const w = bgCanvas.width, h = bgCanvas.height;
-                const center = w / 2, radius = 480; 
+            // --- HUD コンパス ---
+            const initHudCompass = () => {
+                const bgCanvas = document.getElementById('hud-compass-bg'); const bgCtx = bgCanvas.getContext('2d');
+                const w = bgCanvas.width, h = bgCanvas.height, center = w / 2, radius = 480; 
+                const theme = document.documentElement.getAttribute('data-theme'), isCyber = theme === 'cyber', isInd = theme === 'industrial', isMod = theme === 'modern';
+                
+                // テーマ別カラー設定の集約
+                const t = {
+                    main: isCyber ? '#00ffff' : (isMod ? '#3b82f6' : '#222222'),
+                    text: isCyber ? '#ffffff' : (isMod ? '#111111' : '#222222'),
+                    sub: isCyber ? 'rgba(0, 255, 255, 0.9)' : (isMod ? 'rgba(59, 130, 246, 0.9)' : 'rgba(34, 34, 34, 0.9)'),
+                    ring1: isCyber ? 'rgba(0, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+                    ring2: isCyber ? 'rgba(0, 255, 255, 0.4)' : (isMod ? 'rgba(59, 130, 246, 0.4)' : 'rgba(34, 34, 34, 0.8)'),
+                    ring3: isCyber ? 'rgba(0, 255, 255, 0.2)' : 'rgba(34, 34, 34, 0.8)',
+                    ring4: isCyber ? 'rgba(0, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.1)',
+                    ring5: isCyber ? 'rgba(0, 255, 255, 0.4)' : 'rgba(34, 34, 34, 0.6)',
+                    indFill: isCyber ? 'rgba(255, 165, 0, 0.6)' : (isMod ? 'rgba(239, 68, 68, 0.8)' : 'rgba(200, 30, 30, 0.2)'),
+                    indStroke: 'rgba(200, 30, 30, 1.0)',
+                    indShadow: isCyber ? 'rgba(255, 165, 0, 0.8)' : (isMod ? 'rgba(239, 68, 68, 0.8)' : 'rgba(200, 30, 30, 0.5)'),
+                    font: isCyber ? '"Share Tech Mono", monospace' : '"Noto Sans JP", sans-serif'
+                };
 
-                bgCtx.clearRect(0, 0, w, h);
-                bgCtx.shadowColor = '#00ffff';
-                bgCtx.shadowBlur = 8;
+                bgCtx.setTransform(1, 0, 0, 1, 0, 0); bgCtx.clearRect(0, 0, w, h);
+                bgCtx.shadowColor = t.main; bgCtx.shadowBlur = isCyber ? 8 : 0;
 
-                bgCtx.beginPath(); bgCtx.arc(center, center, radius + 45, 0, 2 * Math.PI);
-                bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.15)'; bgCtx.stroke();
+                // ヘルパー関数: リング描画
+                const drawRing = (offset, lWidth, color, dash = []) => {
+                    bgCtx.setLineDash(dash); bgCtx.beginPath(); bgCtx.arc(center, center, radius + offset, 0, 2 * Math.PI);
+                    bgCtx.lineWidth = lWidth; bgCtx.strokeStyle = color; bgCtx.stroke();
+                };
 
-                bgCtx.beginPath(); bgCtx.arc(center, center, radius, 0, 2 * Math.PI);
-                bgCtx.lineWidth = 2; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)'; bgCtx.stroke();
+                if (!isInd) drawRing(45, 1, t.ring1);
+                drawRing(0, isInd ? 1 : 2, t.ring2);
+                if (!isInd) { drawRing(-35, 6, t.ring3, [3, 8]); drawRing(-55, 1, t.ring4); drawRing(-70, 1, t.ring5, [15, 20]); bgCtx.setLineDash([]); }
 
-                bgCtx.setLineDash([3, 8]);
-                bgCtx.beginPath(); bgCtx.arc(center, center, radius - 35, 0, 2 * Math.PI);
-                bgCtx.lineWidth = 6; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; bgCtx.stroke();
-                bgCtx.setLineDash([]); 
-
-                bgCtx.beginPath(); bgCtx.arc(center, center, radius - 55, 0, 2 * Math.PI);
-                bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.25)'; bgCtx.stroke();
-
-                bgCtx.setLineDash([15, 20]);
-                bgCtx.beginPath(); bgCtx.arc(center, center, radius - 70, 0, 2 * Math.PI);
-                bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.4)'; bgCtx.stroke();
-                bgCtx.setLineDash([]);
-
-                bgCtx.translate(center, center);
-                bgCtx.textAlign = 'center'; bgCtx.textBaseline = 'middle';
-
+                bgCtx.translate(center, center); bgCtx.textAlign = 'center'; bgCtx.textBaseline = 'middle';
                 for (let i = 0; i < 360; i += 2.5) { 
-                    bgCtx.save();
-                    bgCtx.rotate((i - 90) * Math.PI / 180);
-                    bgCtx.beginPath();
+                    bgCtx.save(); bgCtx.rotate((i - 90) * Math.PI / 180); bgCtx.beginPath();
                     if (i % 90 === 0) {
                         bgCtx.moveTo(radius - 5, 0); bgCtx.lineTo(radius + 15, 0);
-                        bgCtx.lineWidth = 3; bgCtx.strokeStyle = '#00ffff'; bgCtx.stroke();
-                        let text = i === 0 ? 'N' : i === 90 ? 'E' : i === 180 ? 'S' : 'W';
+                        bgCtx.lineWidth = isInd ? 1 : 3; bgCtx.strokeStyle = t.main; bgCtx.stroke();
                         bgCtx.translate(radius + 32, 0); bgCtx.rotate(-(i - 90) * Math.PI / 180); 
-                        bgCtx.font = 'bold 20px "Share Tech Mono", monospace';
-                        bgCtx.fillStyle = '#ffffff'; bgCtx.shadowBlur = 10;
-                        bgCtx.fillText(text, 0, 0);
+                        bgCtx.font = `bold 20px ${t.font}`; bgCtx.fillStyle = t.text; bgCtx.shadowBlur = isCyber ? 10 : 0;
+                        bgCtx.fillText(i === 0 ? 'N' : i === 90 ? 'E' : i === 180 ? 'S' : 'W', 0, 0);
                     } else if (i % 30 === 0) {
                         bgCtx.moveTo(radius, 0); bgCtx.lineTo(radius + 10, 0);
-                        bgCtx.lineWidth = 2; bgCtx.strokeStyle = '#00ffff'; bgCtx.stroke();
+                        bgCtx.lineWidth = isInd ? 1 : 2; bgCtx.strokeStyle = t.main; bgCtx.stroke();
                         bgCtx.translate(radius + 24, 0); bgCtx.rotate(-(i - 90) * Math.PI / 180);
-                        bgCtx.font = '10px "Share Tech Mono", monospace';
-                        bgCtx.fillStyle = 'rgba(0, 255, 255, 0.9)'; bgCtx.shadowBlur = 4;
+                        bgCtx.font = `10px ${t.font}`; bgCtx.fillStyle = t.sub; bgCtx.shadowBlur = isCyber ? 4 : 0;
                         bgCtx.fillText(i.toString().padStart(3, '0'), 0, 0);
                     } else if (i % 10 === 0) {
                         bgCtx.moveTo(radius, 0); bgCtx.lineTo(radius + 6, 0);
-                        bgCtx.lineWidth = 1.5; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.6)'; bgCtx.stroke();
+                        bgCtx.lineWidth = isInd ? 1 : 1.5; bgCtx.strokeStyle = isCyber ? 'rgba(0,255,255,0.6)' : (isMod ? 'rgba(59,130,246,0.6)' : 'rgba(34,34,34,0.8)'); bgCtx.stroke();
                     } else {
                         bgCtx.moveTo(radius, 0); bgCtx.lineTo(radius + 3, 0);
-                        bgCtx.lineWidth = 1; bgCtx.strokeStyle = 'rgba(0, 255, 255, 0.25)'; bgCtx.stroke();
+                        bgCtx.lineWidth = 1; bgCtx.strokeStyle = isCyber ? 'rgba(0,255,255,0.25)' : (isInd ? 'rgba(34,34,34,0.5)' : 'rgba(0,0,0,0.1)'); bgCtx.stroke();
                     }
                     bgCtx.restore();
                 }
 
-                const indCanvas = document.getElementById('hud-compass-indicator');
-                const indCtx = indCanvas.getContext('2d');
-                indCtx.clearRect(0, 0, w, h);
-                indCtx.translate(center, center);
-                indCtx.shadowColor = 'rgba(255, 165, 0, 0.8)'; 
-                indCtx.shadowBlur = 15; indCtx.fillStyle = 'rgba(255, 165, 0, 0.6)';
-                indCtx.beginPath();
-                indCtx.moveTo(0, -(radius + 10)); 
-                indCtx.lineTo(-15, -(radius + 35)); 
-                indCtx.lineTo(15, -(radius + 35)); 
-                indCtx.closePath(); indCtx.fill();
-            }
-            initHudCompass();
+                const indCtx = document.getElementById('hud-compass-indicator').getContext('2d');
+                indCtx.setTransform(1, 0, 0, 1, 0, 0); indCtx.clearRect(0, 0, w, h); indCtx.translate(center, center);
+                indCtx.shadowColor = t.indShadow; indCtx.shadowBlur = isCyber ? 15 : 0; 
+                indCtx.beginPath(); indCtx.moveTo(0, -(radius + 10)); indCtx.lineTo(-15, -(radius + 35)); indCtx.lineTo(15, -(radius + 35)); indCtx.closePath(); 
+                indCtx.fillStyle = t.indFill; indCtx.fill();
+                if (isInd) { indCtx.lineWidth = 1.5; indCtx.strokeStyle = t.indStroke; indCtx.stroke(); }
+            };
             addLog("HUD.COMPASS ... ONLINE", "INFO");
+
+            // --- システム制御・テーマ反映 ---
+            let isDemoMode = true;
+            const applyTheme = (themeName) => {
+                document.documentElement.setAttribute('data-theme', themeName);
+                const dict = TEXT_DICT[themeName];
+                if (dict) {
+                    document.querySelectorAll('[data-i18n]').forEach(el => {
+                        const key = el.getAttribute('data-i18n');
+                        if (dict[key]) el.innerHTML = key === 'import_placeholder' ? `<span class="font-bold">${dict[key]}</span>` : dict[key];
+                    });
+                    const demoBtn = document.getElementById('demo-btn'), badge = document.getElementById('sensor-status-badge');
+                    if(demoBtn) demoBtn.textContent = isDemoMode ? dict.demo_stop_btn : dict.demo_start_btn;
+                    if(badge) {
+                        badge.textContent = isDemoMode ? dict.badge_online : dict.badge_standby;
+                        badge.className = isDemoMode ? 
+                            (themeName === 'industrial' ? 'text-[9px] text-theme-alert bg-theme-alert/20 px-1 border border-theme-alert transition-colors font-bold' : 'text-[9px] text-white bg-theme-alert/80 px-1 border border-theme-alert transition-colors') : 
+                            'text-[9px] text-theme-accent bg-theme-accent/20 px-1 border border-theme-accent/50 transition-colors';
+                    }
+                }
+                const tColor = THREE_THEMES[themeName] || THREE_THEMES.industrial;
+                scene.background = null; if (scene.fog) scene.fog.color.setHex(tColor.fog);
+                if (bgGrid && bgGrid.material) { bgGrid.material.color.setHex(tColor.grid); bgGrid.material.opacity = tColor.gridOpacity; }
+                if (verticalLineMat) verticalLineMat.color.setHex(tColor.vline);
+                
+                initHudCompass(); addLog(`SKIN CHANGED TO: ${themeName.toUpperCase()}`, "INFO");
+            };
+
+            const themeSelect = document.getElementById('theme-select');
+            themeSelect.addEventListener('change', e => applyTheme(e.target.value));
+            applyTheme(document.documentElement.getAttribute('data-theme') || 'industrial');
 
             // --- モデル管理 ---
             const shipGroup = new THREE.Group(); shipGroup.rotation.order = "YXZ"; scene.add(shipGroup);
-            let currentModel = null;
+            let currentModel = null; 
+            let currentMixer = null; 
+            const animClock = new THREE.Clock(); 
             const loader = new THREE.GLTFLoader();
 
-            function createDefaultShip() {
-                const group = new THREE.Group();
-                const hull = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 10), new THREE.MeshStandardMaterial({ color: 0x94a3b8 }));
-                hull.position.y = 0.75; hull.castShadow = true; group.add(hull);
-                const bridge = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 3), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
-                bridge.position.set(0, 2.25, 2); bridge.castShadow = true; group.add(bridge);
-                const bow = new THREE.Mesh(new THREE.BoxGeometry(3.1, 1.6, 0.5), new THREE.MeshStandardMaterial({ color: 0xef4444 }));
-                bow.position.set(0, 0.75, -5.0); group.add(bow);
-                return group;
-            }
+            // 読み込みエラー時に表示されるデフォルトモデル
+            const createDefaultShip = () => {
+                const g = new THREE.Group();
+                const addMesh = (geo, color, pos) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color})); m.position.copy(pos); m.castShadow = true; g.add(m); };
+                
+                // 船体
+                addMesh(new THREE.BoxGeometry(3, 1.5, 10), 0x94a3b8, new THREE.Vector3(0, 0.75, 0));
+                
+                // ブリッジ
+                addMesh(new THREE.BoxGeometry(2, 1.5, 3), 0xe2e8f0, new THREE.Vector3(0, 2.25, 2));
+                
+                // 船首の赤い目印
+                addMesh(new THREE.BoxGeometry(3.1, 1.6, 0.5), 0xef4444, new THREE.Vector3(0, 0.75, -5.0));
+                
+                return g;
+            };
 
-            function loadModel(fileUrl, fileName) {
-                loader.load(fileUrl, (gltf) => {
-                    // 読み込み成功時、古いモデルがあれば削除して差し替え
-                    if (currentModel) shipGroup.remove(currentModel);
-                    const loadedScene = gltf.scene;
-                    const box = new THREE.Box3().setFromObject(loadedScene);
-                    const center = box.getCenter(new THREE.Vector3());
-                    const size = box.getSize(new THREE.Vector3());
-                    const scale = 10 / Math.max(size.x, size.y, size.z);
-                    loadedScene.scale.set(scale, scale, scale);
-                    loadedScene.position.sub(center.multiplyScalar(scale));
-                    
-                    // SETTINGS のオフセット値を適用
-                    loadedScene.position.y += SETTINGS.MODEL_OFFSET_Y;
-                    loadedScene.position.z += SETTINGS.MODEL_OFFSET_Z;
-
-                    const wrapper = new THREE.Group(); wrapper.add(loadedScene);
-                    wrapper.rotation.y = Math.PI;
-                    currentModel = wrapper;
-                    currentModel.traverse(n => { if(n.isMesh) { n.castShadow = n.receiveShadow = true; }});
-                    shipGroup.add(currentModel);
-
-                    if (fileName !== "初期モデル") {
-                        const fileNameElem = document.getElementById('file-name');
-                        fileNameElem.textContent = `読み込み完了: ${fileName}`;
-                        fileNameElem.classList.remove('hidden');
-                        addLog(`MODEL IMPORTED: ${fileName}`, "INFO");
-                    } else {
-                        addLog(`DEFAULT MODEL IMPORTED`, "INFO");
-                    }
-                }, undefined, (e) => {
-                    console.warn(`モデル読み込み失敗 (${fileName}):`, e);
-                    if (fileName !== "初期モデル") {
-                        alert("ファイルの読み込みに失敗しました。CORS設定やファイル形式を確認してください。");
-                        addLog(`IMPORT FAILED: ${fileName}`, "ERR");
-                    } else {
-                        // ★ 初期読み込みに失敗した時だけ、簡易モデルを生成して表示する
-                        addLog(`DEFAULT MODEL NOT FOUND. FALLBACK TO BASIC.`, "WARN");
+            const loadModel = (fileUrl, fileName) => {
+                try {
+                    loader.load(fileUrl, (gltf) => {
                         if (currentModel) shipGroup.remove(currentModel);
-                        currentModel = createDefaultShip();
-                        shipGroup.add(currentModel);
-                    }
-                });
-            }
+                        if (currentMixer) currentMixer = null; 
 
-            // ★ 初期状態では簡易モデルを表示せず、URLの指定状況に応じて処理を分ける
-            if (SETTINGS.DEFAULT_MODEL_URL && SETTINGS.DEFAULT_MODEL_URL.trim() !== '') {
-                // URLが指定されている場合は読み込みを試行（失敗すればloadModel内で簡易モデルにフォールバック）
-                loadModel(SETTINGS.DEFAULT_MODEL_URL, "初期モデル");
-            } else {
-                // URLが空の場合は読み込みに行かず、直接簡易モデルを表示
-                currentModel = createDefaultShip();
-                shipGroup.add(currentModel);
-                addLog("BASIC MODEL INITIALIZED", "INFO");
-            }
+                        const box = new THREE.Box3().setFromObject(gltf.scene), scale = 10 / Math.max(...box.getSize(new THREE.Vector3()).toArray());
+                        gltf.scene.scale.setScalar(scale); gltf.scene.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(scale));
+                        gltf.scene.position.y += SETTINGS.MODEL_OFFSET_Y; gltf.scene.position.z += SETTINGS.MODEL_OFFSET_Z;
+                        currentModel = new THREE.Group().add(gltf.scene); currentModel.rotation.y = Math.PI;
+                        currentModel.traverse(n => { if(n.isMesh) n.castShadow = n.receiveShadow = true; });
+                        shipGroup.add(currentModel);
+
+                        if (gltf.animations && gltf.animations.length > 0) {
+                            currentMixer = new THREE.AnimationMixer(gltf.scene);
+                            gltf.animations.forEach((clip) => {
+                                currentMixer.clipAction(clip).play();
+                            });
+                            addLog(`MODEL ANIMATIONS LOADED: ${gltf.animations.length}`, "INFO");
+                        }
+
+                        if (fileName !== "初期モデル") { document.getElementById('file-name')?.classList.remove('hidden'); addLog(`MODEL IMPORTED: ${fileName}`, "INFO"); }
+                    }, undefined, (e) => {
+                        console.warn(e);
+                        if (fileName !== "初期モデル") alert("ファイルの読み込みに失敗しました。");
+                        else { if (currentModel) shipGroup.remove(currentModel); currentModel = createDefaultShip(); shipGroup.add(currentModel); }
+                    });
+                } catch (e) {
+                    console.warn("Load Error:", e);
+                    if (fileName !== "初期モデル") alert("ファイルの読み込みに失敗しました。");
+                    else { if (currentModel) shipGroup.remove(currentModel); currentModel = createDefaultShip(); shipGroup.add(currentModel); }
+                }
+            };
+            SETTINGS.DEFAULT_MODEL_URL ? loadModel(SETTINGS.DEFAULT_MODEL_URL, "初期モデル") : (currentModel = createDefaultShip(), shipGroup.add(currentModel));
 
             // --- UIとループ ---
-            const yawSlider = document.getElementById('yaw-slider'), pitchSlider = document.getElementById('pitch-slider'), rollSlider = document.getElementById('roll-slider');
-            const yawVal = document.getElementById('yaw-val'), pitchVal = document.getElementById('pitch-val'), rollVal = document.getElementById('roll-val');
+            const sliders = ['yaw', 'pitch', 'roll', 'speed'].map(id => document.getElementById(`${id}-slider`));
+            const vals = ['yaw', 'pitch', 'roll', 'speed'].map(id => document.getElementById(`${id}-val`));
 
-            function updateRotation() {
-                const y = parseFloat(yawSlider.value), p = parseFloat(pitchSlider.value), r = parseFloat(rollSlider.value);
-                yawVal.textContent = `${y.toFixed(1)}°`; pitchVal.textContent = `${p.toFixed(1)}°`; rollVal.textContent = `${r.toFixed(1)}°`;
-                shipGroup.rotation.y = 0; 
-                shipGroup.rotation.x = THREE.MathUtils.degToRad(p);
-                shipGroup.rotation.z = -THREE.MathUtils.degToRad(r);
-                const indicatorContainer = document.getElementById('hud-indicator-container');
-                if (indicatorContainer) indicatorContainer.style.transform = `rotate(${y}deg)`;
-            }
+            const updateRotation = () => {
+                const [y, p, r, s] = sliders.map(el => parseFloat(el.value));
+                const units = ['°', '°', '°', 'kt'];
+                vals.forEach((el, i) => el.textContent = `${[y, p, r, s][i].toFixed(1)}${units[i]}`);
+                shipGroup.rotation.set(THREE.MathUtils.degToRad(p), 0, -THREE.MathUtils.degToRad(r));
+                const ind = document.getElementById('hud-indicator-container'); if (ind) ind.style.transform = `rotate(${y}deg)`;
+            };
 
-            [yawSlider, pitchSlider, rollSlider].forEach(s => s.addEventListener('input', updateRotation));
+            sliders.forEach(s => s.addEventListener('input', updateRotation));
             document.getElementById('reset-btn').addEventListener('click', () => {
-                [yawSlider, pitchSlider, rollSlider].forEach(s => s.value = 0);
-                updateRotation(); 
-                // SETTINGS の初期カメラ値を使用
-                camera.position.set(SETTINGS.CAMERA_INIT_POS.x, SETTINGS.CAMERA_INIT_POS.y, SETTINGS.CAMERA_INIT_POS.z).setLength(SETTINGS.CAMERA_INIT_ZOOM); 
-                controls.target.set(0, 0, 0);
-                addLog("POSTURE & CAMERA RESET", "WARN");
+                sliders.forEach(s => s.value = 0); updateRotation(); 
+                camera.position.set(SETTINGS.CAMERA_INIT_POS.x, SETTINGS.CAMERA_INIT_POS.y, SETTINGS.CAMERA_INIT_POS.z).setLength(SETTINGS.CAMERA_INIT_ZOOM); controls.target.set(0, 0, 0);
             });
+            document.getElementById('file-upload').addEventListener('change', e => { if (e.target.files[0]) loadModel(URL.createObjectURL(e.target.files[0]), e.target.files[0].name); });
 
-            document.getElementById('file-upload').addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) loadModel(URL.createObjectURL(file), file.name);
+            // UI切り替えイベント最適化
+            [['show-log-cb', 'log-panel', 'flex'], ['show-hud-cb', 'hud-compass-wrapper', 'block'], ['show-posture-cb', 'posture-panel', 'block'], ['show-graph-cb', 'graph-panel', 'block']].forEach(([cb, panel, disp]) => {
+                document.getElementById(cb).addEventListener('change', e => document.getElementById(panel).style.display = e.target.checked ? disp : 'none');
             });
-
-            // ★ 初期からデモ状態（オンライン）とする
-            addLog("DATA.METRICS ... ONLINE", "INFO");
-            addLog("DEMO.SEQUENCE ... STARTED", "WARN");
-
-            document.getElementById('show-log-cb').addEventListener('change', (e) => document.getElementById('log-panel').style.display = e.target.checked ? 'flex' : 'none');
-            document.getElementById('show-hud-cb').addEventListener('change', (e) => document.getElementById('hud-compass-wrapper').style.display = e.target.checked ? 'block' : 'none');
-            document.getElementById('show-posture-cb').addEventListener('change', (e) => document.getElementById('posture-panel').style.display = e.target.checked ? 'block' : 'none');
-            document.getElementById('show-graph-cb').addEventListener('change', (e) => document.getElementById('graph-panel').style.display = e.target.checked ? 'block' : 'none');
-            document.getElementById('show-vline-cb').addEventListener('change', (e) => verticalLine.visible = e.target.checked);
-
+            document.getElementById('show-vline-cb').addEventListener('change', e => verticalLine.visible = e.target.checked);
+            
             const toggleBtn = document.getElementById('toggle-panel-btn'), panelContent = document.getElementById('panel-content'), toggleIcon = document.getElementById('toggle-icon');
             let isPanelOpen = true;
-            toggleBtn.addEventListener('click', () => {
-                isPanelOpen = !isPanelOpen;
-                panelContent.classList.toggle('hidden', !isPanelOpen);
-                toggleIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)';
-            });
+            toggleBtn.addEventListener('click', () => { isPanelOpen = !isPanelOpen; panelContent.classList.toggle('hidden', !isPanelOpen); toggleIcon.style.transform = isPanelOpen ? 'rotate(0deg)' : 'rotate(180deg)'; });
 
-            // ★ isDemoMode を初期状態で true に設定し、clock をスタート
-            let isDemoMode = true; 
-            const clock = new THREE.Clock();
-            clock.start();
-            
+            const clock = new THREE.Clock(); clock.start();
             document.getElementById('demo-btn').addEventListener('click', (e) => {
-                isDemoMode = !isDemoMode;
-                e.target.textContent = isDemoMode ? 'HALT // DEMO.SEQ' : 'INITIATE // DEMO.SEQ';
+                isDemoMode = !isDemoMode; applyTheme(document.documentElement.getAttribute('data-theme')); 
                 e.target.classList.toggle('btn-alert', isDemoMode);
-                const badge = document.getElementById('sensor-status-badge');
-
-                if (isDemoMode) {
-                    clock.start();
-                    addLog("DEMO.SEQUENCE ... STARTED", "WARN");
-                    addLog("SENSOR LINK ... ONLINE", "INFO");
-                    controls.autoRotate = true; 
-                    badge.textContent = 'ONLINE';
-                    badge.className = 'text-[9px] text-red-400 bg-red-900/30 px-1 border border-red-500/50 transition-colors';
-                } else {
-                    clock.stop();
-                    addLog("DEMO.SEQUENCE ... HALTED", "INFO");
-                    addLog("SENSOR LINK ... OFFLINE", "WARN");
-                    controls.autoRotate = false; 
-                    badge.textContent = 'STANDBY';
-                    badge.className = 'text-[9px] text-cyan-400 bg-cyan-900/30 px-1 border border-cyan-500/50 transition-colors';
-                }
+                isDemoMode ? clock.start() : clock.stop(); controls.autoRotate = isDemoMode;
             });
 
-            const yawData = new Array(100).fill(0), pitchData = new Array(100).fill(0), rollData = new Array(100).fill(0);
-            
-            function hexToRgba(hex, alpha) {
-                let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            }
+            // グラフ描画
+            const graphData = { yaw: new Array(100).fill(0), pitch: new Array(100).fill(0), roll: new Array(100).fill(0), speed: new Array(100).fill(0) };
+            const hexToRgba = (hex, alpha) => hex.startsWith('#') ? `rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${alpha})` : hex.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
 
-            function drawGraph(id, data, min, max, colorHex) {
-                const c = document.getElementById(id); if (!c) return;
-                const ctx = c.getContext('2d'), w = c.width, h = c.height;
-                ctx.clearRect(0,0,w,h); 
-                
-                ctx.strokeStyle = 'rgba(0, 255, 255, 0.2)'; 
-                ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
-                ctx.beginPath(); let zy = h - ((0-min)/(max-min))*h; 
-                ctx.moveTo(0,zy); ctx.lineTo(w,zy); ctx.stroke();
-                ctx.setLineDash([]); 
+            const drawGraph = (id, data, min, max) => {
+                const c = document.getElementById(`${id}-canvas`); if (!c) return;
+                const ctx = c.getContext('2d'), dpr = window.devicePixelRatio || 1, cssW = 288, cssH = 48;
+                if (c.width !== cssW * dpr) { c.width = cssW * dpr; c.height = cssH * dpr; }
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-                ctx.strokeStyle = colorHex; ctx.lineWidth = 2; ctx.beginPath();
-                for(let i=0; i<100; i++) {
-                    let y = h - ((Math.min(Math.max(data[i], min), max)-min)/(max-min))*h;
-                    if(i===0) ctx.moveTo(0,y); else ctx.lineTo(i*(w/99),y);
-                }
+                const theme = document.documentElement.getAttribute('data-theme'), isCyber = theme === 'cyber', isInd = theme === 'industrial';
+                const mainColor = isCyber ? '#00ffff' : (theme === 'modern' ? '#3b82f6' : '#222222');
+
+                ctx.clearRect(0, 0, cssW, cssH); 
+                ctx.strokeStyle = isCyber ? 'rgba(0,255,255,0.2)' : 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.setLineDash([2, 4]);
+                ctx.beginPath(); let zy = Math.floor(cssH - ((0-min)/(max-min))*cssH) + 0.5; ctx.moveTo(0,zy); ctx.lineTo(cssW,zy); ctx.stroke(); ctx.setLineDash([]); 
+
+                ctx.strokeStyle = hexToRgba(mainColor, 0.5); ctx.lineWidth = 1; ctx.beginPath();
+                data.forEach((val, i) => { let y = cssH - ((Math.min(Math.max(val, min), max)-min)/(max-min))*cssH; i===0 ? ctx.moveTo(0,y) : ctx.lineTo(i*(cssW/99),y); });
                 ctx.stroke();
 
-                ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
-                let grad = ctx.createLinearGradient(0, 0, 0, h);
-                grad.addColorStop(0, hexToRgba(colorHex, 0.4)); 
-                grad.addColorStop(1, hexToRgba(colorHex, 0.0)); 
-                ctx.fillStyle = grad; ctx.fill();
+                if (!isInd) {
+                    ctx.lineTo(cssW, cssH); ctx.lineTo(0, cssH); ctx.closePath();
+                    let grad = ctx.createLinearGradient(0, 0, 0, cssH); grad.addColorStop(0, hexToRgba(mainColor, 0.4)); grad.addColorStop(1, hexToRgba(mainColor, 0.0)); ctx.fillStyle = grad; ctx.fill();
+                }
 
-                let lastY = h - ((Math.min(Math.max(data[99], min), max)-min)/(max-min))*h;
-                ctx.fillStyle = '#fff'; ctx.shadowColor = colorHex; ctx.shadowBlur = 8;
-                ctx.beginPath(); ctx.arc(w - 2, lastY, 3, 0, Math.PI*2); ctx.fill();
-                ctx.shadowBlur = 0;
-            }
+                let lastY = cssH - ((Math.min(Math.max(data[99], min), max)-min)/(max-min))*cssH;
+                ctx.fillStyle = isCyber ? '#fff' : mainColor; ctx.shadowColor = mainColor; ctx.shadowBlur = isCyber ? 8 : 0;
+                ctx.beginPath(); ctx.arc(cssW - 2, lastY, 3, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+            };
 
-            drawGraph('yaw-canvas', yawData, 0, 360, '#00ffff');
-            drawGraph('pitch-canvas', pitchData, -15, 15, '#00ffff');
-            drawGraph('roll-canvas', rollData, -15, 15, '#00ffff');
+            const axisConfig = {
+                yaw: { min: 0, max: 360, unit: '°' }, pitch: { min: -15, max: 15, unit: '°' },
+                roll: { min: -15, max: 15, unit: '°' }, speed: { min: 0, max: 30, unit: 'kt' }
+            };
 
-            // SETTINGS のインターバルを使用
             setInterval(() => {
                 if (!isDemoMode) return;
-                const y = parseFloat(yawSlider.value), p = parseFloat(pitchSlider.value), r = parseFloat(rollSlider.value);
-                [yawData, pitchData, rollData].forEach((d, i) => { d.push([y,p,r][i]); d.shift(); });
+                const currentVals = sliders.map(s => parseFloat(s.value));
+                ['yaw', 'pitch', 'roll', 'speed'].forEach((id, i) => {
+                    const val = currentVals[i]; graphData[id].push(val); graphData[id].shift();
+                    drawGraph(id, graphData[id], axisConfig[id].min, axisConfig[id].max);
+                    document.getElementById(`${id}-graph-val`).textContent = `${val.toFixed(1)}${axisConfig[id].unit}`;
+                });
                 
-                drawGraph('yaw-canvas', yawData, 0, 360, '#00ffff');
-                drawGraph('pitch-canvas', pitchData, -15, 15, '#00ffff');
-                drawGraph('roll-canvas', rollData, -15, 15, '#00ffff');
-                
-                document.getElementById('yaw-graph-val').textContent = `${y.toFixed(1)}°`;
-                document.getElementById('pitch-graph-val').textContent = `${p.toFixed(1)}°`;
-                document.getElementById('roll-graph-val').textContent = `${r.toFixed(1)}°`;
-
-                const strY = y.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
-                const strP = p.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
-                const strR = r.toFixed(1).padStart(5, ' ').replace(/ /g, '&nbsp;');
-                addLog(`SENSOR.RECV [Y:${strY} P:${strP} R:${strR}]`, "INFO");
+                const fmt = (v) => v.toFixed(1).padStart(5).replace(/ /g,'&nbsp;');
+                // ★ 船速の表記を S: から V: に変更
+                addLog(`SENSOR.RECV [Y:${fmt(currentVals[0])} P:${fmt(currentVals[1])} R:${fmt(currentVals[2])} V:${fmt(currentVals[3])}]`, "INFO");
             }, SETTINGS.GRAPH_UPDATE_MS);
 
-            function animate() {
+            const animate = () => {
                 requestAnimationFrame(animate);
+                
+                const delta = animClock.getDelta();
+                if (currentMixer) {
+                    currentMixer.update(delta);
+                }
+
                 if (isDemoMode) {
                     let t = clock.getElapsedTime(), amp = 5;
-                    yawSlider.value = (parseFloat(yawSlider.value) + 0.15) % 360;
-                    pitchSlider.value = Math.sin(t) * amp;
-                    rollSlider.value = Math.cos(t) * amp;
+                    sliders[0].value = (parseFloat(sliders[0].value) + 0.15) % 360; 
+                    sliders[1].value = Math.sin(t) * amp; 
+                    sliders[2].value = Math.cos(t) * amp;
+                    sliders[3].value = 7.5 + Math.sin(t * 0.5) * 2.5; 
                     updateRotation();
                 }
+
+                const speed = parseFloat(sliders[3].value);
+                const scrollSpeed = speed * 0.001;
+                bgGrid.position.z = (bgGrid.position.z + scrollSpeed) % 2;
+
                 controls.update(); renderer.render(scene, camera);
-                
-                document.getElementById('cam-x').textContent = camera.position.x.toFixed(1);
-                document.getElementById('cam-y').textContent = camera.position.y.toFixed(1);
-                document.getElementById('cam-z').textContent = camera.position.z.toFixed(1);
-                document.getElementById('cam-zoom').textContent = camera.position.distanceTo(controls.target).toFixed(1);
-            }
+                document.getElementById('cam-x').textContent = camera.position.x.toFixed(1); document.getElementById('cam-y').textContent = camera.position.y.toFixed(1);
+                document.getElementById('cam-z').textContent = camera.position.z.toFixed(1); document.getElementById('cam-zoom').textContent = camera.position.distanceTo(controls.target).toFixed(1);
+            };
             updateRotation(); animate();
-            window.addEventListener('resize', () => { 
-                camera.aspect = window.innerWidth/window.innerHeight; 
-                camera.updateProjectionMatrix(); 
-                renderer.setSize(window.innerWidth, window.innerHeight); 
-            });
+            
+            window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
         });
     </script>
 </head>
-<!-- ★ w-full と h-screen を追加して画面サイズを固定 -->
-<body class="m-0 p-0 overflow-hidden text-white w-full h-screen relative">
+<body class="m-0 p-0 overflow-hidden w-full h-screen relative">
 
-    <!-- 設定パネル (第1層: z-50) -->
-    <div class="absolute top-4 right-4 w-80 cyber-panel z-50">
-        
-        <!-- パネルヘッダー -->
-        <div class="flex items-center justify-between px-5 py-3 border-b border-cyan-500/30 bg-cyan-900/20">
-            <h1 class="text-[10px] font-bold cyber-header">SYSTEM.CORE // UX.FRAME.01</h1>
-            <button id="toggle-panel-btn" class="p-1 text-cyan-500 hover:text-cyan-300 transition-colors">
-                <svg id="toggle-icon" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                </svg>
+    <!-- 設定パネル -->
+    <div class="absolute top-4 right-4 w-80 system-panel p-4 z-50 flex flex-col max-h-[90vh]">
+        <div class="flex items-center justify-between mb-4 border-b border-theme-accent/30 pb-1">
+            <div class="text-[10px] font-bold panel-header" data-i18n="sys_title">システム設定</div>
+            <button id="toggle-panel-btn" class="p-0 text-theme-accent hover:text-theme-sub transition-colors">
+                <svg id="toggle-icon" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" /></svg>
             </button>
         </div>
         
-        <!-- 折りたたみ対象のコンテンツ -->
-        <div id="panel-content" class="p-5">
-            <!-- ファイルアップロード -->
+        <div id="panel-content" class="flex-1 overflow-y-auto pr-1">
+            <div class="flex justify-between items-center mb-5 pb-3 border-b border-theme-accent/20">
+                <label class="text-xs text-theme-text tracking-widest" data-i18n="theme_label">表示モード</label>
+                <select id="theme-select" class="styled-select text-[10px] p-1 pr-6 font-bold bg-transparent">
+                    <option value="cyber">CYBER</option>
+                    <option value="industrial" selected>INDUSTRIAL</option>
+                    <!-- ★ モダンテーマの選択肢を削除（機能自体は保持） -->
+                </select>
+            </div>
+
             <div class="mb-5">
                 <div class="flex justify-between items-end mb-2">
-                    <label class="text-xs text-cyan-400 tracking-widest">DATA.IMPORT // MODEL</label>
-                    <span class="text-[10px] text-cyan-600 bg-cyan-900/40 px-1">.GLB / .GLTF</span>
+                    <label class="text-xs text-theme-text tracking-widest" data-i18n="import_label">3Dモデルデータ取り込み</label>
+                    <span class="text-[10px] text-theme-accent bg-theme-accent/20 px-1">.GLB / .GLTF</span>
                 </div>
                 <div class="flex items-center justify-center w-full">
-                    <label for="file-upload" class="flex flex-col items-center justify-center w-full h-16 border border-cyan-500/40 border-dashed cursor-pointer bg-cyan-950/30 hover:bg-cyan-900/50 transition">
+                    <label for="file-upload" class="flex flex-col items-center justify-center w-full h-16 border border-theme-accent/40 border-dashed cursor-pointer bg-transparent hover:bg-theme-accent/10 transition rounded-[var(--panel-radius)]">
                         <div class="flex flex-col items-center justify-center pt-2 pb-2">
-                            <p class="text-[11px] text-cyan-500"><span class="font-bold">CLICK</span> OR DRAG & DROP</p>
+                            <p class="text-[11px] text-theme-accent" data-i18n="import_placeholder"><span class="font-bold">クリック</span> または ドラッグ＆ドロップ</p>
                         </div>
                         <input id="file-upload" type="file" class="hidden" accept=".glb,.gltf" />
                     </label>
                 </div>
-                <p id="file-name" class="text-[10px] text-green-400 mt-2 hidden">STATUS: IMPORTED </p>
+                <p id="file-name" class="text-[10px] text-green-500 mt-2 hidden" data-i18n="import_status">状態: 読込完了</p>
             </div>
 
-            <div class="h-px w-full bg-cyan-500/20 my-4"></div>
+            <div class="h-px w-full bg-theme-accent/20 my-4"></div>
 
-            <!-- システムコントロールボタン -->
-            <button id="reset-btn" class="w-full py-2 cyber-btn text-xs">
-                SYS.RESET // POSTURE
-            </button>
+            <button id="reset-btn" class="w-full py-2 action-btn text-xs" data-i18n="reset_btn">姿勢・視点リセット</button>
+            <button id="demo-btn" class="mt-3 w-full py-2 action-btn text-xs btn-alert" data-i18n="demo_stop_btn">テストモード停止</button>
 
-            <!-- ★ 初期表示を動作中のテキストとスタイルに変更 -->
-            <button id="demo-btn" class="mt-3 w-full py-2 cyber-btn text-xs btn-alert">
-                HALT // DEMO.SEQ
-            </button>
-
-            <!-- 各種パネル表示切替チェックボックス -->
-            <div class="mt-4 border border-cyan-500/20 p-2 bg-cyan-950/20 space-y-2">
+            <div class="mt-4 border border-theme-accent/20 p-2 bg-transparent space-y-2 rounded-[var(--panel-radius)]">
                 <div class="flex items-center justify-between">
-                    <label for="show-log-cb" class="text-[10px] text-cyan-500 cursor-pointer">VISUALIZE // SYS.LOGS</label>
-                    <input type="checkbox" id="show-log-cb" class="w-3 h-3 appearance-none border border-cyan-500 checked:bg-cyan-500 cursor-pointer" checked>
+                    <label for="show-log-cb" class="text-[10px] text-theme-text cursor-pointer" data-i18n="vis_log">システムログ表示</label>
+                    <input type="checkbox" id="show-log-cb" class="w-3 h-3 cursor-pointer accent-theme-accent" checked>
                 </div>
                 <div class="flex items-center justify-between">
-                    <label for="show-hud-cb" class="text-[10px] text-cyan-500 cursor-pointer">VISUALIZE // HUD.COMPASS</label>
-                    <input type="checkbox" id="show-hud-cb" class="w-3 h-3 appearance-none border border-cyan-500 checked:bg-cyan-500 cursor-pointer" checked>
+                    <label for="show-hud-cb" class="text-[10px] text-theme-text cursor-pointer" data-i18n="vis_hud">HUDコンパス表示</label>
+                    <input type="checkbox" id="show-hud-cb" class="w-3 h-3 cursor-pointer accent-theme-accent" checked>
                 </div>
                 <div class="flex items-center justify-between">
-                    <label for="show-posture-cb" class="text-[10px] text-cyan-500 cursor-pointer">VISUALIZE // POSTURE.CTRL</label>
-                    <input type="checkbox" id="show-posture-cb" class="w-3 h-3 appearance-none border border-cyan-500 checked:bg-cyan-500 cursor-pointer" checked>
+                    <label for="show-posture-cb" class="text-[10px] text-theme-text cursor-pointer" data-i18n="vis_posture">手動制御パネル表示</label>
+                    <input type="checkbox" id="show-posture-cb" class="w-3 h-3 cursor-pointer accent-theme-accent" checked>
                 </div>
                 <div class="flex items-center justify-between">
-                    <label for="show-graph-cb" class="text-[10px] text-cyan-500 cursor-pointer">VISUALIZE // DATA.METRICS</label>
-                    <input type="checkbox" id="show-graph-cb" class="w-3 h-3 appearance-none border border-cyan-500 checked:bg-cyan-500 cursor-pointer" checked>
+                    <label for="show-graph-cb" class="text-[10px] text-theme-text cursor-pointer" data-i18n="vis_graph">センサーデータ表示</label>
+                    <input type="checkbox" id="show-graph-cb" class="w-3 h-3 cursor-pointer accent-theme-accent" checked>
                 </div>
-                <!-- ★ 垂直線の表示切替チェックボックスを追加 -->
                 <div class="flex items-center justify-between">
-                    <label for="show-vline-cb" class="text-[10px] text-cyan-500 cursor-pointer">VISUALIZE // VERT.LINE</label>
-                    <input type="checkbox" id="show-vline-cb" class="w-3 h-3 appearance-none border border-cyan-500 checked:bg-cyan-500 cursor-pointer" checked>
+                    <label for="show-vline-cb" class="text-[10px] text-theme-text cursor-pointer" data-i18n="vis_vline">Z軸表示</label>
+                    <input type="checkbox" id="show-vline-cb" class="w-3 h-3 cursor-pointer accent-theme-accent" checked>
                 </div>
             </div>
 
-            <!-- カメラ座標表示 -->
-            <div class="mt-4 pt-3 border-t border-cyan-500/30">
-                <div class="mb-1 text-[10px] text-cyan-500 border-b border-cyan-500/30 pb-1">VIEW.COORDS // CAMERA</div>
-                <!-- ★ ZOOM（カメラとターゲットの距離）のテキストカラーを他と同じに統一 -->
+            <div class="mt-4 pt-3 border-t border-theme-accent/30">
+                <div class="mb-1 text-[10px] text-theme-text border-b border-theme-accent/30 pb-1" data-i18n="view_coords">カメラ視点座標</div>
                 <div class="mt-1 flex justify-between text-[11px]">
-                    <div class="text-cyan-200">X:<span id="cam-x" class="font-mono ml-1">0.0</span></div>
-                    <div class="text-cyan-200">Y:<span id="cam-y" class="font-mono ml-1">0.0</span></div>
-                    <div class="text-cyan-200">Z:<span id="cam-z" class="font-mono ml-1">0.0</span></div>
-                    <div class="text-cyan-200">ZOOM:<span id="cam-zoom" class="font-mono ml-1">0.0</span></div>
+                    <div class="text-theme-sub">X:<span id="cam-x" class="font-mono ml-1 text-theme-accent">0.0</span></div>
+                    <div class="text-theme-sub">Y:<span id="cam-y" class="font-mono ml-1 text-theme-accent">0.0</span></div>
+                    <div class="text-theme-sub">Z:<span id="cam-z" class="font-mono ml-1 text-theme-accent">0.0</span></div>
+                    <div class="text-theme-sub">ZOOM:<span id="cam-zoom" class="font-mono ml-1 text-theme-accent">0.0</span></div>
                 </div>
             </div>
-        </div> <!-- panel-content 終了 -->
+        </div>
     </div>
 
-    <!-- 姿勢コントロールパネル (第1層: z-50) -->
-    <div id="posture-panel" class="absolute bottom-4 left-4 w-80 cyber-panel p-4 z-50">
-        <div class="mb-4 text-[10px] font-bold cyber-header border-b border-cyan-500/30 pb-1">POSTURE.CTRL // MANUAL</div>
-        
+    <!-- 姿勢コントロールパネル -->
+    <div id="posture-panel" class="absolute bottom-4 left-4 w-80 system-panel p-4 z-50">
+        <div class="mb-4 text-[10px] font-bold panel-header border-b border-theme-accent/30 pb-1" data-i18n="posture_title">手動設定</div>
         <div class="space-y-4">
-            <!-- ヨー (Yaw / Heading) -->
             <div>
                 <div class="flex justify-between text-xs mb-1">
-                    <label class="text-cyan-400">YAW.AXIS</label>
-                    <span id="yaw-val" class="text-cyan-200 font-mono">0.0°</span>
+                    <label class="text-theme-text" data-i18n="axis_yaw">ヨー角 (YAW)</label><span id="yaw-val" class="text-theme-accent font-mono">0.0°</span>
                 </div>
                 <input type="range" id="yaw-slider" min="0" max="360" step="0.1" value="0">
             </div>
-
-            <!-- ピッチ (Pitch) -->
             <div>
                 <div class="flex justify-between text-xs mb-1">
-                    <!-- ★ 色をシアン系に統一 -->
-                    <label class="text-cyan-400">PITCH.AXIS</label>
-                    <span id="pitch-val" class="text-cyan-200 font-mono">0.0°</span>
+                    <label class="text-theme-text" data-i18n="axis_pitch">ピッチ角 (PITCH)</label><span id="pitch-val" class="text-theme-accent font-mono">0.0°</span>
                 </div>
-                <!-- ★ カスタムカラースライダーのクラス(slider-magenta)を削除し、デフォルトのシアンに -->
                 <input type="range" id="pitch-slider" min="-90" max="90" step="0.1" value="0">
             </div>
-
-            <!-- ロール (Roll) -->
             <div>
                 <div class="flex justify-between text-xs mb-1">
-                    <!-- ★ 色をシアン系に統一 -->
-                    <label class="text-cyan-400">ROLL.AXIS</label>
-                    <span id="roll-val" class="text-cyan-200 font-mono">0.0°</span>
+                    <label class="text-theme-text" data-i18n="axis_roll">ロール角 (ROLL)</label><span id="roll-val" class="text-theme-accent font-mono">0.0°</span>
                 </div>
                 <input type="range" id="roll-slider" min="-90" max="90" step="0.1" value="0">
             </div>
-        </div>
-    </div>
-
-    <!-- リアルタイムログ表示パネル (第4層・最背面: z-20に変更し、マスクを適用) -->
-    <div id="log-panel" class="absolute top-4 left-4 w-96 cyber-panel p-4 z-20 pointer-events-none">
-        <div class="mb-2 text-[10px] font-bold cyber-header border-b border-cyan-500/30 pb-1">
-            YUGEMARU D-TWIN // VISUALIZATION SYS
-        </div>
-        <div class="h-[25vh] overflow-hidden relative flex flex-col justify-end mask-fade-top">
-            <div id="log-content" class="text-[10px] font-mono space-y-1 pb-1 leading-tight relative z-0">
-                <!-- ログがここに追加される -->
+            <div>
+                <div class="flex justify-between text-xs mb-1">
+                    <label class="text-theme-text" data-i18n="axis_speed">船速 (SPEED)</label><span id="speed-val" class="text-theme-accent font-mono">0.0kt</span>
+                </div>
+                <input type="range" id="speed-slider" min="0" max="30" step="0.1" value="0">
             </div>
         </div>
     </div>
 
-    <!-- 3Dキャンバスコンテナ (第2層: z-40) -->
-    <!-- ※ 背面を透かすためにabsoluteで明示的にz-indexを指定 -->
+    <!-- ログパネル -->
+    <!-- ★ 横幅を w-96 (384px) から w-[450px] に広げる -->
+    <div id="log-panel" class="absolute top-4 left-4 w-[450px] system-panel p-4 z-20 pointer-events-none">
+        <div class="mb-2 text-[10px] font-bold panel-header border-b border-theme-accent/30 pb-1" data-i18n="log_title">弓削丸デジタルツイン表示システム</div>
+        <div class="h-[25vh] overflow-hidden relative flex flex-col justify-end mask-fade-top">
+            <div id="log-content" class="text-[10px] font-mono space-y-1 pb-1 leading-tight relative z-0"></div>
+        </div>
+    </div>
+
+    <!-- 3Dキャンバス -->
     <div id="canvas-container" class="absolute inset-0 w-full h-screen z-40"></div>
 
-    <!-- HUD コンパス (第3層: z-30) -->
-    <div id="hud-compass-wrapper" class="absolute top-1/2 left-1/2 w-[1200px] h-[1200px] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 mix-blend-screen opacity-90">
-        <!-- コンパスリング (固定) -->
+    <!-- HUD コンパス -->
+    <div id="hud-compass-wrapper" class="absolute top-1/2 left-1/2 w-[1200px] h-[1200px] transform -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30 opacity-90">
         <canvas id="hud-compass-bg" width="1200" height="1200" class="absolute top-0 left-0 w-full h-full"></canvas>
-        <!-- インジケーター (回転する) -->
         <div id="hud-indicator-container" class="absolute top-0 left-0 w-full h-full will-change-transform">
             <canvas id="hud-compass-indicator" width="1200" height="1200" class="w-full h-full"></canvas>
         </div>
     </div>
 
-    <!-- リアルタイムグラフパネル (第1層: z-50) -->
-    <div id="graph-panel" class="absolute bottom-4 right-4 w-80 cyber-panel p-4 z-50 pointer-events-none">
-        <div class="flex justify-between items-center mb-3 border-b border-cyan-500/30 pb-1">
-            <span class="text-xs font-bold cyber-header">DATA.METRICS // SENSORS</span>
-            <!-- ★ 初期状態を ONLINE (赤) に変更 -->
-            <span id="sensor-status-badge" class="text-[9px] text-red-400 bg-red-900/30 px-1 border border-red-500/50 transition-colors">ONLINE</span>
+    <!-- グラフパネル -->
+    <div id="graph-panel" class="absolute bottom-4 right-4 w-80 system-panel p-4 z-50 pointer-events-none">
+        <div class="flex justify-between items-center mb-3 border-b border-theme-accent/30 pb-1">
+            <span class="text-xs font-bold panel-header" data-i18n="graph_title">センサーデータ測定</span>
+            <span id="sensor-status-badge" class="text-[9px] text-theme-alert bg-theme-alert/20 px-1 border border-theme-alert transition-colors font-bold" data-i18n="badge_online">稼働中</span>
         </div>
         
-        <!-- Yaw グラフ -->
         <div class="mb-3 relative">
             <div class="flex justify-between text-[10px] mb-1">
-                <span class="text-cyan-500">YAW.TRACE</span>
-                <span id="yaw-graph-val" class="text-cyan-300">0.0°</span>
+                <span class="text-theme-text" data-i18n="trace_yaw">ヨー履歴</span><span id="yaw-graph-val" class="text-theme-accent">0.0°</span>
             </div>
-            <!-- 背景に薄い方眼紙模様を入れる -->
-            <div class="relative w-full h-12 border border-cyan-500/30 bg-[#02050a]" style="background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); background-size: 10px 10px;">
-                <canvas id="yaw-canvas" width="280" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
+            <!-- ★ グラフ背景の透明度をパネル(var(--panel-bg-alpha))と同じ値になるように修正 -->
+            <div class="relative w-full h-12 border border-theme-accent/30 rounded-[calc(var(--panel-radius)/2)] overflow-hidden" style="background-color: rgba(var(--c-graph-bg), var(--panel-bg-alpha));">
+                <canvas id="yaw-canvas" width="288" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
             </div>
         </div>
 
-        <!-- Pitch グラフ -->
         <div class="mb-3 relative">
             <div class="flex justify-between text-[10px] mb-1">
-                <!-- ★ 色をシアン系に統一 -->
-                <span class="text-cyan-500">PITCH.TRACE</span>
-                <span id="pitch-graph-val" class="text-cyan-300">0.0°</span>
+                <span class="text-theme-text" data-i18n="trace_pitch">ピッチ履歴</span><span id="pitch-graph-val" class="text-theme-accent">0.0°</span>
             </div>
-            <div class="relative w-full h-12 border border-cyan-500/30 bg-[#02050a]" style="background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); background-size: 10px 10px;">
-                <canvas id="pitch-canvas" width="280" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
+            <!-- ★ グラフ背景の透明度をパネル(var(--panel-bg-alpha))と同じ値になるように修正 -->
+            <div class="relative w-full h-12 border border-theme-accent/30 rounded-[calc(var(--panel-radius)/2)] overflow-hidden" style="background-color: rgba(var(--c-graph-bg), var(--panel-bg-alpha));">
+                <canvas id="pitch-canvas" width="288" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
             </div>
         </div>
 
-        <!-- Roll グラフ -->
         <div class="mb-3 relative">
             <div class="flex justify-between text-[10px] mb-1">
-                <!-- ★ 色をシアン系に統一 -->
-                <span class="text-cyan-500">ROLL.TRACE</span>
-                <span id="roll-graph-val" class="text-cyan-300">0.0°</span>
+                <span class="text-theme-text" data-i18n="trace_roll">ロール履歴</span><span id="roll-graph-val" class="text-theme-accent">0.0°</span>
             </div>
-            <div class="relative w-full h-12 border border-cyan-500/30 bg-[#02050a]" style="background-image: linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px); background-size: 10px 10px;">
-                <canvas id="roll-canvas" width="280" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
+            <!-- ★ グラフ背景の透明度をパネル(var(--panel-bg-alpha))と同じ値になるように修正 -->
+            <div class="relative w-full h-12 border border-theme-accent/30 rounded-[calc(var(--panel-radius)/2)] overflow-hidden" style="background-color: rgba(var(--c-graph-bg), var(--panel-bg-alpha));">
+                <canvas id="roll-canvas" width="288" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
+            </div>
+        </div>
+
+        <div class="mb-1 relative">
+            <div class="flex justify-between text-[10px] mb-1">
+                <span class="text-theme-text" data-i18n="trace_speed">船速履歴</span><span id="speed-graph-val" class="text-theme-accent">0.0kt</span>
+            </div>
+            <!-- ★ グラフ背景の透明度をパネル(var(--panel-bg-alpha))と同じ値になるように修正 -->
+            <div class="relative w-full h-12 border border-theme-accent/30 rounded-[calc(var(--panel-radius)/2)] overflow-hidden" style="background-color: rgba(var(--c-graph-bg), var(--panel-bg-alpha));">
+                <canvas id="speed-canvas" width="288" height="48" class="absolute top-0 left-0 w-full h-full"></canvas>
             </div>
         </div>
     </div>
