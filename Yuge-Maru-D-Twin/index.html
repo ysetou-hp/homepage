@@ -533,7 +533,8 @@
             --f-main: 'Share Tech Mono', monospace;
             --panel-border: 1px solid rgba(0, 255, 255, 0.2);
             --panel-shadow: 0 0 20px rgba(0, 255, 255, 0.05) inset;
-            --panel-radius: 0px; --panel-bg-alpha: 0.85; --panel-blur: 8px; --slider-track-h: 2px;
+            /* ★ --panel-bg-alpha を 0.6 から 0.3 に変更して視覚的な透け感を調整 */
+            --panel-radius: 0px; --panel-bg-alpha: 0.3; --panel-blur: 8px; --slider-track-h: 2px;
             --grid-bg: linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
             --c-graph-bg: var(--c-bg); 
         }
@@ -622,7 +623,8 @@
         :root[data-theme="industrial"] #hud-compass-wrapper { mix-blend-mode: normal; opacity: 0.85; }
         :root[data-theme="modern"] #hud-compass-wrapper { mix-blend-mode: normal; opacity: 0.9; }
 
-        .mask-fade-top { mask-image: linear-gradient(to bottom, transparent 0%, black 15%); -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%); }
+        /* ★ フェードアウトの領域を上部40px（約3行分）に固定 */
+        .mask-fade-top { mask-image: linear-gradient(to bottom, transparent 0%, black 40px); -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 40px); }
         .log-line { animation: fadeIn 0.15s ease-out; }
         :root[data-theme="cyber"] .log-line { text-shadow: 0 0 4px rgba(var(--c-accent), 0.4); }
         @keyframes fadeIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
@@ -750,9 +752,10 @@
     </div>
 
     <!-- ログパネル -->
-    <div id="log-panel" class="absolute top-4 left-4 w-[450px] system-panel p-4 z-20 pointer-events-none">
+    <div id="log-panel" class="absolute top-4 left-4 w-[450px] system-panel p-4 z-50 pointer-events-none">
         <div class="mb-2 text-[10px] font-bold panel-header border-b border-theme-accent/30 pb-1" data-i18n="log_title">弓削丸デジタルツイン表示システム</div>
-        <div class="h-[25vh] overflow-hidden relative flex flex-col justify-end mask-fade-top">
+        <!-- ★ 高さを 140px から 170px (約12行分) に変更 -->
+        <div class="h-[170px] overflow-hidden relative flex flex-col justify-end mask-fade-top">
             <div id="log-content" class="text-[10px] font-mono space-y-1 pb-1 leading-tight relative z-0"></div>
         </div>
     </div>
