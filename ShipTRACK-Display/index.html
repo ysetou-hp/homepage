@@ -1,0 +1,850 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, Upload, Trash2, Calendar, Activity, Info, Settings, X, Check, Map as MapIcon, Layers, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+
+export default function App() {
+  const [libsLoaded, setLibsLoaded] = useState(false);
+
+  // 外部ライブラリの動的読み込み
+  useEffect(() => {
+    const loadDependencies = async () => {
+      if (!document.querySelector('link[href*="leaflet.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
+      }
+
+      const loadScript = (src) => {
+        return new Promise((resolve, reject) => {
+          if (document.querySelector(`script[src="${src}"]`)) {
+            resolve();
+            return;
+          }
+          const script = document.createElement('script');
+          script.src = src;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+      };
+
+      try {
+        // Leaflet と PapaParse のみを読み込む（グリッド用プラグインは削除）
+        await loadScript('https://unpkg.com/leaflet@1.9.4/dist/leaflet.js');
+        await loadScript('https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js');
+        
+        setLibsLoaded(true);
+      } catch (error) {
+        console.error('ライブラリの読み込みに失敗しました:', error);
+      }
+    };
+
+    loadDependencies();
+  }, []);
+
+  if (!libsLoaded) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-400 font-sans">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-cyan-500 mr-3"></div>
+        <span className="text-[11px] font-bold uppercase tracking-wider">Loading Map Engine...</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <style>{`
+        /* カスタムレンジスライダー (Cyan) */
+        input[type=range] {
+          -webkit-appearance: none;
+          appearance: none;
+          background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+          pointer-events: none;
+        }
+        input[type=range]::-moz-range-track {
+          pointer-events: none;
+        }
+        .range-slider-thumb::-webkit-slider-thumb {
+          pointer-events: auto;
+          appearance: none;
+          width: 20px;
+          height: 20px;
+          background-color: white;
+          border: 2px solid #06b6d4;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          transition: transform 0.1s;
+        }
+        .range-slider-thumb::-webkit-slider-thumb:hover {
+          transform: scale(1.1);
+          background-color: #f8fafc;
+        }
+        .range-slider-thumb::-moz-range-thumb {
+          pointer-events: auto;
+          width: 20px;
+          height: 20px;
+          background-color: white;
+          border: 2px solid #06b6d4;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+          transition: transform 0.1s;
+        }
+        
+        /* 白フチ付きテキスト (Tooltip) */
+        .leaflet-tooltip.map-label-halo {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          color: #111827 !important;
+          font-family: ui-sans-serif, system-ui, sans-serif !important;
+          font-weight: 900 !important;
+          font-size: 12px;
+          text-shadow: 
+            -2px -2px 0 #fff, 2px -2px 0 #fff, -2px 2px 0 #fff, 2px 2px 0 #fff,
+             0px 2px 0 #fff, 0px -2px 0 #fff, 2px 0px 0 #fff, -2px 0px 0 #fff;
+        }
+        .leaflet-tooltip.map-label-halo::before {
+          display: none !important;
+        }
+        
+        /* カスタムグリッドラベルのスタイル */
+        .custom-grid-label {
+          font-family: ui-sans-serif, system-ui, sans-serif !important;
+          font-size: 11px;
+          font-weight: 800;
+          white-space: nowrap;
+          pointer-events: none;
+        }
+        .grid-label-light {
+          text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 0 4px #fff;
+        }
+        .grid-label-dark {
+          text-shadow: -1px -1px 0 #111827, 1px -1px 0 #111827, -1px 1px 0 #111827, 1px 1px 0 #111827, 0 0 4px #111827;
+        }
+
+        /* スクロールバーのカスタマイズ */
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #e5e7eb;
+          border-radius: 10px;
+        }
+        .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+          background-color: #d1d5db;
+        }
+      `}</style>
+      <MapTrackerApp />
+    </>
+  );
+}
+
+const formatDateForInput = (dateObj) => {
+  if (!dateObj || isNaN(dateObj.getTime())) return "";
+  const yyyy = dateObj.getFullYear();
+  const MM = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  const HH = String(dateObj.getHours()).padStart(2, '0');
+  const mm = String(dateObj.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${MM}-${dd}T${HH}:${mm}`;
+};
+
+const SimpleToggle = ({ label, active, onClick, colorClass = "bg-cyan-500" }) => (
+  <div 
+    className="flex items-center justify-between py-2 cursor-pointer group"
+    onClick={onClick}
+  >
+    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 group-hover:text-gray-800 transition-colors">
+      {label}
+    </span>
+    <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${active ? colorClass : 'bg-gray-200'}`}>
+      <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-transform duration-200 ${active ? 'translate-x-4' : 'translate-x-0'}`}></div>
+    </div>
+  </div>
+);
+
+function MapTrackerApp() {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const tileLayerRef = useRef(null);
+  const graticuleLayerRef = useRef(null);
+  
+  const csvPolylineRef = useRef(null);
+  const markersLayerGroupRef = useRef(null);
+  
+  const [allCsvData, setAllCsvData] = useState([]);
+  const [csvHeaders, setCsvHeaders] = useState([]); // エクスポート用にヘッダー行を保持
+  const [csvFileName, setCsvFileName] = useState("");
+
+  const [startIndex, setStartIndex] = useState(0);
+  const [endIndex, setEndIndex] = useState(0);
+  const [activeThumb, setActiveThumb] = useState(null);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showStartMarker, setShowStartMarker] = useState(true);
+  const [showEndMarker, setShowEndMarker] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [showArrows, setShowArrows] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
+  const [lineWidth, setLineWidth] = useState(1);
+  
+  // マップテーマ: 'light' または 'dark' のみ
+  const [mapStyle, setMapStyle] = useState('light'); 
+  
+  const [zoomLevel, setZoomLevel] = useState(8);
+
+  // マップ初期化
+  useEffect(() => {
+    if (mapInstanceRef.current || !mapRef.current || !window.L) return;
+
+    const L = window.L;
+    const map = L.map(mapRef.current, {
+      zoomControl: false 
+    }).setView([34.25, 133.20], 8);
+
+    map.on('zoomend', () => setZoomLevel(map.getZoom()));
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    csvPolylineRef.current = L.polyline([], { color: '#06b6d4', weight: lineWidth, opacity: 0.8 }).addTo(map);
+    markersLayerGroupRef.current = L.layerGroup().addTo(map);
+
+    mapInstanceRef.current = map;
+
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []); 
+
+  // ベースマップの切り替え
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L) return;
+    const L = window.L;
+
+    if (tileLayerRef.current) {
+      mapInstanceRef.current.removeLayer(tileLayerRef.current);
+    }
+
+    const url = mapStyle === 'dark' 
+      ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+
+    tileLayerRef.current = L.tileLayer(url, {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      maxZoom: 18
+    }).addTo(mapInstanceRef.current);
+    
+    tileLayerRef.current.bringToBack();
+  }, [mapStyle]);
+
+  // 自作グリッドレイヤーの描画処理
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.L) return;
+    const map = mapInstanceRef.current;
+    const L = window.L;
+
+    if (!graticuleLayerRef.current) {
+      graticuleLayerRef.current = L.layerGroup().addTo(map);
+    }
+
+    const updateGrid = () => {
+      const layerGroup = graticuleLayerRef.current;
+      layerGroup.clearLayers();
+      
+      if (!showGrid) return;
+
+      const bounds = map.getBounds();
+      const zoom = map.getZoom();
+
+      // ズームレベルに応じた線の間隔（度）
+      let interval = 10;
+      if (zoom > 4) interval = 5;
+      if (zoom > 6) interval = 2;
+      if (zoom > 7) interval = 1;
+      if (zoom > 8) interval = 0.5;
+      if (zoom > 9) interval = 0.25;
+      if (zoom > 10) interval = 0.1;
+      if (zoom > 12) interval = 0.05;
+      if (zoom > 14) interval = 0.01;
+      if (zoom > 16) interval = 0.005;
+
+      const minLat = Math.floor(bounds.getSouth() / interval) * interval - interval;
+      const maxLat = Math.ceil(bounds.getNorth() / interval) * interval + interval;
+      const minLng = Math.floor(bounds.getWest() / interval) * interval - interval;
+      const maxLng = Math.ceil(bounds.getEast() / interval) * interval + interval;
+
+      const isDark = mapStyle === 'dark';
+      const lineStyle = { 
+        color: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(55, 65, 81, 0.2)', 
+        weight: 1, 
+        dashArray: '3,3', 
+        interactive: false 
+      };
+
+      // ラベルを描画する位置を画面の端から少し内側に固定
+      const latLabelLng = bounds.getWest() + (bounds.getEast() - bounds.getWest()) * 0.01;
+      const lngLabelLat = bounds.getNorth() - (bounds.getNorth() - bounds.getSouth()) * 0.01;
+
+      const formatCoord = (val, isLat) => {
+        const dir = isLat ? (val >= 0 ? 'N' : 'S') : (val >= 0 ? 'E' : 'W');
+        return `${Math.abs(val).toFixed(2)}° ${dir}`;
+      };
+
+      const shadowClass = isDark ? 'grid-label-dark' : 'grid-label-light';
+      const colorClass = isDark ? 'text-gray-400' : 'text-gray-600';
+
+      // 経度線 (縦線)
+      for (let lng = minLng; lng <= maxLng; lng += interval) {
+        const roundedLng = parseFloat(lng.toFixed(4));
+        L.polyline([[minLat, roundedLng], [maxLat, roundedLng]], lineStyle).addTo(layerGroup);
+        
+        if (roundedLng > bounds.getWest() && roundedLng < bounds.getEast()) {
+          L.marker([lngLabelLat, roundedLng], {
+            icon: L.divIcon({
+              className: 'custom-grid-label',
+              html: `<span class="${colorClass} ${shadowClass}">${formatCoord(roundedLng, false)}</span>`,
+              iconSize: [60, 20],
+              iconAnchor: [30, -5]
+            }),
+            interactive: false
+          }).addTo(layerGroup);
+        }
+      }
+
+      // 緯度線 (横線)
+      for (let lat = minLat; lat <= maxLat; lat += interval) {
+        const roundedLat = parseFloat(lat.toFixed(4));
+        L.polyline([[roundedLat, minLng], [roundedLat, maxLng]], lineStyle).addTo(layerGroup);
+        
+        if (roundedLat > bounds.getSouth() && roundedLat < bounds.getNorth()) {
+          L.marker([roundedLat, latLabelLng], {
+            icon: L.divIcon({
+              className: 'custom-grid-label',
+              html: `<span class="${colorClass} ${shadowClass}">${formatCoord(roundedLat, true)}</span>`,
+              iconSize: [60, 20],
+              iconAnchor: [-5, 10]
+            }),
+            interactive: false
+          }).addTo(layerGroup);
+        }
+      }
+    };
+
+    map.on('moveend', updateGrid);
+    updateGrid(); // 初期描画
+
+    return () => {
+      map.off('moveend', updateGrid);
+    };
+  }, [showGrid, mapStyle]);
+
+  // CSV読み込み
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setCsvFileName(file.name);
+
+    window.Papa.parse(file, {
+      skipEmptyLines: true,
+      complete: (results) => {
+        const data = results.data;
+        const parsedData = [];
+        const headers = [];
+
+        for (let i = 0; i < data.length; i++) {
+          const row = data[i];
+          if (row.length > 5) {
+            const timeStr = String(row[2]).replace(/["']/g, '');
+            const latStr = row[4];
+            const lngStr = row[5];
+            
+            const lat = parseFloat(String(latStr).replace(/["']/g, ''));
+            const lng = parseFloat(String(lngStr).replace(/["']/g, ''));
+
+            if (!isNaN(lat) && !isNaN(lng) && timeStr) {
+              const timeObj = new Date(timeStr);
+              if (!isNaN(timeObj.getTime())) {
+                // 生の行データ(rawRow)も保持しておく
+                parsedData.push({ time: timeObj, lat, lng, rawRow: row });
+              }
+            } else {
+              // パースできない行で、データ出現前のものはヘッダーとして扱う
+              if (parsedData.length === 0) {
+                headers.push(row);
+              }
+            }
+          } else {
+            if (parsedData.length === 0) {
+              headers.push(row);
+            }
+          }
+        }
+
+        if (parsedData.length > 0) {
+          parsedData.sort((a, b) => a.time - b.time);
+          
+          setCsvHeaders(headers);
+          setAllCsvData(parsedData);
+          setStartIndex(0);
+          setEndIndex(parsedData.length - 1);
+
+          const latLngs = parsedData.map(p => [p.lat, p.lng]);
+          const bounds = window.L.polyline(latLngs).getBounds();
+          mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+        } else {
+          setCsvFileName("");
+          setCsvHeaders([]);
+        }
+      }
+    });
+    e.target.value = null;
+  };
+
+  const clearCsvData = () => {
+    setAllCsvData([]);
+    setCsvHeaders([]);
+    setStartIndex(0);
+    setEndIndex(0);
+    setCsvFileName("");
+    if (csvPolylineRef.current) csvPolylineRef.current.setLatLngs([]);
+    if (markersLayerGroupRef.current) markersLayerGroupRef.current.clearLayers();
+  };
+
+  const handleStartTimeChange = (e) => {
+    const timeStr = e.target.value;
+    if (!timeStr) return;
+    const time = new Date(timeStr).getTime();
+    
+    let idx = allCsvData.findIndex(d => d.time.getTime() >= time);
+    if (idx === -1) idx = allCsvData.length - 1; 
+    if (idx > endIndex) idx = endIndex;
+    setStartIndex(idx);
+  };
+
+  const handleEndTimeChange = (e) => {
+    const timeStr = e.target.value;
+    if (!timeStr) return;
+    const time = new Date(timeStr).getTime();
+    
+    let idx = -1;
+    for (let i = allCsvData.length - 1; i >= 0; i--) {
+      if (allCsvData[i].time.getTime() <= time) {
+        idx = i;
+        break;
+      }
+    }
+    if (idx === -1) idx = 0;
+    if (idx < startIndex) idx = startIndex;
+    setEndIndex(idx);
+  };
+
+  // エクスポート機能
+  const exportFilteredData = () => {
+    if (allCsvData.length === 0) return;
+    
+    // 表示中の範囲の生データを抽出
+    const filtered = allCsvData.slice(startIndex, endIndex + 1);
+    const rowsToExport = [...csvHeaders, ...filtered.map(d => d.rawRow)];
+    
+    // PapaParseのunparse機能でCSV文字列を作成
+    const csvStr = window.Papa.unparse(rowsToExport);
+    
+    // ダウンロード実行 (Excelでの文字化けを防ぐため、先頭にBOMを追加)
+    const blob = new Blob(["\uFEFF" + csvStr], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `filtered_${csvFileName || 'trackdata.csv'}`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // フィルタリングと地図描画
+  useEffect(() => {
+    if (allCsvData.length === 0 || startIndex < 0 || endIndex < startIndex) {
+      if (csvPolylineRef.current) csvPolylineRef.current.setLatLngs([]);
+      if (markersLayerGroupRef.current) markersLayerGroupRef.current.clearLayers();
+      return;
+    }
+
+    const filtered = allCsvData.slice(startIndex, endIndex + 1);
+    const latLngs = filtered.map(d => [d.lat, d.lng]);
+
+    if (csvPolylineRef.current) {
+      csvPolylineRef.current.setLatLngs(latLngs);
+      csvPolylineRef.current.setStyle({ weight: lineWidth });
+    }
+
+    if (markersLayerGroupRef.current && window.L) {
+      markersLayerGroupRef.current.clearLayers();
+      const L = window.L;
+
+      const calculateBearing = (lat1, lon1, lat2, lon2) => {
+        const toRad = deg => deg * Math.PI / 180;
+        const toDeg = rad => rad * 180 / Math.PI;
+        const phi1 = toRad(lat1);
+        const phi2 = toRad(lat2);
+        const deltaLambda = toRad(lon2 - lon1);
+
+        const y = Math.sin(deltaLambda) * Math.cos(phi2);
+        const x = Math.cos(phi1) * Math.sin(phi2) -
+                  Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+        
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+      };
+
+      if (filtered.length > 0) {
+        const startPoint = filtered[0];
+        const endPoint = filtered[filtered.length - 1];
+
+        if (showArrows && filtered.length > 1) {
+          const step = Math.max(1, Math.ceil(filtered.length / 80));
+          const arrowSize = Math.max(10, Math.min(30, 8 + (zoomLevel - 5) * 2));
+          const containerSize = arrowSize * 1.5;
+          const anchorPos = containerSize / 2;
+
+          for (let i = 0; i < filtered.length - 1; i += step) {
+            const p1 = filtered[i];
+            const p2 = filtered[Math.min(i + 1, filtered.length - 1)];
+            
+            if (p1.lat === p2.lat && p1.lng === p2.lng) continue;
+
+            const bearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+            
+            const arrowIcon = L.divIcon({
+              className: 'custom-arrow-icon',
+              html: `<div style="transform: rotate(${bearing}deg); display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="${arrowSize}" height="${arrowSize}" viewBox="0 0 24 24" fill="#06b6d4" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.2));">
+                        <polygon points="12 2 22 22 12 17 2 22 12 2"></polygon>
+                      </svg>
+                     </div>`,
+              iconSize: [containerSize, containerSize],
+              iconAnchor: [anchorPos, anchorPos]
+            });
+
+            L.marker([p1.lat, p1.lng], { icon: arrowIcon, interactive: false }).addTo(markersLayerGroupRef.current);
+          }
+        }
+
+        const formatTime = (dateObj) => {
+          const HH = String(dateObj.getHours()).padStart(2, '0');
+          const mm = String(dateObj.getMinutes()).padStart(2, '0');
+          const ss = String(dateObj.getSeconds()).padStart(2, '0');
+          return `${HH}:${mm}:${ss}`;
+        };
+
+        if (showStartMarker) {
+          const startMarker = L.circleMarker([startPoint.lat, startPoint.lng], {
+            radius: 12,
+            fillColor: '#06b6d4',
+            color: '#06b6d4',
+            weight: 1,
+            fillOpacity: 0.4
+          }).addTo(markersLayerGroupRef.current);
+          
+          if (showLabels) {
+            startMarker.bindTooltip(`START ${formatTime(startPoint.time)}`, { permanent: true, direction: "right", className: 'map-label-halo', offset: [15, 0] });
+          }
+        }
+
+        if (filtered.length > 1 && showEndMarker) {
+          const endMarker = L.circleMarker([endPoint.lat, endPoint.lng], {
+            radius: 12,
+            fillColor: '#f472b6',
+            color: '#f472b6',
+            weight: 1,
+            fillOpacity: 0.4
+          }).addTo(markersLayerGroupRef.current);
+          
+          if (showLabels) {
+            endMarker.bindTooltip(`END ${formatTime(endPoint.time)}`, { permanent: true, direction: "right", className: 'map-label-halo', offset: [15, 0] });
+          }
+        }
+      }
+    }
+  }, [allCsvData, startIndex, endIndex, showStartMarker, showEndMarker, showLabels, showArrows, lineWidth, zoomLevel]);
+
+  const dataLength = allCsvData.length;
+  const maxIndex = Math.max(0, dataLength - 1);
+  const activeCount = dataLength > 0 ? (endIndex - startIndex + 1) : 0;
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50 font-sans text-gray-800">
+      
+      <header className="bg-white border-b border-gray-200 p-5 shrink-0 z-20 flex items-center gap-3">
+        <MapPin className="text-gray-900" size={24} strokeWidth={2.5} />
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">ShipTRACK用表示アプリ</h1>
+      </header>
+
+      <main className="flex-1 min-h-0 relative overflow-hidden bg-[#e0e7ee] z-0">
+        <div ref={mapRef} className="absolute inset-0 w-full h-full"></div>
+        
+        <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-gray-100 z-[400] pointer-events-none">
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Legend</h3>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-4 h-1 bg-cyan-500 rounded"></div>
+            <span className="text-[11px] font-medium text-gray-800">Track Path</span>
+          </div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-3 h-3 rounded-full bg-cyan-500/40 border border-cyan-500 flex items-center justify-center ml-0.5"></div>
+            <span className="text-[11px] font-medium text-gray-800">Start Point</span>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="w-3 h-3 rounded-full bg-pink-400/40 border border-pink-400 flex items-center justify-center ml-0.5"></div>
+            <span className="text-[11px] font-medium text-gray-800">End Point</span>
+          </div>
+        </div>
+
+        <div className="absolute top-6 right-6 z-[1000] flex flex-col items-end">
+          {!isSettingsOpen ? (
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="bg-white/95 backdrop-blur-md p-3.5 rounded-full shadow-md border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-transform hover:scale-105 active:scale-95"
+            >
+              <Settings size={24} strokeWidth={2} />
+            </button>
+          ) : (
+            <div className="bg-white/95 backdrop-blur-md p-6 rounded-2xl shadow-xl border border-gray-200 w-[380px] max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+              
+              <div className="flex items-center justify-between border-b border-gray-100 pb-4 shrink-0">
+                 <h2 className="text-[13px] font-black uppercase tracking-wider text-gray-900 flex items-center gap-2">
+                   <Settings size={16} className="text-gray-400" /> Control Panel
+                 </h2>
+                 <button 
+                   onClick={() => setIsSettingsOpen(false)} 
+                   className="text-gray-400 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 rounded-full p-1.5 transition-colors"
+                 >
+                   <X size={18} />
+                 </button>
+              </div>
+
+              <section>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
+                  <Activity size={14} /> Data Source
+                </h3>
+                <div className="bg-gray-50/50 rounded-lg border border-gray-100 p-4 mb-4">
+                  <div className="flex justify-between items-end mb-3">
+                    <div className="overflow-hidden mr-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">File Name</p>
+                      <p className="text-[13px] text-gray-900 font-medium truncate" title={csvFileName}>
+                        {csvFileName || 'No file selected'}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-0.5">Total Points</p>
+                      <p className="text-xl font-black text-gray-900 leading-none">{dataLength.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 bg-cyan-500 hover:bg-cyan-600 text-white py-2.5 rounded-lg shadow-sm cursor-pointer transition-colors">
+                    <Upload size={16} strokeWidth={2.5} />
+                    <span className="text-[11px] font-bold uppercase tracking-wider">Upload CSV</span>
+                    <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                  </label>
+                  {dataLength > 0 && (
+                    <button
+                      onClick={clearCsvData}
+                      className="flex-none px-4 flex items-center justify-center bg-white border border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-red-500 hover:border-red-200 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </section>
+
+              <section className={`transition-opacity duration-300 ${dataLength === 0 ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center gap-1.5">
+                  <Calendar size={14} /> Timeline Filter
+                </h3>
+                <div className="relative w-full h-8 flex items-center mb-6 px-1">
+                  <div className="absolute left-1 right-1 h-1.5 bg-gray-100 rounded-full z-0"></div>
+                  <div 
+                    className="absolute h-1.5 bg-cyan-500 rounded-full z-10"
+                    style={{ 
+                      left: `calc(${((startIndex / (maxIndex || 1)) * 100)}% + 4px)`,
+                      width: `calc(${(((endIndex - startIndex) / (maxIndex || 1)) * 100)}% - 8px)`
+                    }}
+                  ></div>
+                  <input 
+                    type="range" min="0" max={maxIndex} value={startIndex}
+                    onMouseDown={() => setActiveThumb('start')}
+                    onTouchStart={() => setActiveThumb('start')}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val <= endIndex) setStartIndex(val);
+                    }}
+                    className={`absolute w-full appearance-none bg-transparent pointer-events-none range-slider-thumb ${activeThumb === 'start' ? 'z-40' : 'z-20'}`}
+                  />
+                  <input 
+                    type="range" min="0" max={maxIndex} value={endIndex}
+                    onMouseDown={() => setActiveThumb('end')}
+                    onTouchStart={() => setActiveThumb('end')}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val >= startIndex) setEndIndex(val);
+                    }}
+                    className={`absolute w-full appearance-none bg-transparent pointer-events-none range-slider-thumb ${activeThumb === 'end' ? 'z-40' : 'z-30'}`}
+                  />
+                </div>
+
+                <div className="border border-gray-100 rounded-lg overflow-hidden mb-4 shadow-sm">
+                  <div className="bg-gray-50 px-3 py-1.5 flex items-center border-b border-gray-100">
+                    <div className="w-2.5 h-2.5 rounded-full bg-cyan-500 mr-2"></div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex-1">Start Time</span>
+                  </div>
+                  <div className="p-2 bg-white hover:bg-gray-50 transition-colors">
+                    <input 
+                      type="datetime-local"
+                      value={dataLength > 0 ? formatDateForInput(allCsvData[startIndex].time) : ""}
+                      onChange={handleStartTimeChange}
+                      className="w-full bg-transparent text-gray-800 text-[13px] outline-none font-medium cursor-pointer"
+                    />
+                  </div>
+                  <div className="bg-gray-50 px-3 py-1.5 flex items-center border-y border-gray-100">
+                    <div className="w-2.5 h-2.5 rounded-full bg-pink-400 mr-2"></div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex-1">End Time</span>
+                  </div>
+                  <div className="p-2 bg-white hover:bg-gray-50 transition-colors">
+                    <input 
+                      type="datetime-local"
+                      value={dataLength > 0 ? formatDateForInput(allCsvData[endIndex].time) : ""}
+                      onChange={handleEndTimeChange}
+                      className="w-full bg-transparent text-gray-800 text-[13px] outline-none font-medium cursor-pointer"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-end mt-2 pt-4 border-t border-gray-100">
+                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Points</p>
+                   <p className="text-2xl font-black text-cyan-500 leading-none">{activeCount.toLocaleString()}</p>
+                </div>
+                
+                {/* エクスポートボタン */}
+                <button
+                  onClick={exportFilteredData}
+                  disabled={activeCount === 0}
+                  className="w-full mt-5 flex items-center justify-center gap-2 bg-white border border-cyan-500 text-cyan-600 hover:bg-cyan-50 disabled:opacity-50 disabled:hover:bg-white py-2.5 rounded-lg transition-colors font-bold text-[11px] uppercase tracking-wider shadow-sm"
+                >
+                  <Download size={16} strokeWidth={2.5} />
+                  Export Filtered CSV
+                </button>
+              </section>
+
+              <section>
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
+                  <MapIcon size={14} /> Map Display
+                </h3>
+                
+                <div className="flex flex-col border border-gray-100 bg-gray-50/50 rounded-lg px-4 py-2">
+                  
+                  {/* Base Map Style 切替 UI */}
+                  <div className="flex flex-col py-3 border-b border-gray-100 mb-2">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                      <Layers size={12} /> Map Theme
+                    </label>
+                    <div className="flex bg-gray-200/60 p-1 rounded-lg">
+                      <button 
+                        onClick={() => setMapStyle('light')}
+                        className={`flex-1 py-1.5 text-[11px] font-bold tracking-wider uppercase rounded-md transition-all ${mapStyle === 'light' ? 'bg-white shadow-sm text-cyan-600' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        Light
+                      </button>
+                      <button 
+                        onClick={() => setMapStyle('dark')}
+                        className={`flex-1 py-1.5 text-[11px] font-bold tracking-wider uppercase rounded-md transition-all ${mapStyle === 'dark' ? 'bg-gray-800 shadow-sm text-cyan-400' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        Dark
+                      </button>
+                    </div>
+                  </div>
+
+                  <SimpleToggle 
+                    label="Lat/Lon Grid" 
+                    active={showGrid} 
+                    onClick={() => setShowGrid(!showGrid)} 
+                    colorClass="bg-indigo-500" 
+                  />
+                  <div className="h-px bg-gray-100 w-full" />
+                  <SimpleToggle 
+                    label="Direction Arrows" 
+                    active={showArrows} 
+                    onClick={() => setShowArrows(!showArrows)} 
+                    colorClass="bg-cyan-500" 
+                  />
+                  <div className="h-px bg-gray-100 w-full" />
+                  <SimpleToggle 
+                    label="Start Marker" 
+                    active={showStartMarker} 
+                    onClick={() => setShowStartMarker(!showStartMarker)} 
+                    colorClass="bg-cyan-500" 
+                  />
+                  <div className="h-px bg-gray-100 w-full" />
+                  <SimpleToggle 
+                    label="End Marker" 
+                    active={showEndMarker} 
+                    onClick={() => setShowEndMarker(!showEndMarker)} 
+                    colorClass="bg-pink-400" 
+                  />
+                  <div className="h-px bg-gray-100 w-full" />
+                  <SimpleToggle 
+                    label="Time Labels" 
+                    active={showLabels} 
+                    onClick={() => setShowLabels(!showLabels)} 
+                    colorClass="bg-gray-600" 
+                  />
+                  <div className="h-px bg-gray-100 w-full my-2" />
+                  
+                  {/* ライン幅設定UI (ステッパー型) */}
+                  <div className="flex flex-col gap-2 py-2">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
+                      Line Width
+                    </label>
+                    <div className="flex items-center justify-between bg-gray-200/60 rounded-lg p-1">
+                      <button
+                        onClick={() => setLineWidth(prev => Math.max(1, prev - 1))}
+                        disabled={lineWidth <= 1}
+                        className="p-1.5 rounded-md text-gray-600 hover:text-cyan-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none cursor-pointer"
+                      >
+                        <ChevronLeft size={16} strokeWidth={2.5} />
+                      </button>
+                      
+                      <span className="text-[13px] font-bold text-cyan-600 tracking-wider w-12 text-center">
+                        {lineWidth} px
+                      </span>
+                      
+                      <button
+                        onClick={() => setLineWidth(prev => Math.min(5, prev + 1))}
+                        disabled={lineWidth >= 5}
+                        className="p-1.5 rounded-md text-gray-600 hover:text-cyan-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none cursor-pointer"
+                      >
+                        <ChevronRight size={16} strokeWidth={2.5} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
