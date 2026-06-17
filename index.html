@@ -13,6 +13,10 @@
         // ==========================================
         // 【設定項目】ここを編集してアプリを追加・変更できます
         // ==========================================
+        // 💡 リンク（link）の設定：パターンA（1つのリポジトリ内にフォルダ分け）のため、
+        // すべて相対パス「./フォルダ名/」に統一しました。
+        // ※ フォルダ名の大文字小文字、ハイフンの有無は実際のリポジトリ内のフォルダ名と完全一致させてください。
+        
         const APPS_CONFIG = [
             {
                 title: "中学校データ分布バブルマップ",
@@ -26,7 +30,7 @@
             {
                 title: "タイムテーブルメーカー",
                 description: "オープンキャンパスのタイムテーブルを直感的に作成できるツールです。イベントの重なりを視覚的に調整できます。",
-                link: "https://ysetou-hp.github.io/homepage/Timetable-Maker/",
+                link: "./Timetable-Maker/",
                 gradient: "from-emerald-500 to-teal-600",
                 hoverText: "text-emerald-600",
                 status: "available",
@@ -35,7 +39,7 @@
             {
                 title: "弓削丸デジタルツイン",
                 description: "練習船『弓削丸』をデジタル空間に再現。船内の様子や航海データなどを視覚的に体験できるプロジェクトです。",
-                link: "https://ysetou-hp.github.io/homepage/Yugemaru-D-Twin/", 
+                link: "./Yugemaru-D-Twin/", 
                 gradient: "from-cyan-500 to-blue-600",
                 hoverText: "text-cyan-600",
                 status: "available",
@@ -43,23 +47,22 @@
             },
             {
                 title: "ShipTRACK表示",
-                description: "ファイルから船舶 of 航跡データを読み込んで地図上にマッピングするツールです。表示範囲を簡単に変更できるUIを実装しており、選択した表示範囲を出力する機能も備えています。",
-                link: "https://ysetou-hp.github.io/homepage/ShipTRACK-Display/", 
+                description: "ファイルから船舶の航跡データを読み込んで地図上にマッピングするツールです。表示範囲を簡単に変更できるUIを実装しており、選択した表示範囲を出力する機能も備えています。",
+                link: "./ShipTRACK-Display/", 
                 gradient: "from-sky-500 to-indigo-500",
                 hoverText: "text-sky-500",
                 status: "available",
                 icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`
             },
-//            {
-//                title: "3Dモデリング体験案内",
-//                description: "オープンキャンパスなどで開催する『TinkerCAD』を用いた3Dモデリング体験ワークショップの特設案内ページです。",
-//                link: "https://ysetou-test01.github.io/OpenCampus/", 
-//                gradient: "from-fuchsia-500 to-pink-500",
-//                hoverText: "text-fuchsia-500",
-//                status: "available",
-                // 3Dモデリング・3Dプリントを象徴する立体（キューブ）アイコン
-//                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 //12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`
-//            },
+            {
+                title: "未定",
+                description: "内容未定",
+                link: "#",
+                gradient: "from-slate-300 to-slate-400",
+                hoverText: "text-slate-600",
+                status: "coming-soon",
+                icon: `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`
+            },
             {
                 title: "未定",
                 description: "内容未定",
@@ -130,11 +133,11 @@
 </head>
 <body class="bg-slate-50 text-slate-900">
 
-    <!-- ナビゲーション -->
+    <!-- ナビゲーション（ロゴを「広報主事室」に変更） -->
     <nav class="fixed w-full z-50 glass shadow-sm">
         <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                My Lab
+                広報主事室
             </div>
         </div>
     </nav>
