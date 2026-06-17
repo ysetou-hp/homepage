@@ -15,8 +15,8 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-  <!-- Babel for JSX -->
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Babel for JSX (安定版を指定) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -116,8 +116,8 @@
 <body>
   <div id="root"></div>
 
-  <!-- Reactコード (Babelによるブラウザ内コンパイル) -->
-  <script type="text/babel">
+  <!-- Reactコード (Babelによるブラウザ内コンパイル) presetsを明示 -->
+  <script type="text/babel" data-presets="react,env">
     const { useState, useEffect, useRef } = React;
 
     // --- インライン SVG アイコン (lucide-react の代用) ---
@@ -223,7 +223,7 @@
       const [showGrid, setShowGrid] = useState(true);
       const [lineWidth, setLineWidth] = useState(1);
       
-      const [mapStyle, setMapStyle] = useState('light'); 
+      const [mapStyle, setMapStyle] = useState('nautical'); 
       const [zoomLevel, setZoomLevel] = useState(8);
 
       // マップ初期化
@@ -264,17 +264,19 @@
         tileLayerRefs.current.forEach(layer => mapInstanceRef.current.removeLayer(layer));
         tileLayerRefs.current = [];
 
-        const url = mapStyle === 'dark' 
-          ? 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png';
+        const style = MAP_STYLES.find(s => s.id === mapStyle);
+        if (style) {
+          const layersToAdd = style.layers || [{ url: style.url, attr: style.attr }];
 
-        const newLayer = L.tileLayer(url, {
-          attribution: '&copy; OpenStreetMap &copy; CARTO',
-          maxZoom: 18
-        }).addTo(mapInstanceRef.current);
-        
-        tileLayerRefs.current.push(newLayer);
-        newLayer.bringToBack();
+          layersToAdd.forEach((layerDef, index) => {
+            const layer = L.tileLayer(layerDef.url, {
+              attribution: layerDef.attr,
+              maxZoom: 18,
+              zIndex: index 
+            }).addTo(mapInstanceRef.current);
+            tileLayerRefs.current.push(layer);
+          });
+        }
       }, [mapStyle]);
 
       // 自作グリッドレイヤーの描画処理
