@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
@@ -10,8 +10,8 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- html2canvasを削除し、文字ズレが起きにくい html-to-image に変更 -->
+  <!-- Babelの最新版のバグを回避するため、安定版（7.22.20）を指定 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
   
   <style>
@@ -23,7 +23,7 @@
       }
     }
     
-    /* html2canvasの文字見切れバグを防ぐため、基本フォントを安定したものに固定 */
+    /* html2canvas/html-to-imageの文字見切れバグを防ぐため、基本フォントを安定したものに固定 */
     #root {
       font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
     }
@@ -32,7 +32,8 @@
 <body>
   <div id="root"></div>
 
-  <script type="text/babel">
+  <!-- Babelの変換をReactと最新のJavaScript環境（env）に指定 -->
+  <script type="text/babel" data-presets="react,env">
     const { useState, useRef, useEffect, useMemo, useCallback } = React;
 
     // --- アイコンコンポーネント ---
