@@ -48,13 +48,13 @@
                     keyframes: {
                         stamp: {
                             '0%': { transform: 'scale(3) rotate(-30deg)', opacity: '0' },
-                            '100%': { transform: 'scale(1) rotate(15deg)', opacity: '1' },
+                            '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
                         },
                         'stamp-press': {
                             '0%': { transform: 'scale(4) rotate(-45deg)', opacity: '0', filter: 'blur(4px)' },
-                            '40%': { transform: 'scale(0.9) rotate(15deg)', opacity: '1', filter: 'blur(0px)' },
-                            '70%': { transform: 'scale(1.1) rotate(15deg)', opacity: '1' },
-                            '100%': { transform: 'scale(1) rotate(15deg)', opacity: '1' },
+                            '40%': { transform: 'scale(0.9) rotate(5deg)', opacity: '1', filter: 'blur(0px)' },
+                            '70%': { transform: 'scale(1.1) rotate(-2deg)', opacity: '1' },
+                            '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
                         },
                         'screen-shake': {
                             '0%, 100%': { transform: 'translateX(0)' },
@@ -185,15 +185,15 @@
                     <span class="text-xs text-marine-600">※マップは指で拡大・縮小できます</span>
                 </div>
                 
-                <!-- 🔍 ズーム機能のためのラッパー要素 (画像に合わせて高さが変わるように変更) -->
-                <div id="map-wrapper" class="relative w-full max-w-sm mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
+                <!-- 🔍 ズーム機能のためのラッパー要素 (600x600に合わせて正方形に固定) -->
+                <div id="map-wrapper" class="relative w-full max-w-sm aspect-square mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
                     <!-- この中の要素が拡大縮小される -->
-                    <div id="map-zoom-target" class="relative w-full origin-top-left">
-                        <!-- マップ画像 (初期状態で画像全体が見えるように w-full h-auto を指定) -->
-                        <img id="img-map" src="" alt="船内マップ" class="w-full h-auto min-h-[300px] object-contain pointer-events-none">
+                    <div id="map-zoom-target" class="relative w-full h-full origin-top-left">
+                        <!-- マップ画像 (正方形の枠にピッタリ収まるように表示) -->
+                        <img id="img-map" src="" alt="船内マップ" class="absolute inset-0 w-full h-full object-contain pointer-events-none">
                         
                         <!-- マップ上のポイント (例: ブリッジ) -->
-                        <div class="absolute top-[15%] left-[20%] flex items-center drop-shadow-md">
+                        <div class="map-pin absolute top-[15%] left-[20%] flex items-center drop-shadow-md origin-left">
                             <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
                             </div>
@@ -202,15 +202,16 @@
                             </div>
                         </div>
                         <!-- 他のポイントも同様に配置 -->
-                        <div class="absolute top-[35%] left-[10%] flex items-center drop-shadow-md">
+                        <div class="map-pin absolute top-[35%] left-[10%] flex items-center drop-shadow-md origin-left">
                             <div class="bg-white text-marine-900 p-1.5 rounded-full z-10"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg></div>
                             <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">機関室</div>
                         </div>
-                        <div class="absolute top-[50%] left-[10%] flex items-center drop-shadow-md">
+                        <div class="map-pin absolute top-[50%] left-[10%] flex items-center drop-shadow-md origin-left">
                             <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">🍽️</div>
                             <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">食堂</div>
                         </div>
-                         <div class="absolute bottom-[20%] right-[10%] flex items-center flex-row-reverse drop-shadow-md">
+                         <!-- 甲板は右側に配置されているので、基準点を右(origin-right)にする -->
+                         <div class="map-pin absolute bottom-[20%] right-[10%] flex items-center flex-row-reverse drop-shadow-md origin-right">
                             <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">⚓️</div>
                             <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-l-full -mr-2 pr-4">甲板</div>
                         </div>
@@ -374,9 +375,9 @@
             images: {
                 hero: "./yugemaru.jpg", // ホーム画面：メインビジュアル (例: "hero.jpg")
                 captain: "./captain.jpg", // ホーム画面：船長アイコン (例: "captain.png")
-                map: "./map.jpg", // マップ画面：船内マップ (例: "map.jpg")
-                badge: "https://placehold.co/200x200/fbbf24/0c4a6e?text=記念バッジ&font=Noto+Sans+JP", // スタンプ画面：特典バッジ (例: "badge.png")
-                stamp: "./stamp.png" // スタンプ枠：達成時の画像 (例: "stamp_clear.png")
+                map: "./map.jpg", // マップ画面：船内マップ (600x600に変更)
+                badge: "https://placehold.co/200x200/fbbf24/0c4a6e?text=記念バッジ&font=Noto+Sans+JP", // スタンプ画面：特典バッジ
+                stamp: "./stamp.png" // スタンプ枠：達成時の画像
             }
         };
 
@@ -415,7 +416,7 @@
             // 画像の適用 (エラー時は自動でダミーの数値を表示)
             setImgSrc('img-hero', CONFIG.images.hero, 'https://placehold.co/600x400/e2e8f0/64748b?text=600x400');
             setImgSrc('img-captain', CONFIG.images.captain, 'https://placehold.co/100x100/e2e8f0/64748b?text=100x100');
-            setImgSrc('img-map', CONFIG.images.map, 'https://placehold.co/600x800/e2e8f0/64748b?text=600x800');
+            setImgSrc('img-map', CONFIG.images.map, 'https://placehold.co/600x600/e2e8f0/64748b?text=600x600');
             setImgSrc('img-badge', CONFIG.images.badge, 'https://placehold.co/200x200/e2e8f0/64748b?text=200x200');
 
             // ローカルストレージからデータ読み込み
@@ -453,12 +454,26 @@
 
             // PCのホイール操作でもズームできるようにする
             wrapper.addEventListener('wheel', mapPanzoom.zoomWithWheel);
+
+            // 🔍 ズーム率に連動してアイコンのサイズを最適化する
+            // マップを拡大してもアイコンが巨大になりすぎず、見やすい大きさを維持します（Googleマップのような挙動）
+            elem.addEventListener('panzoomzoom', (e) => {
+                const scale = e.detail.scale;
+                document.querySelectorAll('.map-pin').forEach(pin => {
+                    // 倍率の逆数(1/scale)をかけて、画面上での実寸を維持する
+                    pin.style.transform = `scale(${1 / scale})`;
+                });
+            });
         }
 
         function resetMapZoom() {
             if (mapPanzoom) {
                 // アニメーション付きで等倍に戻す
                 mapPanzoom.reset({ animate: true });
+                // ピンのサイズもリセット
+                document.querySelectorAll('.map-pin').forEach(pin => {
+                    pin.style.transform = `scale(1)`;
+                });
             }
         }
 
@@ -525,8 +540,8 @@
                             <div class="text-4xl mb-2 text-marine-900">${spot.icon}</div>
                             <div class="font-bold text-[11px] text-marine-900 whitespace-nowrap">${spot.name}</div>
                         </div>
-                        <!-- スタンプ画像 (右上に配置、透明度無し) -->
-                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain animate-stamp z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
+                        <!-- スタンプ画像 (右上に配置。既得分はアニメーションさせない) -->
+                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
                     `;
                 } else {
                     if (CONFIG.isDemoMode) {
@@ -589,11 +604,14 @@
             localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
             updateUI();
 
-            if (acquiredStamps.length >= SPOTS.length) {
-                setTimeout(triggerComplete, 500);
-            } else {
-                showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
-            }
+            // アニメーション完了後、1秒待ってからポップアップを表示
+            setTimeout(() => {
+                if (acquiredStamps.length >= SPOTS.length) {
+                    triggerComplete();
+                } else {
+                    showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
+                }
+            }, 2500);
         }
 
         // --- 演出関連 ---
