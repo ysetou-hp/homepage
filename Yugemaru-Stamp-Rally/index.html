@@ -136,16 +136,24 @@
             
             <!-- ==================== ホーム画面 ==================== -->
             <section id="view-home" class="p-6 flex flex-col items-center">
-                <!-- メインビジュアル (アスペクト比固定で領域を確保) -->
-                <div class="relative w-full max-w-sm aspect-[3/2] mb-8 bg-marine-100 rounded-2xl">
+                
+                <!-- メッセージ (トップに移動) -->
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 flex flex-col md:flex-row items-center md:items-start gap-4 mb-8">
+                    <!-- 画像 (サイズを大きく変更: 100x100相当から、250x250画像を想定した大きめサイズへ) -->
+                    <img id="img-captain" src="" alt="船長" class="w-32 h-32 md:w-40 md:h-40 rounded-full border-1 border-marine-900 object-cover bg-marine-100 flex-shrink-0 shadow-md">
+                    <div class="text-base text-marine-800 font-bold text-center md:text-left mt-2 md:mt-0 flex-1">
+                        <span class="text-lg text-accent-600 block mb-1">ようこそ弓削丸へ！</span>
+                        <span class="text-sm font-medium leading-relaxed">船内のいろいろな場所を巡って、スタンプを集めてみよう！</span>
+                    </div>
+                </div>
+
+                <!-- メインビジュアル -->
+                <div class="relative w-full max-w-sm aspect-square mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100">
                     <div class="absolute inset-0 flex items-center justify-center opacity-10">
                         <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" class="text-marine-900"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
                     </div>
                     <!-- 画像 -->
-                    <img id="img-hero" src="" alt="弓削丸" class="absolute inset-0 w-full h-full object-cover rounded-2xl shadow-lg z-10">
-                    <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-marine-900 text-white font-bold tracking-widest text-xl py-1 px-8 rounded-sm shadow-md z-20 whitespace-nowrap">
-                        YUGEMARU
-                    </div>
+                    <img id="img-hero" src="" alt="弓削丸" class="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none">
                 </div>
 
                 <!-- スタンプ獲得状況 -->
@@ -159,15 +167,6 @@
                     </div>
                     <div class="w-full bg-marine-200 rounded-full h-3 overflow-hidden">
                         <div id="home-progress-bar" class="bg-accent-500 h-full rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <!-- メッセージ -->
-                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 flex items-center gap-4 mb-6">
-                    <!-- 画像 -->
-                    <img id="img-captain" src="" alt="船長" class="w-16 h-16 rounded-full border-2 border-marine-900 object-cover bg-marine-100 flex-shrink-0">
-                    <div class="text-sm text-marine-800 font-medium">
-                        ようこそ弓削丸へ！<br>船内のいろいろな場所を巡って、スタンプを集めてみよう！
                     </div>
                 </div>
 
@@ -187,8 +186,8 @@
                 
                 <!-- 🔍 ズーム機能のためのラッパー要素 (600x600に合わせて正方形に固定) -->
                 <div id="map-wrapper" class="relative w-full max-w-sm aspect-square mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
-                    <!-- この中の要素が拡大縮小される -->
-                    <div id="map-zoom-target" class="relative w-full h-full origin-top-left">
+                    <!-- この中の要素が拡大縮小される (will-changeを追加して滑らかに) -->
+                    <div id="map-zoom-target" class="relative w-full h-full origin-top-left" style="will-change: transform;">
                         <!-- マップ画像 (正方形の枠にピッタリ収まるように表示) -->
                         <img id="img-map" src="" alt="船内マップ" class="absolute inset-0 w-full h-full object-contain pointer-events-none">
                         
@@ -414,8 +413,9 @@
         // --- 初期化 ---
         function init() {
             // 画像の適用 (エラー時は自動でダミーの数値を表示)
-            setImgSrc('img-hero', CONFIG.images.hero, 'https://placehold.co/600x400/e2e8f0/64748b?text=600x400');
-            setImgSrc('img-captain', CONFIG.images.captain, 'https://placehold.co/100x100/e2e8f0/64748b?text=100x100');
+            setImgSrc('img-hero', CONFIG.images.hero, 'https://placehold.co/600x600/e2e8f0/64748b?text=600x600');
+            // 画像がない場合のプレースホルダーのテキストを250x250に変更
+            setImgSrc('img-captain', CONFIG.images.captain, 'https://placehold.co/250x250/e2e8f0/64748b?text=250x250');
             setImgSrc('img-map', CONFIG.images.map, 'https://placehold.co/600x600/e2e8f0/64748b?text=600x600');
             setImgSrc('img-badge', CONFIG.images.badge, 'https://placehold.co/200x200/e2e8f0/64748b?text=200x200');
 
@@ -446,22 +446,29 @@
             
             // Panzoomの適用
             mapPanzoom = Panzoom(elem, {
-                maxScale: 4, // 最大4倍まで拡大
+                maxScale: 6, // 最大拡大率を少し広げる
                 minScale: 1, // 最小は等倍
                 contain: 'outside', // ラッパーの外枠に画像をフィットさせる
-                step: 0.3 // PCホイール時のズーム量
+                step: 0.6 // PCホイール時のズーム量を増やしてサクサクにする
             });
 
-            // PCのホイール操作でもズームできるようにする
-            wrapper.addEventListener('wheel', mapPanzoom.zoomWithWheel);
+            // PCのホイール操作でもズームできるようにする (デフォルトのスクロールを無効化してガタつきを防止)
+            wrapper.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                mapPanzoom.zoomWithWheel(e);
+            }, { passive: false });
 
             // 🔍 ズーム率に連動してアイコンのサイズを最適化する
-            // マップを拡大してもアイコンが巨大になりすぎず、見やすい大きさを維持します（Googleマップのような挙動）
+            // 処理を軽くして(requestAnimationFrame)パンやズームを滑らかにする
+            let zoomRaf;
             elem.addEventListener('panzoomzoom', (e) => {
                 const scale = e.detail.scale;
-                document.querySelectorAll('.map-pin').forEach(pin => {
-                    // 倍率の逆数(1/scale)をかけて、画面上での実寸を維持する
-                    pin.style.transform = `scale(${1 / scale})`;
+                if (zoomRaf) cancelAnimationFrame(zoomRaf);
+                zoomRaf = requestAnimationFrame(() => {
+                    document.querySelectorAll('.map-pin').forEach(pin => {
+                        // 倍率の逆数(1/scale)をかけて、画面上での実寸を維持する
+                        pin.style.transform = `scale(${1 / scale})`;
+                    });
                 });
             });
         }
