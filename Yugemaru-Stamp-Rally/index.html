@@ -188,31 +188,62 @@
                 <div id="map-wrapper" class="relative w-full max-w-sm aspect-square mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
                     <!-- この中の要素が拡大縮小される (will-changeを追加して滑らかに) -->
                     <div id="map-zoom-target" class="relative w-full h-full origin-top-left" style="will-change: transform;">
-                        <!-- マップ画像 (正方形の枠にピッタリ収まるように表示) -->
-                        <img id="img-map" src="" alt="船内マップ" class="absolute inset-0 w-full h-full object-contain pointer-events-none">
                         
-                        <!-- マップ上のポイント (例: ブリッジ) -->
-                        <div class="map-pin absolute top-[15%] left-[20%] flex items-center drop-shadow-md origin-left">
-                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+                        <!-- ズレ防止: 実際の画像サイズと完全に一致するラッパー -->
+                        <div class="relative w-full h-full">
+                            <!-- マップ画像 -->
+                            <img id="img-map" src="" alt="船内マップ" class="absolute inset-0 w-full h-full object-contain pointer-events-none">
+                            
+                            <!-- ========================================== -->
+                            <!-- マップピン (3層構造で絶対にズレないように設計) -->
+                            <!-- ========================================== -->
+                            
+                            <!-- ブリッジ -->
+                            <div class="absolute top-[15%] left-[20%] w-0 h-0 z-10"> <!-- 層1: 座標の固定点 (サイズ0) -->
+                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]"> <!-- 層2: 丸アイコン中心への位置補正 -->
+                                    <div class="map-pin flex items-center drop-shadow-md origin-[16px_50%] transition-transform duration-75"> <!-- 層3: 拡縮専用 (起点=アイコン中心) -->
+                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+                                        </div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-100 border-l-0">
+                                            ブリッジ
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">
-                                ブリッジ
+
+                            <!-- 機関室 -->
+                            <div class="absolute top-[35%] left-[10%] w-0 h-0 z-10">
+                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+                                    <div class="map-pin flex items-center drop-shadow-md origin-[16px_50%] transition-transform duration-75">
+                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-100">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg>
+                                        </div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-100 border-l-0">機関室</div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <!-- 他のポイントも同様に配置 -->
-                        <div class="map-pin absolute top-[35%] left-[10%] flex items-center drop-shadow-md origin-left">
-                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg></div>
-                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">機関室</div>
-                        </div>
-                        <div class="map-pin absolute top-[50%] left-[10%] flex items-center drop-shadow-md origin-left">
-                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">🍽️</div>
-                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">食堂</div>
-                        </div>
-                         <!-- 甲板は右側に配置されているので、基準点を右(origin-right)にする -->
-                         <div class="map-pin absolute bottom-[20%] right-[10%] flex items-center flex-row-reverse drop-shadow-md origin-right">
-                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">⚓️</div>
-                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-l-full -mr-2 pr-4">甲板</div>
+
+                            <!-- 食堂 -->
+                            <div class="absolute top-[50%] left-[10%] w-0 h-0 z-10">
+                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+                                    <div class="map-pin flex items-center drop-shadow-md origin-[16px_50%] transition-transform duration-75">
+                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-100 text-[13px]">🍽️</div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-100 border-l-0">食堂</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 甲板 (右側を基準に配置) -->
+                            <div class="absolute bottom-[20%] right-[10%] w-0 h-0 z-10">
+                                <div class="absolute top-1/2 right-0 -translate-y-1/2 translate-x-[16px]">
+                                    <div class="map-pin flex items-center flex-row-reverse drop-shadow-md origin-[calc(100%-16px)_50%] transition-transform duration-75">
+                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-100 text-[13px]">⚓️</div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-l-full -mr-2 pr-4 whitespace-nowrap border border-marine-100 border-r-0">甲板</div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                     
