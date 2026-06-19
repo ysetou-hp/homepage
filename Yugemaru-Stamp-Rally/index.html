@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>弓削丸 デジタルスタンプラリー</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS (スタイリング) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                    },
+                    colors: {
+                        marine: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e', // 濃紺
+                            950: '#082f49',
+                        },
+                        accent: {
+                            400: '#fbbf24',
+                            500: '#f59e0b', // オレンジ
+                            600: '#d97706',
+                        }
+                    },
+                    animation: {
+                        'stamp': 'stamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'stamp-press': 'stamp-press 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                        'float': 'float 3s ease-in-out infinite',
+                        'screen-shake': 'screen-shake 0.35s ease-in-out',
+                    },
+                    keyframes: {
+                        stamp: {
+                            '0%': { transform: 'scale(3) rotate(-30deg)', opacity: '0' },
+                            '100%': { transform: 'scale(1) rotate(15deg)', opacity: '1' },
+                        },
+                        'stamp-press': {
+                            '0%': { transform: 'scale(4) rotate(-45deg)', opacity: '0', filter: 'blur(4px)' },
+                            '40%': { transform: 'scale(0.9) rotate(15deg)', opacity: '1', filter: 'blur(0px)' },
+                            '70%': { transform: 'scale(1.1) rotate(15deg)', opacity: '1' },
+                            '100%': { transform: 'scale(1) rotate(15deg)', opacity: '1' },
+                        },
+                        'screen-shake': {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '20%': { transform: 'translateX(-4px) translateY(2px)' },
+                            '40%': { transform: 'translateX(4px) translateY(-2px)' },
+                            '60%': { transform: 'translateX(-4px) translateY(-2px)' },
+                            '80%': { transform: 'translateX(4px) translateY(2px)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' },
+                        }
+                    },
+                    backgroundImage: {
+                        'wave-pattern': "url('data:image/svg+xml,%3Csvg width=\"40\" height=\"40\" viewBox=\"0 0 40 40\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cpath d=\"M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2v2H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2z\" fill=\"%230ea5e9\" fill-opacity=\"0.03\" fill-rule=\"evenodd\"/%3E%3C/svg%3E')",
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HTML5 QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- 紙吹雪アニメーション -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- テスト用QRコード生成 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- 🔍 マップの拡大縮小(Panzoom)ライブラリ追加 -->
+    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom/dist/panzoom.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f0f9ff; /* marine-50 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* スクロールバー非表示 */
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* グラスモーフィズム */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        /* QRスキャナーのUI調整 */
+        #reader { width: 100%; border-radius: 1rem; overflow: hidden; border: 4px solid rgba(255,255,255,0.2); }
+        #reader video { object-fit: cover; border-radius: 0.8rem; }
+        #reader__dashboard_section_csr span { color: white !important; }
+        #reader__dashboard_section_swaplink { color: #38bdf8 !important; text-decoration: none; }
+
+        /* ナビゲーションアイコンのアクティブ状態 */
+        .nav-icon-active { color: #f59e0b; /* accent-500 */ }
+        .nav-text-active { color: #f59e0b; font-weight: 700; }
+    </style>
+</head>
+<body class="text-marine-900 antialiased select-none">
+
+    <!-- アプリコンテナ -->
+    <div id="app" class="max-w-md mx-auto bg-wave-pattern bg-marine-50 h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
+        
+        <!-- デモモード用バナー -->
+        <div id="demo-mode-alert" class="hidden bg-accent-500 text-white text-xs md:text-sm font-bold text-center py-1 z-50 relative shadow-md">
+            ⚠️ デモモード：スタンプ枠をタップで取得
+        </div>
+
+        <!-- ヘッダー -->
+        <header class="bg-marine-900 text-white p-4 flex items-center justify-between relative z-10">
+            <h1 id="header-title" class="text-lg font-bold tracking-wider">弓削丸 デジタルスタンプラリー</h1>
+            <button onclick="toggleAdminMenu()" class="text-white/80 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+        </header>
+
+        <!-- メインコンテンツ領域 (スクロール可能) -->
+        <main id="main-content" class="flex-1 overflow-y-auto pb-20 bg-gradient-to-b from-marine-100 to-marine-50">
+            
+            <!-- ==================== ホーム画面 ==================== -->
+            <section id="view-home" class="p-6 flex flex-col items-center">
+                <!-- メインビジュアル (アスペクト比固定で領域を確保) -->
+                <div class="relative w-full max-w-sm aspect-[3/2] mb-8 bg-marine-100 rounded-2xl">
+                    <div class="absolute inset-0 flex items-center justify-center opacity-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" class="text-marine-900"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+                    </div>
+                    <!-- 画像 -->
+                    <img id="img-hero" src="" alt="弓削丸" class="absolute inset-0 w-full h-full object-cover rounded-2xl shadow-lg z-10">
+                    <div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-marine-900 text-white font-bold tracking-widest text-xl py-1 px-8 rounded-sm shadow-md z-20 whitespace-nowrap">
+                        YUGEMARU
+                    </div>
+                </div>
+
+                <!-- スタンプ獲得状況 -->
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-6 mb-6 text-center mt-2">
+                    <h2 class="text-marine-800 font-bold mb-2">スタンプ獲得状況</h2>
+                    <div class="flex items-baseline justify-center gap-1 mb-3">
+                        <span id="home-progress-count" class="text-5xl font-black text-accent-500">0</span>
+                        <span class="text-2xl font-bold text-marine-900">/</span>
+                        <span id="home-progress-total" class="text-2xl font-bold text-marine-900">8</span>
+                        <span class="text-marine-800 font-bold ml-2">スタンプ獲得</span>
+                    </div>
+                    <div class="w-full bg-marine-200 rounded-full h-3 overflow-hidden">
+                        <div id="home-progress-bar" class="bg-accent-500 h-full rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- メッセージ -->
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 flex items-center gap-4 mb-6">
+                    <!-- 画像 -->
+                    <img id="img-captain" src="" alt="船長" class="w-16 h-16 rounded-full border-2 border-marine-900 object-cover bg-marine-100 flex-shrink-0">
+                    <div class="text-sm text-marine-800 font-medium">
+                        ようこそ弓削丸へ！<br>船内のいろいろな場所を巡って、スタンプを集めてみよう！
+                    </div>
+                </div>
+
+                <!-- スタンプ取得ボタン -->
+                <button onclick="startScanner()" class="w-full max-w-sm bg-accent-500 hover:bg-accent-600 text-white font-bold text-xl py-4 rounded-full shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 20 20 20 20 4 4 4 4 20"></polygon><path d="M12 8v.01"></path><path d="M12 12v.01"></path><path d="M16 8v.01"></path><path d="M8 8v.01"></path><path d="M8 12v.01"></path><path d="M16 12v.01"></path><path d="M12 16v.01"></path><path d="M8 16v.01"></path><path d="M16 16v.01"></path></svg>
+                    スタンプを取得
+                </button>
+            </section>
+
+            <!-- ==================== マップ画面 ==================== -->
+            <section id="view-map" class="hidden p-6 flex flex-col items-center">
+                <div class="bg-white/70 rounded-full px-6 py-2 text-marine-800 font-bold text-sm mb-6 shadow-sm text-center">
+                    スタンプポイントをタップして場所を確認しよう！<br>
+                    <span class="text-xs text-marine-600">※マップは指で拡大・縮小できます</span>
+                </div>
+                
+                <!-- 🔍 ズーム機能のためのラッパー要素 (画像に合わせて高さが変わるように変更) -->
+                <div id="map-wrapper" class="relative w-full max-w-sm mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
+                    <!-- この中の要素が拡大縮小される -->
+                    <div id="map-zoom-target" class="relative w-full origin-top-left">
+                        <!-- マップ画像 (初期状態で画像全体が見えるように w-full h-auto を指定) -->
+                        <img id="img-map" src="" alt="船内マップ" class="w-full h-auto min-h-[300px] object-contain pointer-events-none">
+                        
+                        <!-- マップ上のポイント (例: ブリッジ) -->
+                        <div class="absolute top-[15%] left-[20%] flex items-center drop-shadow-md">
+                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+                            </div>
+                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">
+                                ブリッジ
+                            </div>
+                        </div>
+                        <!-- 他のポイントも同様に配置 -->
+                        <div class="absolute top-[35%] left-[10%] flex items-center drop-shadow-md">
+                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg></div>
+                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">機関室</div>
+                        </div>
+                        <div class="absolute top-[50%] left-[10%] flex items-center drop-shadow-md">
+                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">🍽️</div>
+                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-r-full -ml-2 pl-4">食堂</div>
+                        </div>
+                         <div class="absolute bottom-[20%] right-[10%] flex items-center flex-row-reverse drop-shadow-md">
+                            <div class="bg-white text-marine-900 p-1.5 rounded-full z-10">⚓️</div>
+                            <div class="bg-white text-marine-900 text-xs font-bold px-3 py-1.5 rounded-l-full -mr-2 pr-4">甲板</div>
+                        </div>
+                    </div>
+                    
+                    <!-- ズームリセットボタン (アイコンを分かりやすく変更) -->
+                    <button onclick="resetMapZoom()" class="absolute bottom-3 right-3 bg-white/95 text-marine-800 p-2 rounded-full shadow-lg hover:bg-white z-20 flex items-center gap-1.5 active:scale-95 border border-marine-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                        <span class="text-xs font-bold pr-1">元のサイズ</span>
+                    </button>
+                </div>
+
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 text-center mb-6 flex items-center justify-center gap-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-marine-600"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    <span class="text-sm text-marine-800 font-medium leading-tight text-left">
+                        各ポイントにあるQRコードまたは<br>NFCタグを読み取ってください
+                    </span>
+                </div>
+
+                <button onclick="startScanner()" class="w-full max-w-sm bg-accent-500 hover:bg-accent-600 text-white font-bold text-xl py-4 rounded-full shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-95 mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 20 20 20 20 4 4 4 4 20"></polygon><path d="M12 8v.01"></path><path d="M12 12v.01"></path><path d="M16 8v.01"></path><path d="M8 8v.01"></path><path d="M8 12v.01"></path><path d="M16 12v.01"></path><path d="M12 16v.01"></path><path d="M8 16v.01"></path><path d="M16 16v.01"></path></svg>
+                    スタンプを取得
+                </button>
+                <a href="#" class="text-marine-600 text-sm font-bold underline">スタンプ取得方法について</a>
+            </section>
+
+            <!-- ==================== スタンプ画面 ==================== -->
+            <section id="view-stamp" class="hidden p-6 flex flex-col items-center">
+                
+                <!-- 達成率 -->
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-6 mb-8">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <div>
+                            <span class="text-sm font-bold text-marine-800 block">達成率</span>
+                            <span id="stamp-progress-percent" class="text-5xl font-black text-marine-900">0%</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-accent-500 font-bold mb-1">あと<span id="stamp-remaining-count" class="text-2xl mx-1">8</span>個で達成！</div>
+                            <div class="text-marine-600 text-sm font-bold"><span id="stamp-progress-count">0</span>/8 スタンプ獲得</div>
+                        </div>
+                    </div>
+                    <div class="w-full bg-marine-200 rounded-full h-4 overflow-hidden">
+                        <div id="stamp-progress-bar" class="bg-accent-500 h-full rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- スタンプグリッド (8個) -->
+                <div id="stamp-grid" class="grid grid-cols-4 gap-4 w-full max-w-sm mb-8">
+                    <!-- JSで生成 -->
+                </div>
+
+                <!-- コンプリート特典バナー -->
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-6 text-center relative overflow-hidden">
+                    <div class="absolute top-0 inset-x-0 h-8 bg-marine-900 flex items-center justify-center">
+                        <span class="text-white font-bold tracking-widest">コンプリート特典</span>
+                    </div>
+                    <div class="mt-8">
+                        <p class="text-marine-800 font-bold mb-4">すべてのスタンプを集めると<br>オリジナル記念バッジをプレゼント！</p>
+                        <!-- 画像 -->
+                        <img id="img-badge" src="" alt="記念バッジ" class="w-32 h-32 mx-auto mb-4 drop-shadow-md animate-float object-cover rounded-full bg-marine-100">
+                        <p class="text-xs text-marine-600">※特典は下船時に船内スタッフへお見せください</p>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- 下部ナビゲーション -->
+        <nav class="bg-white border-t border-marine-100 p-2 flex justify-around items-center absolute bottom-0 w-full z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <button onclick="switchView('home')" class="flex flex-col items-center p-2 w-16 group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1" id="nav-icon-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span class="text-[10px] text-gray-500 group-[.active]:text-accent-500 font-medium transition-colors" id="nav-text-home">ホーム</span>
+            </button>
+            <button onclick="switchView('map')" class="flex flex-col items-center p-2 w-16 group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1" id="nav-icon-map"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+                <span class="text-[10px] text-gray-500 group-[.active]:text-accent-500 font-medium transition-colors" id="nav-text-map">マップ</span>
+            </button>
+            <button onclick="switchView('stamp')" class="flex flex-col items-center p-2 w-16 group">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1" id="nav-icon-stamp"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+                <span class="text-[10px] text-gray-500 group-[.active]:text-accent-500 font-medium transition-colors" id="nav-text-stamp">スタンプ</span>
+            </button>
+            <button class="flex flex-col items-center p-2 w-16 group opacity-50 cursor-not-allowed">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 mb-1"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                <span class="text-[10px] text-gray-500 font-medium">お知らせ</span>
+            </button>
+        </nav>
+
+
+        <!-- スキャナー画面 (全画面オーバーレイ) -->
+        <div id="screen-scanner" class="hidden absolute inset-0 bg-marine-950/95 backdrop-blur-md z-50 flex flex-col">
+            <div class="flex-1 flex flex-col">
+                <div class="p-6 flex justify-between items-center text-white">
+                    <span class="font-bold text-xl tracking-wider">QRコードをスキャン</span>
+                    <button onclick="stopScanner()" class="bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="flex-1 flex items-center justify-center p-6 w-full max-w-md mx-auto">
+                    <div id="reader" class="bg-black/50 shadow-2xl w-full aspect-square"></div>
+                </div>
+                <div class="p-8 text-center">
+                    <p class="text-white text-lg font-medium bg-marine-800/50 inline-block px-6 py-3 rounded-full border border-marine-700 animate-pulse">
+                        枠内にQRコードを合わせてください
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 汎用モーダル -->
+        <div id="modal-overlay" class="hidden absolute inset-0 bg-marine-950/60 backdrop-blur-sm z-[60] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
+            <div id="modal-content" class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 text-center">
+                <div id="modal-icon" class="text-6xl mb-4"></div>
+                <h2 id="modal-title" class="text-2xl font-black text-marine-900 mb-4">タイトル</h2>
+                <p id="modal-message" class="text-gray-600 font-medium leading-relaxed mb-8 whitespace-pre-wrap">メッセージ</p>
+                <button onclick="closeModal()" class="w-full bg-accent-500 text-white hover:bg-accent-600 font-bold py-4 rounded-full transition-colors shadow-md">とじる</button>
+            </div>
+        </div>
+
+        <!-- 運営メニュー (隠し領域) -->
+        <div id="admin-menu" class="hidden absolute inset-0 bg-marine-50/95 backdrop-blur-md z-[70] flex flex-col p-8 overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-marine-200 pb-6 mb-8 mt-4 max-w-md mx-auto w-full">
+                <h2 class="text-2xl font-bold text-marine-900">設定・テスト用メニュー</h2>
+                <button onclick="toggleAdminMenu()" class="p-3 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+            </div>
+            
+            <div class="max-w-md mx-auto w-full flex flex-col gap-6">
+                <button onclick="toggleDemoMode()" class="bg-white text-marine-900 border-2 border-marine-200 py-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-marine-50 transition-colors flex items-center justify-between px-6">
+                    <span>デモモード (タップで取得)</span>
+                    <span id="demo-status-badge" class="bg-gray-200 text-gray-500 text-sm px-4 py-1.5 rounded-full font-black">OFF</span>
+                </button>
+
+                <button onclick="resetData()" class="bg-white text-red-500 border-2 border-red-100 py-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-red-50 transition-colors mb-4 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    スタンプデータをリセットする
+                </button>
+
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-marine-100">
+                    <h3 class="font-bold text-xl text-marine-900 mb-3">テスト用QRコード</h3>
+                    <p class="text-sm text-gray-500 mb-6">PCの画面に表示して、スマホのカメラで読み取ってテストしてください。</p>
+                    
+                    <div id="qr-container" class="grid grid-cols-2 gap-4">
+                        <!-- QRコードがここに生成される -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==========================================
+        // 🔧 アプリケーション設定
+        // ==========================================
+        const CONFIG = {
+            storageKey: "yugemaru_stamps_v3_ui_refresh", // キーを変更してデータを一新
+            isDemoMode: false,
+            // 🖼️ 画像設定：各画面の画像URLを指定してください。
+            // 【指定方法の例】
+            // 同じフォルダに画像がある場合: "hero.jpg" または "./hero.jpg"
+            // imgフォルダの中にある場合: "img/hero.jpg"
+            images: {
+                hero: "./yugemaru.jpg", // ホーム画面：メインビジュアル (例: "hero.jpg")
+                captain: "./captain.jpg", // ホーム画面：船長アイコン (例: "captain.png")
+                map: "./map.jpg", // マップ画面：船内マップ (例: "map.jpg")
+                badge: "https://placehold.co/200x200/fbbf24/0c4a6e?text=記念バッジ&font=Noto+Sans+JP", // スタンプ画面：特典バッジ (例: "badge.png")
+                stamp: "./stamp.png" // スタンプ枠：達成時の画像 (例: "stamp_clear.png")
+            }
+        };
+
+        // --- スポットデータ定義 (8個に拡張) ---
+        const SPOTS = [
+            { id: 'bridge', name: 'ブリッジ', icon: '⚓️', description: '船の操縦を行う場所。見晴らし最高！' },
+            { id: 'engine', name: '機関室', icon: '⚙️', description: '船の心臓部。巨大なエンジンが鎮座。' },
+            { id: 'dining', name: '食堂', icon: '🍽️', description: '美味しい食事が待っている憩いの場。' },
+            { id: 'deck', name: '甲板', icon: '🌊', description: '潮風を感じられる開放的なスペース。' },
+            { id: 'training', name: '実習室', icon: '📖', description: '航海や機関について学ぶ教室。' },
+            { id: 'student', name: '学生室', icon: '👥', description: '学生たちが生活する居住スペース。' },
+            { id: 'library', name: '図書室', icon: '📚', description: '海に関する専門書が揃っています。' },
+            { id: 'lounge', name: 'ラウンジ', icon: '☕', description: 'ゆったりとくつろげる談話室。' },
+        ];
+
+        // --- 状態管理 ---
+        let acquiredStamps = [];
+        let html5QrCode = null;
+        let isScannerRunning = false;
+        let currentView = 'home';
+        let mapPanzoom = null; // 🔍 Panzoomのインスタンス
+
+        // 画像の存在チェックとフォールバック処理を行う関数
+        function setImgSrc(imgId, src, fallbackUrl) {
+            const img = document.getElementById(imgId);
+            if (!img) return;
+            img.onerror = function() {
+                this.onerror = null; // 無限ループを防ぐ
+                this.src = fallbackUrl;
+            };
+            img.src = src;
+        }
+
+        // --- 初期化 ---
+        function init() {
+            // 画像の適用 (エラー時は自動でダミーの数値を表示)
+            setImgSrc('img-hero', CONFIG.images.hero, 'https://placehold.co/600x400/e2e8f0/64748b?text=600x400');
+            setImgSrc('img-captain', CONFIG.images.captain, 'https://placehold.co/100x100/e2e8f0/64748b?text=100x100');
+            setImgSrc('img-map', CONFIG.images.map, 'https://placehold.co/600x800/e2e8f0/64748b?text=600x800');
+            setImgSrc('img-badge', CONFIG.images.badge, 'https://placehold.co/200x200/e2e8f0/64748b?text=200x200');
+
+            // ローカルストレージからデータ読み込み
+            const savedData = localStorage.getItem(CONFIG.storageKey);
+            if (savedData) {
+                try {
+                    acquiredStamps = JSON.parse(savedData);
+                } catch (e) {
+                    acquiredStamps = [];
+                }
+            }
+            
+            // UIの初期化
+            switchView('home'); // 初期ビュー
+            updateUI();
+            generateTestQRs();
+            updateDemoModeUI();
+            
+            // 🔍 マップのズーム機能初期化
+            initMapZoom();
+        }
+
+        // --- マップズーム機能 ---
+        function initMapZoom() {
+            const elem = document.getElementById('map-zoom-target');
+            const wrapper = document.getElementById('map-wrapper');
+            
+            // Panzoomの適用
+            mapPanzoom = Panzoom(elem, {
+                maxScale: 4, // 最大4倍まで拡大
+                minScale: 1, // 最小は等倍
+                contain: 'outside', // ラッパーの外枠に画像をフィットさせる
+                step: 0.3 // PCホイール時のズーム量
+            });
+
+            // PCのホイール操作でもズームできるようにする
+            wrapper.addEventListener('wheel', mapPanzoom.zoomWithWheel);
+        }
+
+        function resetMapZoom() {
+            if (mapPanzoom) {
+                // アニメーション付きで等倍に戻す
+                mapPanzoom.reset({ animate: true });
+            }
+        }
+
+        // --- ビュー切り替え ---
+        function switchView(viewId) {
+            currentView = viewId;
+            
+            // すべてのビューを非表示
+            document.querySelectorAll('#main-content > section').forEach(el => el.classList.add('hidden'));
+            // 選択されたビューを表示
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+            
+            // ナビゲーションのアクティブ状態を更新
+            document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`nav button[onclick="switchView('${viewId}')"]`).classList.add('active');
+
+            // 画面トップへスクロール
+            document.getElementById('main-content').scrollTop = 0;
+            
+            // 🔍 マップ画面を開いた時はズームをリセットする
+            if (viewId === 'map') {
+                setTimeout(resetMapZoom, 50);
+            }
+            
+            updateUI();
+        }
+
+        // --- UI全体更新 ---
+        function updateUI() {
+            const count = acquiredStamps.length;
+            const total = SPOTS.length;
+            const percent = Math.round((count / total) * 100);
+
+            // ホーム画面の更新
+            document.getElementById('home-progress-count').innerText = count;
+            document.getElementById('home-progress-total').innerText = total;
+            document.getElementById('home-progress-bar').style.width = `${percent}%`;
+
+            // スタンプ画面の更新
+            document.getElementById('stamp-progress-percent').innerText = `${percent}%`;
+            document.getElementById('stamp-remaining-count').innerText = total - count;
+            document.getElementById('stamp-progress-count').innerText = count;
+            document.getElementById('stamp-progress-bar').style.width = `${percent}%`;
+            
+            renderStampGrid();
+        }
+
+        // --- スタンプグリッド描画 (スタンプ画面用) ---
+        function renderStampGrid() {
+            const grid = document.getElementById('stamp-grid');
+            grid.innerHTML = '';
+
+            SPOTS.forEach((spot, index) => {
+                const isAcquired = acquiredStamps.includes(spot.id);
+                const cell = document.createElement('div');
+                cell.id = `stamp-cell-${spot.id}`;
+                // 画像の比率に合わせて縦長にする
+                cell.className = `aspect-[3/4] rounded-xl relative overflow-hidden flex flex-col items-center justify-center p-2 transition-all duration-200 ${isAcquired ? 'bg-white shadow-md border-2 border-accent-400' : 'bg-marine-100/50 border-2 border-dashed border-marine-200'}`;
+                
+                if (isAcquired) {
+                    cell.innerHTML = `
+                        <!-- 元のアイコンと文字 (スタンプと重ならないように少し下へ移動) -->
+                        <div class="flex flex-col items-center mt-6">
+                            <div class="text-4xl mb-2 text-marine-900">${spot.icon}</div>
+                            <div class="font-bold text-[11px] text-marine-900 whitespace-nowrap">${spot.name}</div>
+                        </div>
+                        <!-- スタンプ画像 (右上に配置、透明度無し) -->
+                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain animate-stamp z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
+                    `;
+                } else {
+                    if (CONFIG.isDemoMode) {
+                        cell.classList.add('cursor-pointer', 'hover:bg-white', 'active:scale-95');
+                        cell.onclick = () => simulateStampScan(spot.id);
+                    }
+                    cell.innerHTML = `
+                        <!-- 番号も取得時と同じバランスで少し下へ移動 -->
+                        <div class="text-3xl font-black text-marine-200 mt-6">${index + 1}</div>
+                    `;
+                }
+                grid.appendChild(cell);
+            });
+        }
+
+
+        // --- QRスキャナー制御 ---
+        async function startScanner() {
+            document.getElementById('screen-scanner').classList.remove('hidden');
+            
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                isScannerRunning = true;
+            } catch (err) {
+                console.error(err);
+                stopScanner();
+                showModal('カメラエラー', 'カメラの起動に失敗しました。\nブラウザの設定を確認してください。', '📷');
+            }
+        }
+
+        async function stopScanner() {
+            if (html5QrCode && isScannerRunning) {
+                try { await html5QrCode.stop(); html5QrCode.clear(); } catch (e) {}
+                isScannerRunning = false;
+            }
+            document.getElementById('screen-scanner').classList.add('hidden');
+        }
+
+        function onScanSuccess(decodedText) {
+            stopScanner().then(() => processStamp(decodedText));
+        }
+        function onScanFailure() {} // 無視
+
+        // --- スタンプ処理 ---
+        async function processStamp(scannedId) {
+            const id = scannedId.trim();
+            const spot = SPOTS.find(s => s.id === id);
+            
+            if (!spot) { showModal('エラー', '無効なQRコードです。', '❓'); return; }
+            if (acquiredStamps.includes(id)) { showModal('お知らせ', '取得済みです！', spot.icon); return; }
+
+            // スタンプ画面へ移動してアニメーション再生
+            switchView('stamp');
+            await playStampAnimation(spot);
+
+            acquiredStamps.push(id);
+            localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
+            updateUI();
+
+            if (acquiredStamps.length >= SPOTS.length) {
+                setTimeout(triggerComplete, 500);
+            } else {
+                showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
+            }
+        }
+
+        // --- 演出関連 ---
+        function playStampAnimation(spot) {
+            return new Promise(resolve => {
+                const cell = document.getElementById(`stamp-cell-${spot.id}`);
+                if (!cell) { resolve(); return; }
+
+                cell.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                setTimeout(() => {
+                    const stampEl = document.createElement('img');
+                    stampEl.src = CONFIG.images.stamp;
+                    // スタンプ画像 (右上に配置、透明度無し)
+                    stampEl.className = `absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-30 animate-stamp-press drop-shadow-md`;
+                    
+                    stampEl.onerror = function() {
+                        this.onerror = null;
+                        this.src = 'https://placehold.co/200x200/transparent/94a3b8?text=Stamp';
+                    };
+                    cell.appendChild(stampEl);
+                    document.getElementById('app').classList.add('animate-screen-shake');
+
+                    confetti({ particleCount: 30, spread: 60, origin: { y: 0.6 }, colors: ['#f59e0b', '#0ea5e9'] });
+
+                    setTimeout(() => {
+                        document.getElementById('app').classList.remove('animate-screen-shake');
+                        resolve();
+                    }, 600);
+                }, 300);
+            });
+        }
+
+        function triggerComplete() {
+            const end = Date.now() + 3000;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#f59e0b', '#0ea5e9', '#ffffff'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#f59e0b', '#0ea5e9', '#ffffff'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+            setTimeout(() => showModal('🎉 コンプリート！ 🎉', 'おめでとうございます！\nすべてのスタンプを集めました。\n下船時に特典をお受け取りください。', '🚢'), 800);
+        }
+
+        // --- モーダル制御 ---
+        function showModal(title, message, icon = '') {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-message').innerText = message;
+            document.getElementById('modal-icon').innerText = icon;
+            const overlay = document.getElementById('modal-overlay');
+            overlay.classList.remove('hidden');
+            setTimeout(() => { overlay.classList.remove('opacity-0'); document.getElementById('modal-content').classList.remove('scale-95'); }, 10);
+        }
+        function closeModal() {
+            const overlay = document.getElementById('modal-overlay');
+            overlay.classList.add('opacity-0'); document.getElementById('modal-content').classList.add('scale-95');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+
+        // --- 運営・テスト用機能 ---
+        function toggleAdminMenu() {
+            const menu = document.getElementById('admin-menu');
+            menu.classList.toggle('hidden');
+        }
+        function toggleDemoMode() {
+            CONFIG.isDemoMode = !CONFIG.isDemoMode;
+            updateDemoModeUI();
+            renderStampGrid(); // グリッドのクリックイベント更新
+            if (CONFIG.isDemoMode) {
+                toggleAdminMenu();
+                setTimeout(() => showModal('デモモードON', 'スタンプ画面の枠をタップして取得できます。', '✨'), 300);
+            }
+        }
+        function updateDemoModeUI() {
+            const badge = document.getElementById('demo-status-badge');
+            const alertBanner = document.getElementById('demo-mode-alert');
+            if (CONFIG.isDemoMode) {
+                badge.innerText = 'ON'; badge.className = badge.className.replace('bg-gray-200 text-gray-500', 'bg-accent-500 text-white animate-pulse');
+                alertBanner.classList.remove('hidden');
+            } else {
+                badge.innerText = 'OFF'; badge.className = badge.className.replace('bg-accent-500 text-white animate-pulse', 'bg-gray-200 text-gray-500');
+                alertBanner.classList.add('hidden');
+            }
+        }
+        async function simulateStampScan(id) { if (!CONFIG.isDemoMode) return; await processStamp(id); }
+        function resetData() {
+            if (confirm('データをリセットしますか？')) {
+                localStorage.removeItem(CONFIG.storageKey); acquiredStamps = []; init(); toggleAdminMenu();
+                setTimeout(() => showModal('リセット完了', 'データを初期化しました。', '🗑️'), 300);
+            }
+        }
+        function generateTestQRs() {
+            const container = document.getElementById('qr-container');
+            if (container.children.length > 0) return;
+            SPOTS.forEach(spot => {
+                const wrapper = document.createElement('div'); wrapper.className = 'flex flex-col items-center p-3 border border-marine-200 rounded-xl bg-white';
+                wrapper.innerHTML = `<div class="font-bold text-xs text-marine-900 mb-2">${spot.name}</div><div id="qr-${spot.id}" class="bg-white p-1"></div><div class="text-[10px] text-gray-400 mt-2 font-mono">${spot.id}</div>`;
+                container.appendChild(wrapper);
+                new QRCode(document.getElementById(`qr-${spot.id}`), { text: spot.id, width: 80, height: 80, colorDark : "#0c4a6e", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
+            });
+        }
+
+        // --- 起動 ---
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
