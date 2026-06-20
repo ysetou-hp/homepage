@@ -118,15 +118,15 @@
     <!-- アプリコンテナ -->
     <div id="app" class="max-w-md mx-auto bg-wave-pattern bg-marine-50 h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
         
-        <!-- デモモード用バナー -->
+        <!-- 設定モード用バナー -->
         <div id="demo-mode-alert" class="hidden bg-accent-500 text-white text-xs md:text-sm font-bold text-center py-1 z-50 relative shadow-md">
-            ⚠️ デモモード：スタンプ枠をタップで取得
+            ⚠️ 設定モード：スタンプ枠をタップで取得/解除
         </div>
 
         <!-- ヘッダー -->
         <header class="bg-marine-900 text-white p-4 flex items-center justify-between relative z-10">
             <h1 id="header-title" class="text-lg font-bold tracking-wider">弓削丸 デジタルスタンプラリー</h1>
-            <button onclick="toggleAdminMenu()" class="text-white/80 hover:text-white">
+            <button onclick="requestAdminMenu()" class="text-white/80 hover:text-white">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
         </header>
@@ -138,60 +138,23 @@
             <section id="view-home" class="p-6 flex flex-col items-center">
                 
                 <!-- メッセージ (トップに移動) -->
-                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 flex flex-col md:flex-row items-center md:items-start gap-4 mb-8">
-                    <!-- 画像 (サイズを大きく変更: 100x100相当から、250x250画像を想定した大きめサイズへ) -->
+                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 flex flex-col md:flex-row items-center md:items-start gap-4 mb-6">
+                    <!-- 画像 -->
                     <img id="img-captain" src="" alt="船長" class="w-32 h-32 md:w-40 md:h-40 rounded-full border-1 border-marine-900 object-cover bg-marine-100 flex-shrink-0 shadow-md">
                     <div class="text-base text-marine-800 font-bold text-center md:text-left mt-2 md:mt-0 flex-1">
+                        <!-- カスタムタイトル表示領域 -->
+                        <span id="display-welcome-title" class="text-xl text-marine-900 font-black block mb-2 hidden"></span>
+                        
                         <span class="text-lg text-accent-600 block mb-1">ようこそ弓削丸へ！</span>
                         <span class="text-sm font-medium leading-relaxed">船内のいろいろな場所を巡って、スタンプを集めてみよう！</span>
                     </div>
                 </div>
 
-                <!-- メインビジュアル -->
-                <div class="relative w-full max-w-sm aspect-square mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100">
-                    <div class="absolute inset-0 flex items-center justify-center opacity-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round" class="text-marine-900"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
-                    </div>
-                    <!-- 画像 -->
-                    <img id="img-hero" src="" alt="弓削丸" class="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none">
-                </div>
-
-                <!-- スタンプ獲得状況 -->
-                <div class="glass-panel w-full max-w-sm rounded-2xl p-6 mb-6 text-center mt-2">
-                    <h2 class="text-marine-800 font-bold mb-2">スタンプ獲得状況</h2>
-                    <div class="flex items-baseline justify-center gap-1 mb-3">
-                        <span id="home-progress-count" class="text-5xl font-black text-accent-500">0</span>
-                        <span class="text-2xl font-bold text-marine-900">/</span>
-                        <span id="home-progress-total" class="text-2xl font-bold text-marine-900">8</span>
-                        <span class="text-marine-800 font-bold ml-2">スタンプ獲得</span>
-                    </div>
-                    <div class="w-full bg-marine-200 rounded-full h-3 overflow-hidden">
-                        <div id="home-progress-bar" class="bg-accent-500 h-full rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <!-- スタンプ取得ボタン -->
-                <button onclick="startScanner()" class="w-full max-w-sm bg-accent-500 hover:bg-accent-600 text-white font-bold text-xl py-4 rounded-full shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-95">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 20 20 20 20 4 4 4 4 20"></polygon><path d="M12 8v.01"></path><path d="M12 12v.01"></path><path d="M16 8v.01"></path><path d="M8 8v.01"></path><path d="M8 12v.01"></path><path d="M16 12v.01"></path><path d="M12 16v.01"></path><path d="M8 16v.01"></path><path d="M16 16v.01"></path></svg>
-                    スタンプを取得
-                </button>
-            </section>
-
-            <!-- ==================== マップ画面 ==================== -->
-            <section id="view-map" class="hidden p-6 flex flex-col items-center">
-                <div class="bg-white/70 rounded-full px-6 py-2 text-marine-800 font-bold text-sm mb-6 shadow-sm text-center">
-                    スタンプポイントをタップして場所を確認しよう！<br>
-                    <span class="text-xs text-marine-600">※マップは指で拡大・縮小できます</span>
-                </div>
-                
-                <!-- 🔍 ズーム機能のためのラッパー要素 -->
-                <div id="map-wrapper" class="relative w-full max-w-sm aspect-square mb-8 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
-                    <!-- ぼやけの原因となる will-change を削除 -->
+                <!-- 🔍 ズーム機能付きマップ (ホーム画面に統合) -->
+                <div id="map-wrapper" class="relative w-full max-w-sm aspect-square mb-3 overflow-hidden rounded-xl shadow-md border-2 border-marine-200 bg-marine-100 touch-none">
                     <div id="map-zoom-target" class="relative w-full h-full origin-top-left">
-                        
                         <!-- ズレ防止: 実際の画像サイズと完全に一致するラッパー -->
                         <div class="relative w-full h-full">
-                            
                             <!-- 【改善】タブレットのぼやけ防止: 画像のテクスチャ解像度を確保するため、内部的に4倍サイズで描画して縮小表示 -->
                             <div class="absolute top-0 left-0 w-[400%] h-[400%] origin-top-left" style="transform: scale(0.25);">
                                 <!-- マップ画像 -->
@@ -200,7 +163,6 @@
                             
                             <!-- ========================================== -->
                             <!-- マップピン (3層構造で絶対にズレないように設計) -->
-                            <!-- 変更: drop-shadowと遅延(transition)を削除し、直接パーツに軽いshadowを付与 -->
                             <!-- ========================================== -->
                             
                             <!-- ブリッジ -->
@@ -259,18 +221,17 @@
                     </button>
                 </div>
 
-                <div class="glass-panel w-full max-w-sm rounded-2xl p-4 text-center mb-6 flex items-center justify-center gap-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-marine-600"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                    <span class="text-sm text-marine-800 font-medium leading-tight text-left">
-                        各ポイントにあるQRコードまたは<br>NFCタグを読み取ってください
-                    </span>
+                <!-- マップ操作の注意書き -->
+                <div class="text-sm font-bold text-marine-600 mb-8 flex items-center justify-center gap-2 bg-white/60 px-5 py-2.5 rounded-full shadow-sm w-full max-w-sm border border-marine-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                    <span>※マップは指で拡大・縮小できます</span>
                 </div>
 
-                <button onclick="startScanner()" class="w-full max-w-sm bg-accent-500 hover:bg-accent-600 text-white font-bold text-xl py-4 rounded-full shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-95 mb-4">
+                <!-- スタンプ取得ボタン -->
+                <button onclick="startScanner()" class="w-full max-w-sm bg-accent-500 hover:bg-accent-600 text-white font-bold text-xl py-4 rounded-full shadow-lg flex items-center justify-center gap-3 transition-transform active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 20 20 20 20 4 4 4 4 20"></polygon><path d="M12 8v.01"></path><path d="M12 12v.01"></path><path d="M16 8v.01"></path><path d="M8 8v.01"></path><path d="M8 12v.01"></path><path d="M16 12v.01"></path><path d="M12 16v.01"></path><path d="M8 16v.01"></path><path d="M16 16v.01"></path></svg>
                     スタンプを取得
                 </button>
-                <a href="#" class="text-marine-600 text-sm font-bold underline">スタンプ取得方法について</a>
             </section>
 
             <!-- ==================== スタンプ画面 ==================== -->
@@ -314,21 +275,17 @@
 
         </main>
 
-        <!-- 下部ナビゲーション -->
+        <!-- 下部ナビゲーション (マップを削除) -->
         <nav class="bg-white border-t border-marine-100 p-2 flex justify-around items-center absolute bottom-0 w-full z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            <button onclick="switchView('home')" class="flex flex-col items-center p-2 w-16 group">
+            <button onclick="switchView('home')" class="flex flex-col items-center p-2 w-20 group">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1" id="nav-icon-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 <span class="text-[10px] text-gray-500 group-[.active]:text-accent-500 font-medium transition-colors" id="nav-text-home">ホーム</span>
             </button>
-            <button onclick="switchView('map')" class="flex flex-col items-center p-2 w-16 group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1" id="nav-icon-map"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
-                <span class="text-[10px] text-gray-500 group-[.active]:text-accent-500 font-medium transition-colors" id="nav-text-map">マップ</span>
-            </button>
-            <button onclick="switchView('stamp')" class="flex flex-col items-center p-2 w-16 group">
+            <button onclick="switchView('stamp')" class="flex flex-col items-center p-2 w-20 group">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1" id="nav-icon-stamp"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
                 <span class="text-[10px] text-gray-500 group-[.active]:text-accent-500 font-medium transition-colors" id="nav-text-stamp">スタンプ</span>
             </button>
-            <button class="flex flex-col items-center p-2 w-16 group opacity-50 cursor-not-allowed">
+            <button class="flex flex-col items-center p-2 w-20 group opacity-50 cursor-not-allowed">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 mb-1"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                 <span class="text-[10px] text-gray-500 font-medium">お知らせ</span>
             </button>
@@ -369,18 +326,25 @@
         <div id="admin-menu" class="hidden absolute inset-0 bg-marine-50/95 backdrop-blur-md z-[70] flex flex-col p-8 overflow-y-auto">
             <div class="flex justify-between items-center border-b border-marine-200 pb-6 mb-8 mt-4 max-w-md mx-auto w-full">
                 <h2 class="text-2xl font-bold text-marine-900">設定・テスト用メニュー</h2>
-                <button onclick="toggleAdminMenu()" class="p-3 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                <button onclick="closeAdminMenu()" class="p-3 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
             
             <div class="max-w-md mx-auto w-full flex flex-col gap-6">
-                <button onclick="toggleDemoMode()" class="bg-white text-marine-900 border-2 border-marine-200 py-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-marine-50 transition-colors flex items-center justify-between px-6">
-                    <span>デモモード (タップで取得)</span>
-                    <span id="demo-status-badge" class="bg-gray-200 text-gray-500 text-sm px-4 py-1.5 rounded-full font-black">OFF</span>
-                </button>
+                
+                <!-- タイトル設定 -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-marine-100">
+                    <h3 class="font-bold text-xl text-marine-900 mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-accent-500"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        表示設定
+                    </h3>
+                    <label class="block text-sm font-bold text-marine-800 mb-2">ウェルカムタイトル</label>
+                    <input type="text" id="input-welcome-title" oninput="updateWelcomeTitle()" placeholder="例：弓削中学校の皆様" class="w-full bg-marine-50 border-2 border-marine-200 rounded-xl text-marine-900 px-4 py-3 focus:outline-none focus:border-accent-500 transition-colors font-bold">
+                    <p class="text-xs text-gray-500 mt-2 leading-relaxed">ホーム画面の「ようこそ弓削丸へ！」の上に表示されます。空欄にすると非表示になります。</p>
+                </div>
 
-                <button onclick="resetData()" class="bg-white text-red-500 border-2 border-red-100 py-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-red-50 transition-colors mb-4 flex items-center justify-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    スタンプデータをリセットする
+                <button onclick="toggleDemoMode()" class="bg-white text-marine-900 border-2 border-marine-200 py-5 rounded-2xl font-bold text-lg shadow-sm hover:bg-marine-50 transition-colors flex items-center justify-between px-6">
+                    <span>設定モード (タップで取得/解除)</span>
+                    <span id="demo-status-badge" class="bg-gray-200 text-gray-500 text-sm px-4 py-1.5 rounded-full font-black">OFF</span>
                 </button>
 
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-marine-100">
@@ -394,6 +358,21 @@
             </div>
         </div>
 
+        <!-- PIN入力モーダル -->
+        <div id="pin-modal-overlay" class="hidden absolute inset-0 bg-marine-950/80 backdrop-blur-sm z-[80] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
+            <div id="pin-modal-content" class="bg-white rounded-3xl w-full max-w-sm p-8 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 text-center">
+                <div class="text-5xl mb-4">🔒</div>
+                <h2 class="text-2xl font-black text-marine-900 mb-2">パスワード入力</h2>
+                <p class="text-gray-600 font-medium mb-6 text-sm">設定メニューを開くには<br>4桁のパスワードを入力してください。</p>
+                <input type="password" id="admin-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" onkeyup="if(event.key === 'Enter') verifyPin()" class="w-full bg-marine-50 border-2 border-marine-200 rounded-xl text-center text-3xl tracking-[1em] font-black text-marine-900 py-4 mb-2 focus:outline-none focus:border-accent-500 transition-colors" placeholder="••••">
+                <p id="pin-error-msg" class="text-red-500 text-sm font-bold h-5 mb-4 opacity-0 transition-opacity">パスワードが違います</p>
+                <div class="flex gap-4">
+                    <button onclick="closePinModal()" class="w-1/2 bg-gray-200 text-gray-600 hover:bg-gray-300 font-bold py-4 rounded-full transition-colors shadow-sm">やめる</button>
+                    <button onclick="verifyPin()" class="w-1/2 bg-accent-500 text-white hover:bg-accent-600 font-bold py-4 rounded-full transition-colors shadow-md">確認</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
@@ -402,13 +381,15 @@
         // ==========================================
         const CONFIG = {
             storageKey: "yugemaru_stamps_v3_ui_refresh", // キーを変更してデータを一新
+            titleStorageKey: "yugemaru_welcome_title", // タイトル保存用のキー
             isDemoMode: false,
+            adminPin: "1234", // 管理メニューを開くための4桁パスワード
             // 🖼️ 画像設定：各画面の画像URLを指定してください。
             // 【指定方法の例】
             // 同じフォルダに画像がある場合: "hero.jpg" または "./hero.jpg"
             // imgフォルダの中にある場合: "img/hero.jpg"
             images: {
-                hero: "./yugemaru.jpg", // ホーム画面：メインビジュアル (例: "hero.jpg")
+                hero: "./map.jpg", // ホーム画面：メインビジュアル (マップ画像)
                 captain: "./captain.jpg", // ホーム画面：船長アイコン (例: "captain.png")
                 map: "./map.jpg", // マップ画面：船内マップ (600x600に変更)
                 badge: "https://placehold.co/200x200/fbbf24/0c4a6e?text=記念バッジ&font=Noto+Sans+JP", // スタンプ画面：特典バッジ
@@ -430,6 +411,7 @@
 
         // --- 状態管理 ---
         let acquiredStamps = [];
+        let welcomeTitle = "";
         let html5QrCode = null;
         let isScannerRunning = false;
         let currentView = 'home';
@@ -449,8 +431,6 @@
         // --- 初期化 ---
         function init() {
             // 画像の適用 (エラー時は自動でダミーの数値を表示)
-            setImgSrc('img-hero', CONFIG.images.hero, 'https://placehold.co/600x600/e2e8f0/64748b?text=600x600');
-            // 画像がない場合のプレースホルダーのテキストを250x250に変更
             setImgSrc('img-captain', CONFIG.images.captain, 'https://placehold.co/250x250/e2e8f0/64748b?text=250x250');
             setImgSrc('img-map', CONFIG.images.map, 'https://placehold.co/600x600/e2e8f0/64748b?text=600x600');
             setImgSrc('img-badge', CONFIG.images.badge, 'https://placehold.co/200x200/e2e8f0/64748b?text=200x200');
@@ -464,6 +444,14 @@
                     acquiredStamps = [];
                 }
             }
+
+            // タイトルの読み込み
+            const savedTitle = localStorage.getItem(CONFIG.titleStorageKey);
+            if (savedTitle !== null) {
+                welcomeTitle = savedTitle;
+            }
+            document.getElementById('input-welcome-title').value = welcomeTitle;
+            applyWelcomeTitle(welcomeTitle);
             
             // UIの初期化
             switchView('home'); // 初期ビュー
@@ -471,8 +459,26 @@
             generateTestQRs();
             updateDemoModeUI();
             
-            // 🔍 マップのズーム機能初期化
+            // 🔍 マップのズーム機能初期化 (ホーム画面で実行)
             initMapZoom();
+        }
+
+        // --- タイトル表示関連 ---
+        function updateWelcomeTitle() {
+            const inputVal = document.getElementById('input-welcome-title').value;
+            welcomeTitle = inputVal;
+            localStorage.setItem(CONFIG.titleStorageKey, welcomeTitle);
+            applyWelcomeTitle(welcomeTitle);
+        }
+
+        function applyWelcomeTitle(title) {
+            const el = document.getElementById('display-welcome-title');
+            if (title.trim() === '') {
+                el.classList.add('hidden');
+            } else {
+                el.classList.remove('hidden');
+                el.innerText = title;
+            }
         }
 
         // --- マップズーム機能 ---
@@ -531,15 +537,14 @@
             
             // ナビゲーションのアクティブ状態を更新
             document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`nav button[onclick="switchView('${viewId}')"]`).classList.add('active');
+            // マップボタンは存在しないのでエラー回避
+            const targetBtn = document.querySelector(`nav button[onclick="switchView('${viewId}')"]`);
+            if (targetBtn) {
+                targetBtn.classList.add('active');
+            }
 
             // 画面トップへスクロール
             document.getElementById('main-content').scrollTop = 0;
-            
-            // 🔍 マップ画面を開いた時はズームをリセットする
-            if (viewId === 'map') {
-                setTimeout(resetMapZoom, 50);
-            }
             
             updateUI();
         }
@@ -549,11 +554,6 @@
             const count = acquiredStamps.length;
             const total = SPOTS.length;
             const percent = Math.round((count / total) * 100);
-
-            // ホーム画面の更新
-            document.getElementById('home-progress-count').innerText = count;
-            document.getElementById('home-progress-total').innerText = total;
-            document.getElementById('home-progress-bar').style.width = `${percent}%`;
 
             // スタンプ画面の更新
             document.getElementById('stamp-progress-percent').innerText = `${percent}%`;
@@ -576,6 +576,12 @@
                 // 画像の比率に合わせて縦長にする
                 cell.className = `aspect-[3/4] rounded-xl relative overflow-hidden flex flex-col items-center justify-center p-2 transition-all duration-200 ${isAcquired ? 'bg-white shadow-md border-2 border-accent-400' : 'bg-marine-100/50 border-2 border-dashed border-marine-200'}`;
                 
+                // デモモードの場合は取得・解除のイベントを付与
+                if (CONFIG.isDemoMode) {
+                    cell.classList.add('cursor-pointer', 'hover:bg-white', 'active:scale-95');
+                    cell.onclick = () => toggleStampDemo(spot.id);
+                }
+
                 if (isAcquired) {
                     cell.innerHTML = `
                         <!-- 元のアイコンと文字 (スタンプと重ならないように少し下へ移動) -->
@@ -587,10 +593,6 @@
                         <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
                     `;
                 } else {
-                    if (CONFIG.isDemoMode) {
-                        cell.classList.add('cursor-pointer', 'hover:bg-white', 'active:scale-95');
-                        cell.onclick = () => simulateStampScan(spot.id);
-                    }
                     cell.innerHTML = `
                         <!-- 番号も取得時と同じバランスで少し下へ移動 -->
                         <div class="text-3xl font-black text-marine-200 mt-6">${index + 1}</div>
@@ -689,13 +691,49 @@
         }
 
         function triggerComplete() {
-            const end = Date.now() + 3000;
+            const duration = 5000; // 5秒間
+            const end = Date.now() + duration;
+
+            // 達成の瞬間に画面を少し揺らす演出
+            document.getElementById('app').classList.add('animate-screen-shake');
+            setTimeout(() => document.getElementById('app').classList.remove('animate-screen-shake'), 600);
+
+            // 中央から大量の紙吹雪 (ゴールド＆ブルー)
+            setTimeout(() => {
+                confetti({
+                    particleCount: 200,
+                    spread: 160,
+                    startVelocity: 50,
+                    origin: { y: 0.4 },
+                    zIndex: 200,
+                    colors: ['#f59e0b', '#fbbf24', '#0ea5e9', '#38bdf8', '#ffffff']
+                });
+            }, 300);
+
+            // 左右からの連続打ち上げ (カラフル)
             (function frame() {
-                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#f59e0b', '#0ea5e9', '#ffffff'] });
-                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#f59e0b', '#0ea5e9', '#ffffff'] });
-                if (Date.now() < end) requestAnimationFrame(frame);
+                confetti({
+                    particleCount: 15,
+                    angle: 60,
+                    spread: 80,
+                    origin: { x: 0, y: 0.9 },
+                    colors: ['#f59e0b', '#0ea5e9', '#ffffff', '#ef4444', '#10b981', '#a855f7']
+                });
+                confetti({
+                    particleCount: 15,
+                    angle: 120,
+                    spread: 80,
+                    origin: { x: 1, y: 0.9 },
+                    colors: ['#f59e0b', '#0ea5e9', '#ffffff', '#ef4444', '#10b981', '#a855f7']
+                });
+
+                if (Date.now() < end) {
+                    requestAnimationFrame(frame);
+                }
             }());
-            setTimeout(() => showModal('🎉 コンプリート！ 🎉', 'おめでとうございます！\nすべてのスタンプを集めました。\n下船時に特典をお受け取りください。', '🚢'), 800);
+
+            // 少し遅らせてモーダル表示
+            setTimeout(() => showModal('🎉 コンプリート！ 🎉', 'おめでとうございます！\nすべてのスタンプを集めました。\n下船時に特典をお受け取りください。', '🚢'), 1500);
         }
 
         // --- モーダル制御 ---
@@ -716,17 +754,75 @@
         // --- 運営・テスト用機能 ---
         function toggleAdminMenu() {
             const menu = document.getElementById('admin-menu');
-            menu.classList.toggle('hidden');
+            if (menu.classList.contains('hidden')) {
+                requestAdminMenu();
+            } else {
+                closeAdminMenu();
+            }
         }
+
+        function requestAdminMenu() {
+            // 設定モード中はパスワードをスキップして直接メニューを開く
+            if (CONFIG.isDemoMode) {
+                openAdminMenu();
+                return;
+            }
+
+            const overlay = document.getElementById('pin-modal-overlay');
+            if (!overlay) { openAdminMenu(); return; }
+            document.getElementById('admin-pin-input').value = '';
+            document.getElementById('pin-error-msg').classList.add('opacity-0');
+            overlay.classList.remove('hidden');
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0');
+                document.getElementById('pin-modal-content').classList.remove('scale-95');
+                document.getElementById('admin-pin-input').focus();
+            }, 10);
+        }
+
+        function closePinModal() {
+            const overlay = document.getElementById('pin-modal-overlay');
+            if(!overlay) return;
+            overlay.classList.add('opacity-0');
+            document.getElementById('pin-modal-content').classList.add('scale-95');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        }
+
+        function verifyPin() {
+            const input = document.getElementById('admin-pin-input').value;
+            // 1234 または CONFIGに設定されたパスワードなら通過
+            if (input === '1234' || (CONFIG.adminPin && input === CONFIG.adminPin)) {
+                closePinModal();
+                
+                // 設定モードを自動的にONにする
+                if (!CONFIG.isDemoMode) {
+                    CONFIG.isDemoMode = true;
+                    updateDemoModeUI();
+                    renderStampGrid();
+                }
+                
+                openAdminMenu();
+            } else {
+                document.getElementById('pin-error-msg').classList.remove('opacity-0');
+                const content = document.getElementById('pin-modal-content');
+                content.classList.add('animate-screen-shake');
+                setTimeout(() => content.classList.remove('animate-screen-shake'), 350);
+            }
+        }
+
+        function openAdminMenu() {
+            document.getElementById('admin-menu').classList.remove('hidden');
+        }
+        function closeAdminMenu() {
+            document.getElementById('admin-menu').classList.add('hidden');
+        }
+
         function toggleDemoMode() {
             CONFIG.isDemoMode = !CONFIG.isDemoMode;
             updateDemoModeUI();
             renderStampGrid(); // グリッドのクリックイベント更新
-            if (CONFIG.isDemoMode) {
-                toggleAdminMenu();
-                setTimeout(() => showModal('デモモードON', 'スタンプ画面の枠をタップして取得できます。', '✨'), 300);
-            }
         }
+
         function updateDemoModeUI() {
             const badge = document.getElementById('demo-status-badge');
             const alertBanner = document.getElementById('demo-mode-alert');
@@ -738,13 +834,21 @@
                 alertBanner.classList.add('hidden');
             }
         }
-        async function simulateStampScan(id) { if (!CONFIG.isDemoMode) return; await processStamp(id); }
-        function resetData() {
-            if (confirm('データをリセットしますか？')) {
-                localStorage.removeItem(CONFIG.storageKey); acquiredStamps = []; init(); toggleAdminMenu();
-                setTimeout(() => showModal('リセット完了', 'データを初期化しました。', '🗑️'), 300);
+
+        async function toggleStampDemo(id) {
+            if (!CONFIG.isDemoMode) return;
+            
+            if (acquiredStamps.includes(id)) {
+                // すでに取得済みの場合は「未取得状態」に解除する
+                acquiredStamps = acquiredStamps.filter(stampId => stampId !== id);
+                localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
+                updateUI();
+            } else {
+                // 未取得の場合はスタンプを押す処理
+                await processStamp(id);
             }
         }
+
         function generateTestQRs() {
             const container = document.getElementById('qr-container');
             if (container.children.length > 0) return;
