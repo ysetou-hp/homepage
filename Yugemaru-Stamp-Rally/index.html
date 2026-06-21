@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>弓削丸 デジタルスタンプラリー</title>
+    <title>弓削丸デジタルスタンプラリー</title>
     
     <!-- ======================================================================= -->
     <!-- 🔧 アプリケーション設定（ここからテキストや画像、スケジュールを変更できます） 🔧 -->
     <!-- ======================================================================= -->
     <script>
         const CONFIG = {
-            storageKey: "yugemaru_stamps_v8_default", // ★キーを更新して今までのテストデータをリセットし、この設定をデフォルト化
+            storageKey: "yugemaru_stamps_v9_default", // ★キーを更新して古い設定のキャッシュを強制リセット
             isDemoMode: false,
             adminPin: "1234", // 管理メニューを開くための4桁パスワード
             
@@ -116,7 +116,7 @@
                     animation: {
                         'stamp': 'stamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
                         // ★ アニメーション時間を 0.5s から 0.8s に変更してゆっくりに
-                        'stamp-press': 'stamp-press 1.0s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                        'stamp-press': 'stamp-press 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards',
                         'float': 'float 3s ease-in-out infinite',
                         'fade-in': 'fadeIn 0.5s ease-out forwards',
                         'zoom-in': 'zoomIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
@@ -124,7 +124,7 @@
                     },
                     keyframes: {
                         stamp: {
-                            '0%': { transform: 'scale(3) rotate(-0deg)', opacity: '0' },
+                            '0%': { transform: 'scale(3) rotate(-30deg)', opacity: '0' },
                             '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
                         },
                         'stamp-press': {
@@ -185,8 +185,24 @@
         }
 
         /* QRスキャナーのUI調整 */
-        #reader { width: 100%; border-radius: 1rem; overflow: hidden; border: 4px solid rgba(255,255,255,0.2); }
-        #reader video { object-fit: cover; border-radius: 0.8rem; }
+        #reader { 
+            width: 100%; 
+            aspect-ratio: 1 / 1 !important; /* ★強制的に正方形にする */
+            border-radius: 1rem; 
+            overflow: hidden; 
+            border: 4px solid rgba(255,255,255,0.2); 
+            background: #000;
+        }
+        #reader > div { 
+            width: 100% !important;
+            height: 100% !important;
+        }
+        #reader video { 
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important; /* ★映像の形を無視して正方形の枠いっぱいに敷き詰める */
+            border-radius: 0.8rem; 
+        }
         #reader__dashboard_section_csr span { color: white !important; }
         #reader__dashboard_section_swaplink { color: #38bdf8 !important; text-decoration: none; }
 
@@ -197,24 +213,24 @@
 </head>
 <body class="text-marine-900 antialiased select-none">
 
-    <!-- アプリコンテナ (タブレット対応サイズ max-w-3xl に拡張) -->
-    <div id="app" class="max-w-3xl mx-auto bg-wave-pattern bg-marine-50 h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
+    <!-- アプリコンテナ (ページ全体でスクロールするように変更) -->
+    <div id="app" class="max-w-3xl mx-auto bg-wave-pattern bg-marine-50 min-h-[100dvh] shadow-2xl relative flex flex-col pb-20">
         
         <!-- 設定モード用バナー -->
         <div id="demo-mode-alert" class="hidden bg-accent-500 text-white text-xs md:text-sm font-bold text-center py-1 z-50 relative shadow-md">
             ⚠️ 設定モード：スタンプ枠をタップで取得/解除
         </div>
 
-        <!-- ヘッダー -->
-        <header class="bg-marine-900 text-white p-4 flex items-center justify-between relative z-10">
-            <h1 id="header-title" class="text-lg font-bold tracking-wider">弓削丸 デジタルスタンプラリー</h1>
+        <!-- ヘッダー (画面上部に固定) -->
+        <header class="sticky top-0 bg-marine-900 text-white p-4 flex items-center justify-between z-40 shadow-md">
+            <h1 id="header-title" class="text-lg font-bold tracking-wider">弓削丸デジタルスタンプラリー</h1>
             <button onclick="requestAdminMenu()" class="text-white/80 hover:text-white">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
         </header>
 
-        <!-- メインコンテンツ領域 (スクロール可能) -->
-        <main id="main-content" class="flex-1 overflow-y-auto pb-24 bg-gradient-to-b from-marine-100 to-marine-50">
+        <!-- メインコンテンツ領域 -->
+        <main id="main-content" class="flex-1 bg-gradient-to-b from-marine-100 to-marine-50">
             
             <!-- ==================== ホーム画面 ==================== -->
             <section id="view-home" class="p-6 flex flex-col items-center">
@@ -517,25 +533,27 @@
 
         </main>
 
-        <!-- 下部ナビゲーション -->
-        <nav class="bg-white border-t border-marine-100 p-2 flex justify-around items-center absolute bottom-0 w-full z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            <button onclick="switchView('home')" class="flex flex-col items-center p-3 w-24 group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1.5" id="nav-icon-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                <span class="text-[12px] text-gray-500 group-[.active]:text-accent-500 font-bold transition-colors" id="nav-text-home">ホーム</span>
-            </button>
-            <button onclick="switchView('stamp')" class="flex flex-col items-center p-3 w-24 group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1.5" id="nav-icon-stamp"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
-                <span class="text-[12px] text-gray-500 group-[.active]:text-accent-500 font-bold transition-colors" id="nav-text-stamp">スタンプ</span>
-            </button>
-            <button onclick="switchView('info')" class="flex flex-col items-center p-3 w-24 group">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1.5" id="nav-icon-info"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-                <span class="text-[12px] text-gray-500 group-[.active]:text-accent-500 font-bold transition-colors" id="nav-text-info">お知らせ</span>
-            </button>
-        </nav>
+        <!-- 下部ナビゲーション (画面下部に固定) -->
+        <div class="fixed bottom-0 left-0 w-full z-40 pointer-events-none">
+            <nav class="max-w-3xl mx-auto bg-white border-t border-marine-100 p-2 flex justify-around items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pointer-events-auto">
+                <button onclick="switchView('home')" class="flex flex-col items-center p-3 w-24 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1.5" id="nav-icon-home"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span class="text-[12px] text-gray-500 group-[.active]:text-accent-500 font-bold transition-colors" id="nav-text-home">ホーム</span>
+                </button>
+                <button onclick="switchView('stamp')" class="flex flex-col items-center p-3 w-24 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1.5" id="nav-icon-stamp"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
+                    <span class="text-[12px] text-gray-500 group-[.active]:text-accent-500 font-bold transition-colors" id="nav-text-stamp">スタンプ</span>
+                </button>
+                <button onclick="switchView('info')" class="flex flex-col items-center p-3 w-24 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 group-[.active]:text-accent-500 transition-colors mb-1.5" id="nav-icon-info"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                    <span class="text-[12px] text-gray-500 group-[.active]:text-accent-500 font-bold transition-colors" id="nav-text-info">お知らせ</span>
+                </button>
+            </nav>
+        </div>
 
 
         <!-- スキャナー画面 (全画面オーバーレイ) -->
-        <div id="screen-scanner" class="hidden absolute inset-0 bg-marine-950/95 backdrop-blur-md z-50 flex flex-col">
+        <div id="screen-scanner" class="hidden fixed inset-0 bg-marine-950/95 backdrop-blur-md z-[100] flex flex-col">
             <div class="flex-1 flex flex-col">
                 <div class="p-6 flex justify-between items-center text-white">
                     <span class="font-bold text-2xl tracking-wider">QRコードをスキャン</span>
@@ -555,7 +573,7 @@
         </div>
 
         <!-- 汎用モーダル (QRコードコンテナを追加) -->
-        <div id="modal-overlay" class="hidden absolute inset-0 bg-marine-950/60 backdrop-blur-sm z-[60] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
+        <div id="modal-overlay" class="hidden fixed inset-0 bg-marine-950/60 backdrop-blur-sm z-[110] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
             <div id="modal-content" class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 text-center">
                 <div id="modal-icon" class="text-6xl mb-4"></div>
                 <h2 id="modal-title" class="text-2xl font-black text-marine-900 mb-4">タイトル</h2>
@@ -571,7 +589,7 @@
         </div>
 
         <!-- 運営・設定メニュー -->
-        <div id="admin-menu" class="hidden absolute inset-0 bg-marine-50/95 backdrop-blur-md z-[70] flex flex-col p-8 overflow-y-auto">
+        <div id="admin-menu" class="hidden fixed inset-0 bg-marine-50/95 backdrop-blur-md z-[70] flex flex-col p-8 overflow-y-auto">
             <div class="flex justify-between items-center border-b border-marine-200 pb-6 mb-8 mt-4 max-w-2xl mx-auto w-full">
                 <h2 class="text-2xl font-bold text-marine-900">設定・テスト用メニュー</h2>
                 <button onclick="closeAdminMenu()" class="p-3 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
@@ -626,7 +644,7 @@
         </div>
 
         <!-- PIN入力モーダル -->
-        <div id="pin-modal-overlay" class="hidden absolute inset-0 bg-marine-950/80 backdrop-blur-sm z-[80] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
+        <div id="pin-modal-overlay" class="hidden fixed inset-0 bg-marine-950/80 backdrop-blur-sm z-[80] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
             <div id="pin-modal-content" class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 text-center">
                 <div class="text-5xl mb-4">🔒</div>
                 <h2 class="text-2xl font-black text-marine-900 mb-2">パスワード入力</h2>
@@ -641,7 +659,7 @@
         </div>
         
         <!-- コンプリート演出用オーバーレイ (新演出) -->
-        <div id="complete-overlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+        <div id="complete-overlay" class="hidden fixed inset-0 z-[120] flex items-center justify-center pointer-events-none">
             <div class="absolute inset-0 bg-white/90 backdrop-blur-md animate-fade-in"></div>
             
             <!-- 回転する光の演出 (後光/サンバースト) -->
@@ -659,7 +677,7 @@
         </div>
 
         <!-- コース編集用モーダル -->
-        <div id="course-editor-overlay" class="hidden absolute inset-0 bg-marine-950/80 backdrop-blur-sm z-[90] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
+        <div id="course-editor-overlay" class="hidden fixed inset-0 bg-marine-950/80 backdrop-blur-sm z-[90] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
             <div id="course-editor-content" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 flex flex-col max-h-[90vh]">
                 <h2 id="course-editor-title" class="text-xl font-black text-marine-900 mb-1">コースの編集</h2>
                 <p class="text-xs text-red-500 font-bold mb-3">※現在選択中のコースを変更して保存した場合、スタンプはリセットされます。</p>
@@ -919,7 +937,7 @@
             if (targetBtn) {
                 targetBtn.classList.add('active');
             }
-            document.getElementById('main-content').scrollTop = 0;
+            window.scrollTo(0, 0); // 画面全体のスクロール位置をリセット
             updateUI();
         }
 
@@ -1002,7 +1020,7 @@
                             <div class="text-4xl mb-2 text-marine-900">${spot.icon}</div>
                             <div class="font-bold text-[11px] text-marine-900 whitespace-nowrap">${spot.name}</div>
                         </div>
-                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-2 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
+                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
                     `;
                 } else {
                     cell.innerHTML = `
@@ -1072,7 +1090,7 @@
                 // 紙吹雪のあとにポップアップを表示
                 setTimeout(() => {
                     showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
-                }, 2000);
+                }, 800);
             }
         }
 
@@ -1109,7 +1127,7 @@
                     const stampEl = document.createElement('img');
                     stampEl.src = CONFIG.images.stamp;
                     // ★ ここも同様に -right-3 を right-0 に変更
-                    stampEl.className = `absolute -top-3 right-2 w-24 h-24 md:w-32 md:h-32 object-contain z-30 animate-stamp-press drop-shadow-md`;
+                    stampEl.className = `absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-30 animate-stamp-press drop-shadow-md`;
                     
                     stampEl.onerror = function() {
                         this.onerror = null;
