@@ -10,7 +10,7 @@
     <!-- ======================================================================= -->
     <script>
         const CONFIG = {
-            storageKey: "yugemaru_stamps_v8_default", // ★キーを更新して今までのテストデータをリセットし、この設定をデフォルト化
+            storageKey: "yugemaru_stamps_v3_ui_refresh", // キーを変更してデータを一新
             isDemoMode: false,
             adminPin: "1234", // 管理メニューを開くための4桁パスワード
             
@@ -46,15 +46,12 @@
                 stamp: "./stamp.png" // スタンプ枠：達成時の画像
             },
 
-            // 🚩 アプリ起動時の初期コース設定 ('sunny' または 'rainy')
-            defaultCourse: 'sunny',
-
             // 🌦️ コース設定（晴れ・雨の切り替え用）
             courses: {
                 sunny: {
                     name: "☀️ 晴れの日コース",
                     // 全9カ所の中から初期設定のIDを指定します
-                    spots: ['bridge', 'student_hall', 'control_room', 'chimney', 'bow', 'flying_deck']
+                    spots: ['bridge', 'student_hall', 'student_room', 'control_room', 'chimney', 'electrical_room', 'flying_deck', 'bow']
                 },
                 rainy: {
                     name: "☔️ 雨の日コース",
@@ -115,8 +112,7 @@
                     },
                     animation: {
                         'stamp': 'stamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                        // ★ アニメーション時間を 0.5s から 0.8s に変更してゆっくりに
-                        'stamp-press': 'stamp-press 1.0s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                        'stamp-press': 'stamp-press 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
                         'float': 'float 3s ease-in-out infinite',
                         'fade-in': 'fadeIn 0.5s ease-out forwards',
                         'zoom-in': 'zoomIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
@@ -124,7 +120,7 @@
                     },
                     keyframes: {
                         stamp: {
-                            '0%': { transform: 'scale(3) rotate(-0deg)', opacity: '0' },
+                            '0%': { transform: 'scale(3) rotate(-30deg)', opacity: '0' },
                             '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
                         },
                         'stamp-press': {
@@ -252,7 +248,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -272,7 +268,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -292,7 +288,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -312,7 +308,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -332,7 +328,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -352,7 +348,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -372,7 +368,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -392,7 +388,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -412,7 +408,7 @@
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
                                     <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"></circle>
                                                 <line x1="12" y1="0" x2="12" y2="6"></line>
                                                 <line x1="12" y1="18" x2="12" y2="24"></line>
@@ -613,15 +609,6 @@
                         <!-- QRコード自動生成 -->
                     </div>
                 </div>
-
-                <!-- 初期化エリア -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-red-100">
-                    <h3 class="font-bold text-xl text-red-600 mb-2">データのリセット</h3>
-                    <p class="text-xs text-gray-500 mb-4 leading-relaxed">取得したスタンプや変更したコース設定などをすべて消去し、アプリを初期状態（現在のコードの設定）に戻します。</p>
-                    <button onclick="resetApplicationData()" id="btn-reset-app" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors">
-                        アプリを初期状態にリセット
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -689,7 +676,6 @@
         let pendingCourseChange = null;
         let customCourses = null;
         let editingCourseId = null;
-        let pendingReset = false; // リセット確認用
 
         function getActiveSpots() {
             const spotIds = customCourses[currentCourseId].spots;
@@ -713,7 +699,7 @@
             setImgSrc('img-badge', CONFIG.images.badge, 'https://placehold.co/200x200/e2e8f0/64748b?text=200x200');
 
             // 選択中のコースを読み込み
-            currentCourseId = localStorage.getItem(CONFIG.storageKey + "_course") || CONFIG.defaultCourse || 'sunny';
+            currentCourseId = localStorage.getItem(CONFIG.storageKey + "_course") || 'sunny';
 
             // カスタマイズされたコース設定を読み込み
             const savedCourses = localStorage.getItem(CONFIG.storageKey + "_custom_courses");
@@ -996,13 +982,12 @@
                 }
 
                 if (isAcquired) {
-                    // ★ ここの画像のクラス -right-3 を right-0 に変更（少し左に寄ります）
                     cell.innerHTML = `
                         <div class="flex flex-col items-center mt-6">
                             <div class="text-4xl mb-2 text-marine-900">${spot.icon}</div>
                             <div class="font-bold text-[11px] text-marine-900 whitespace-nowrap">${spot.name}</div>
                         </div>
-                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-2 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
+                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
                     `;
                 } else {
                     cell.innerHTML = `
@@ -1050,30 +1035,20 @@
             if (acquiredStamps.includes(id)) { showModal('お知らせ', '取得済みです！', spot.icon); return; }
 
             switchView('stamp');
-            
-            // 1. スタンプアニメーションが完了するのを待つ
             await playStampAnimation(spot);
 
-            // 2. 状態の更新
             acquiredStamps.push(id);
             localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
             updateUI();
 
-            // 3. その後の演出
-            if (acquiredStamps.length >= activeSpots.length) {
-                // コンプリート時も少し間を空ける
-                setTimeout(() => {
+            setTimeout(() => {
+                if (acquiredStamps.length >= activeSpots.length) {
                     triggerComplete();
-                }, 300);
-            } else {
-                // スタンプ動作の直後に紙吹雪
-                fireConfetti();
-                
-                // 紙吹雪のあとにポップアップを表示
-                setTimeout(() => {
+                } else {
+                    fireConfetti();
                     showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
-                }, 2000);
-            }
+                }
+            }, 1000); // アニメーション終了から少し早めにポップアップ表示
         }
 
         // --- 演出関連 ---
@@ -1108,8 +1083,7 @@
                 setTimeout(() => {
                     const stampEl = document.createElement('img');
                     stampEl.src = CONFIG.images.stamp;
-                    // ★ ここも同様に -right-3 を right-0 に変更
-                    stampEl.className = `absolute -top-3 right-2 w-24 h-24 md:w-32 md:h-32 object-contain z-30 animate-stamp-press drop-shadow-md`;
+                    stampEl.className = `absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-30 animate-stamp-press drop-shadow-md`;
                     
                     stampEl.onerror = function() {
                         this.onerror = null;
@@ -1397,32 +1371,6 @@
             
             updateCourseUI();
             closeCourseEditor();
-        }
-
-        // --- データ初期化機能 ---
-        function resetApplicationData() {
-            const btn = document.getElementById('btn-reset-app');
-            
-            if (!pendingReset) {
-                pendingReset = true;
-                btn.innerHTML = `本当に初期化しますか？<br><span class="text-xs font-normal">(タップで確定して再読み込み)</span>`;
-                btn.className = "w-full bg-red-500 text-white border-2 border-red-600 py-2 rounded-xl font-bold";
-                
-                // 4秒経過でキャンセル
-                setTimeout(() => {
-                    if (pendingReset) {
-                        pendingReset = false;
-                        btn.innerText = "アプリを初期状態にリセット";
-                        btn.className = "w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors";
-                    }
-                }, 4000);
-            } else {
-                // 確定処理：ローカルストレージの該当データをすべて削除してリロード
-                localStorage.removeItem(CONFIG.storageKey);
-                localStorage.removeItem(CONFIG.storageKey + "_course");
-                localStorage.removeItem(CONFIG.storageKey + "_custom_courses");
-                location.reload();
-            }
         }
 
         window.addEventListener('DOMContentLoaded', init);

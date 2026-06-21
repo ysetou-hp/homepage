@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弓削丸スタンプラリー - ポスター一括印刷</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- qrcode.js (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        /* ========================================================
+           印刷用の最適化スタイル
+           ======================================================== */
+        @media print {
+            @page {
+                size: A4 portrait; /* A4 縦 */
+                margin: 0;         /* プリンターデフォルトの余白を消す */
+            }
+            body {
+                margin: 0;
+                padding: 0;
+                /* 背景色・背景画像を確実に印刷させるための設定 */
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .poster-container {
+                width: 210mm;
+                height: 296mm; /* オーバーフロー防止のためA4高さ(297mm)から1mm引く */
+                /* ポスターごとに必ず改ページする */
+                page-break-after: always;
+                break-after: page;
+                margin: 0;
+                box-sizing: border-box;
+            }
+            /* 最後のページの不要な改ページを無効化 */
+            .poster-container:last-of-type {
+                page-break-after: auto;
+                break-after: auto;
+            }
+        }
+
+        /* ========================================================
+           画面プレビュー時のスタイル（A4用紙が並んでいるように見せる）
+           ======================================================== */
+        @media screen {
+            body {
+                background-color: #cbd5e1; /* スレート背景 */
+                padding-top: 4.5rem; /* ヘッダー極小化に伴い上部マージンを小さく調整 */
+                padding-bottom: 4rem;
+            }
+            .poster-container {
+                width: 210mm;
+                height: 297mm;
+                margin: 0 auto 3rem auto;
+                background-color: white;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                box-sizing: border-box;
+                position: relative;
+            }
+        }
+        
+        /* マリン風のドットパターン背景 */
+        .pattern-dots {
+            background-image: radial-gradient(#bae6fd 2.5px, transparent 2.5px);
+            background-size: 24px 24px;
+        }
+
+        /* ドラッグ中の枠線スタイルとカーソル */
+        .logo-img {
+            cursor: move;
+            user-select: none;
+            -webkit-user-drag: none;
+            transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+        }
+        .logo-img:hover {
+            outline: 2px dashed #0284c7;
+            outline-offset: 4px;
+            border-radius: 4px;
+        }
+        .logo-img-dragging {
+            outline: 2px solid #0284c7 !important;
+            outline-offset: 4px;
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800">
+
+    <!-- ==========================================
+         操作UI（極限まで高さを抑え、コンパクトに横一列配置）
+         ========================================== -->
+    <div class="fixed top-0 left-0 w-full bg-white/95 backdrop-blur-sm shadow-md px-6 py-2 flex flex-wrap items-center justify-between z-50 print:hidden border-b border-slate-200 gap-2">
+        <div class="flex flex-wrap items-center gap-3 flex-1">
+            <!-- ① タイトル -->
+            <h1 class="text-base font-bold text-slate-700 flex items-center whitespace-nowrap">
+                <svg class="w-5 h-5 mr-1.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                QRポスター一括印刷
+            </h1>
+            
+            <div class="h-4 w-[1px] bg-slate-300 hidden md:block"></div>
+
+            <!-- ② 校章画像選択 -->
+            <label class="cursor-pointer bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-700 font-bold py-1 px-2.5 rounded-md shadow-sm transition-colors flex items-center gap-1.5 text-xs whitespace-nowrap">
+                <svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                校章を選択
+                <input type="file" id="logoUpload" accept="image/*" class="hidden">
+            </label>
+
+            <div class="h-4 w-[1px] bg-slate-300 hidden md:block"></div>
+
+            <!-- ③ 数値手動入力パネル -->
+            <div class="flex flex-wrap items-center gap-2 bg-slate-50 py-0.5 px-2 rounded-md border border-slate-200">
+                <!-- サイズ -->
+                <div class="flex items-center gap-1">
+                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap">サイズ:</span>
+                    <input type="number" id="sizeInput" value="30" min="5" max="150" class="w-14 text-center border border-slate-300 rounded px-1 py-0.5 text-xs font-bold text-blue-900 focus:outline-none focus:border-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">mm</span>
+                </div>
+                <!-- 上位置 -->
+                <div class="flex items-center gap-1 border-l pl-2 border-slate-200">
+                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap">上:</span>
+                    <input type="number" id="topInput" value="13" min="0" max="297" class="w-14 text-center border border-slate-300 rounded px-1 py-0.5 text-xs font-bold text-blue-900 focus:outline-none focus:border-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">mm</span>
+                </div>
+                <!-- 左位置 -->
+                <div class="flex items-center gap-1 border-l pl-2 border-slate-200">
+                    <span class="text-xs font-bold text-slate-500 whitespace-nowrap">左:</span>
+                    <input type="number" id="leftInput" value="30" min="0" max="210" class="w-14 text-center border border-slate-300 rounded px-1 py-0.5 text-xs font-bold text-blue-900 focus:outline-none focus:border-blue-500">
+                    <span class="text-[10px] font-bold text-slate-400">mm</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 印刷実行 -->
+        <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-4 rounded-md shadow-sm transition-colors flex items-center justify-center gap-1 text-xs whitespace-nowrap">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            一括印刷する
+        </button>
+    </div>
+
+    <!-- ==========================================
+         ポスター描画領域（JSで動的に生成）
+         ========================================== -->
+    <div id="app" class="flex flex-col items-center w-full"></div>
+
+    <script>
+        // ==========================================
+        // レイアウト微調整用の初期設定（単位: mm）
+        // 手動数値入力およびドラッグ操作で動的に変更されます
+        // ==========================================
+        const LAYOUT_CONFIG = {
+            titleOffset: '0mm',       // タイトルの上下位置
+            iconNameOffset: '0mm',    // アイコンとスポット名の上下位置
+            qrOffset: '10mm',         // QRコードの上下位置
+            logoTop: 13,              // 校章の上からの位置 (初期値13mm)
+            logoLeft: 30,             // 校章の左からの位置 (初期値30mm)
+            logoWidth: 30,            // 校章の横幅 (初期値30mm)
+            logoHeight: 30            // 校章の高さ (初期値30mm)
+        };
+
+        // --- スポットデータ定義 (全9個) ---
+        const ALL_SPOTS = [
+            { id: 'bridge', name: 'ブリッジ', icon: '⚓️', description: '船の操縦を行う場所。見晴らし最高！' },
+            { id: 'student_hall', name: '学生ホール', icon: '👥', description: '学生たちが集まる憩いの場。' },
+            { id: 'student_room', name: '学生居室', icon: '🛏️', description: '学生たちが生活する居住スペース。' },
+            { id: 'control_room', name: '制御室', icon: '🖥️', description: '船の様々な機器を監視・制御する部屋。' },
+            { id: 'chimney', name: '煙突', icon: '💨', description: 'エンジンの排気を行う巨大な煙突。' },
+            { id: 'stern', name: '船尾', icon: '🚢', description: '船の後ろ側。航跡が見えます。' },
+            { id: 'electrical_room', name: '電気工作室', icon: '⚡', description: '電気設備のメンテナンスを行う部屋。' },
+            { id: 'flying_deck', name: 'フライングデッキ', icon: '🔭', description: 'ブリッジの上にある見張所。' },
+            { id: 'bow', name: '船首', icon: '🌊', description: '船の最前部。波を切って進みます。' },
+        ];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const app = document.getElementById('app');
+
+            // データをループしてA4サイズのポスターを1枚ずつ生成
+            ALL_SPOTS.forEach(spot => {
+                // 1枚のポスターのコンテナを作成
+                const poster = document.createElement('div');
+                poster.className = 'poster-container bg-white overflow-hidden relative flex flex-col items-center justify-between pt-[20mm] pb-[40mm] px-[15mm]';
+
+                // マリン風の背景パターンと装飾枠を定義 (用紙の端から10mm内側に配置)
+                const decor = `
+                    <div class="absolute top-[10mm] bottom-[10mm] left-[10mm] right-[10mm]">
+                        <div class="absolute inset-0 pattern-dots opacity-40 bg-slate-50 rounded-3xl"></div>
+                        <!-- 外枠 (ネイビー) -->
+                        <div class="absolute inset-0 border-8 border-blue-900 rounded-3xl pointer-events-none"></div>
+                        <!-- 内枠 (マリンブルー) -->
+                        <div class="absolute inset-2 border-4 border-sky-400 rounded-2xl pointer-events-none"></div>
+                        <!-- 船の窓（舷窓）をイメージした四隅の装飾 -->
+                        <div class="absolute top-4 left-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
+                        <div class="absolute top-4 right-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
+                        <div class="absolute bottom-4 left-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
+                        <div class="absolute bottom-4 right-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
+                    </div>
+                `;
+
+                // コンテンツ部分を定義（中部から説明書き description を削除）
+                const content = `
+                    <!-- 校章（独立配置、サイズ可変、ドラッグ対応） -->
+                    <img src="" class="logo-img hidden absolute object-contain drop-shadow-md z-20" style="top: ${LAYOUT_CONFIG.logoTop}mm; left: ${LAYOUT_CONFIG.logoLeft}mm; width: ${LAYOUT_CONFIG.logoWidth}mm; height: ${LAYOUT_CONFIG.logoHeight}mm;" alt="校章">
+
+                    <!-- ① 上部：タイトル -->
+                    <div class="z-10 w-full flex justify-center items-center mt-4" style="transform: translateY(${LAYOUT_CONFIG.titleOffset});">
+                        <div class="bg-white px-8 py-3 rounded-full border-4 border-sky-400 shadow-sm">
+                            <h2 class="text-3xl font-black text-blue-900 tracking-widest m-0">
+                                弓削丸デジタルスタンプラリー
+                            </h2>
+                        </div>
+                    </div>
+
+                    <!-- ② 中部：極大アイコンとスポット名 -->
+                    <div class="z-10 flex flex-col items-center justify-center flex-1 w-full my-4" style="transform: translateY(${LAYOUT_CONFIG.iconNameOffset});">
+                        <div class="text-[9.5rem] leading-none drop-shadow-xl mb-4">${spot.icon}</div>
+                        <h1 class="text-[5.5rem] font-black text-blue-900 tracking-widest drop-shadow-sm whitespace-nowrap leading-tight">
+                            ${spot.name}
+                        </h1>
+                    </div>
+
+                    <!-- ③ 下部：QRコードエリア -->
+                    <div class="z-10 flex flex-col items-center mb-16" style="transform: translateY(${LAYOUT_CONFIG.qrOffset});">
+                        <div class="bg-white p-8 rounded-[2rem] shadow-xl border-8 border-blue-900 relative">
+                            <!-- QRコード描画用の空要素 -->
+                            <div id="qr-${spot.id}"></div>
+                        </div>
+                    </div>
+                `;
+
+                // ポスター内に装飾とコンテンツを挿入
+                poster.innerHTML = decor + content;
+                app.appendChild(poster);
+
+                // ==========================================
+                // QRコードの生成 (qrcode.js を使用)
+                // ==========================================
+                new QRCode(document.getElementById(`qr-${spot.id}`), {
+                    text: spot.id,                      // QRコードに埋め込む文字列（id）
+                    width: 380,                         // 大きく表示して読み取りやすく
+                    height: 380,
+                    colorDark : "#1e3a8a",              // QRコードの色をネイビーに（デザイン統一）
+                    colorLight : "#ffffff",             // 背景色は白
+                    correctLevel : QRCode.CorrectLevel.H // エラー訂正レベル高（読み取りやすさ重視）
+                });
+            });
+
+            // ==========================================
+            // 校章画像の一括表示更新ロジック
+            // ==========================================
+            const logoImgs = document.querySelectorAll('.logo-img');
+            
+            function updateAllLogoStyles() {
+                logoImgs.forEach(img => {
+                    img.style.top = `${LAYOUT_CONFIG.logoTop}mm`;
+                    img.style.left = `${LAYOUT_CONFIG.logoLeft}mm`;
+                    img.style.width = `${LAYOUT_CONFIG.logoWidth}mm`;
+                    img.style.height = `${LAYOUT_CONFIG.logoHeight}mm`;
+                });
+
+                // 数値入力フォーム（インプット欄）の値を同期
+                document.getElementById('sizeInput').value = LAYOUT_CONFIG.logoWidth;
+                document.getElementById('topInput').value = LAYOUT_CONFIG.logoTop;
+                document.getElementById('leftInput').value = LAYOUT_CONFIG.logoLeft;
+            }
+
+            // ==========================================
+            // 数値入力インプットのイベント紐付け
+            // ==========================================
+            document.getElementById('sizeInput').addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                // マイナスのサイズを防止
+                if (val < 0) val = 0;
+                LAYOUT_CONFIG.logoWidth = val;
+                LAYOUT_CONFIG.logoHeight = val;
+                updateAllLogoStyles();
+            });
+
+            document.getElementById('topInput').addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                LAYOUT_CONFIG.logoTop = val;
+                updateAllLogoStyles();
+            });
+
+            document.getElementById('leftInput').addEventListener('input', (e) => {
+                let val = parseInt(e.target.value) || 0;
+                LAYOUT_CONFIG.logoLeft = val;
+                updateAllLogoStyles();
+            });
+
+            // 初期位置を同期適用
+            updateAllLogoStyles();
+
+            // ==========================================
+            // 校章画像の読み込み処理
+            // ==========================================
+            const logoUpload = document.getElementById('logoUpload');
+            if (logoUpload) {
+                logoUpload.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const dataUrl = event.target.result;
+                        logoImgs.forEach(img => {
+                            img.src = dataUrl;
+                            img.classList.remove('hidden'); // 画像が読み込まれたら一斉表示
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // ==========================================
+            // マウス/タッチによる直接ドラッグ＆ドロップ実装
+            // ==========================================
+            let isDragging = false;
+            let startPointerX = 0;
+            let startPointerY = 0;
+            let startLogoLeft = 0;
+            let startLogoTop = 0;
+            let activeImg = null;
+
+            logoImgs.forEach(img => {
+                img.addEventListener('pointerdown', (e) => {
+                    e.preventDefault(); // デフォルト動作防止 (画像のドラッグアウトなど)
+                    
+                    isDragging = true;
+                    activeImg = e.currentTarget;
+
+                    // ドラッグ開始時のポインター座標
+                    startPointerX = e.clientX;
+                    startPointerY = e.clientY;
+
+                    // ドラッグ開始時のロゴ設定値
+                    startLogoLeft = LAYOUT_CONFIG.logoLeft;
+                    startLogoTop = LAYOUT_CONFIG.logoTop;
+
+                    // 全てのロゴをドラッグ中スタイルにする
+                    logoImgs.forEach(i => i.classList.add('logo-img-dragging'));
+
+                    // 動的なPointerMove / PointerUp追跡
+                    window.addEventListener('pointermove', handlePointerMove);
+                    window.addEventListener('pointerup', handlePointerUp);
+                });
+            });
+
+            function handlePointerMove(e) {
+                if (!isDragging || !activeImg) return;
+
+                // ドラッグしている画像があるポスターコンテナ
+                const container = activeImg.closest('.poster-container');
+                if (!container) return;
+
+                // 表示上のコンテナのピクセルサイズを取得
+                const rect = container.getBoundingClientRect();
+                const containerWidthPx = rect.width;
+                const containerHeightPx = rect.height;
+
+                // A4サイズ(幅210mm, 高さ297mm)に対するピクセル比率から、ピクセルをmmに変換
+                const pxToMmX = 210 / containerWidthPx;
+                const pxToMmY = 297 / containerHeightPx;
+
+                // ドラッグの移動距離(px)
+                const dxPx = e.clientX - startPointerX;
+                const dyPx = e.clientY - startPointerY;
+
+                // mm換算
+                const dxMm = dxPx * pxToMmX;
+                const dyMm = dyPx * pxToMmY;
+
+                // 新しい位置を設定 (手動入力と美しく合うように整数mm単位に丸め込み)
+                let newLeft = Math.round(startLogoLeft + dxMm);
+                let newTop = Math.round(startLogoTop + dyMm);
+
+                // A4用紙の範囲から極端にはみ出さないように制限 (制限単位: mm)
+                newLeft = Math.max(0, Math.min(210, newLeft));
+                newTop = Math.max(0, Math.min(297, newTop));
+
+                // グローバル設定に保存
+                LAYOUT_CONFIG.logoLeft = newLeft;
+                LAYOUT_CONFIG.logoTop = newTop;
+
+                // 全ポスターとインプットを更新
+                updateAllLogoStyles();
+            }
+
+            function handlePointerUp() {
+                if (!isDragging) return;
+                isDragging = false;
+                activeImg = null;
+
+                // イベント解除
+                window.removeEventListener('pointermove', handlePointerMove);
+                window.removeEventListener('pointerup', handlePointerUp);
+
+                // ドラッグ中スタイルの解除
+                logoImgs.forEach(i => i.classList.remove('logo-img-dragging'));
+            }
+        });
+    </script>
+</body>
+</html>

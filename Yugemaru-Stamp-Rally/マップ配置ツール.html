@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スタンプラリー ピン配置ツール</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // 提供されたHTMLに含まれるカスタムカラーを定義
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        marine: {
+                            200: '#bfdbfe', // プレビュー用の代替色（薄い青）
+                            900: '#1e3a8a', // プレビュー用の代替色（濃い青）
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* カスタムスクロールバー（太めに調整してドラッグしやすく） */
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 5px; border: 2px solid #f1f5f9; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* プレビュー内のピンが選択されないようにする */
+        .pin-element { user-select: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <!-- 上部：プレビューエリア -->
+    <div class="flex-1 flex flex-col relative min-h-0">
+        <!-- ヘッダー -->
+        <header class="h-14 bg-white border-b border-gray-200 px-6 flex items-center justify-between shadow-sm z-20 flex-shrink-0">
+            <h1 class="font-bold text-gray-700 flex items-center gap-2">
+                <svg class="w-6 h-6 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+                スタンプラリー ピン配置ツール
+            </h1>
+            <div class="text-xs text-gray-500">
+                画像をクリックでピン追加 / ドラッグで微調整 / Ctrl+ホイールでズーム
+            </div>
+        </header>
+
+        <!-- ワークスペース -->
+        <div id="workspace" class="flex-1 bg-slate-200 relative overflow-hidden">
+            
+            <!-- ズームコントロール -->
+            <div class="absolute bottom-6 right-6 bg-white rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-gray-200 flex items-center p-1.5 z-30">
+                <button id="zoom-out-btn" class="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition-colors" title="縮小 (Ctrl + ホイール下)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                </button>
+                <div class="w-[1px] h-4 bg-gray-200 mx-1"></div>
+                <span id="zoom-level-text" class="px-2 text-sm font-bold text-gray-700 min-w-[3.5rem] text-center cursor-pointer hover:text-blue-600 transition-colors" title="100%にリセット">100%</span>
+                <div class="w-[1px] h-4 bg-gray-200 mx-1"></div>
+                <button id="zoom-in-btn" class="p-1.5 hover:bg-gray-100 rounded text-gray-600 transition-colors" title="拡大 (Ctrl + ホイール上)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                </button>
+            </div>
+
+            <!-- スクロール可能なワークスペース内部枠 -->
+            <div id="workspace-inner" class="w-full h-full relative overflow-auto">
+                <!-- 未アップロード時のプロンプト（固定配置） -->
+                <div id="upload-prompt" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none">
+                    <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <p class="font-medium text-lg text-gray-500">下部のパネルからマップ画像を読み込んでください</p>
+                    <p class="text-sm mt-1">.jpg, .png 等に対応</p>
+                </div>
+
+                <!-- スクロール領域本体 -->
+                <div class="flex min-w-full min-h-full p-8 w-max h-max">
+                    <!-- 画像とピンのコンテナ（JSでサイズを制御して絶対にはみ出さないようにする） -->
+                    <div id="map-container" class="relative shadow-xl hidden rounded-sm ring-1 ring-black/5 bg-white m-auto shrink-0">
+                        <img id="map-img" class="w-full h-full block select-none pointer-events-none object-fill" draggable="false" alt="Map Preview">
+                        <!-- ここにピンが動的に追加される -->
+                        <div id="pins-layer" class="absolute inset-0 z-10 cursor-crosshair"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下部：コントロールパネル -->
+    <div class="h-[38vh] min-h-[320px] max-h-[420px] bg-white border-t border-gray-200 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] flex overflow-x-auto z-20 shrink-0">
+        <!-- 1. 画像・コード読み込み -->
+        <div class="w-[320px] shrink-0 p-5 flex flex-col border-r border-gray-100 bg-gray-50/50 justify-between">
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1.5">1. マップ画像の読み込み</label>
+                <input type="file" id="image-upload" accept="image/*" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-gray-200 rounded-md bg-white transition-colors mb-4">
+                
+                <div class="border-t border-gray-200 my-3 pt-3">
+                    <label class="block text-sm font-bold text-gray-700 mb-1">既存ピンコードの復元</label>
+                    <p class="text-[11px] text-gray-500 mb-2">以前保存したコードからピンを再配置します。</p>
+                    <div class="space-y-2">
+                        <!-- ファイルからインポート -->
+                        <div class="relative">
+                            <input type="file" id="code-import-file" accept=".html,.txt" class="hidden">
+                            <button onclick="document.getElementById('code-import-file').click()" class="w-full text-xs bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-bold py-1.5 px-3 rounded-md transition-colors flex items-center justify-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                ファイルから読み込む
+                            </button>
+                        </div>
+                        <!-- テキスト直接貼り付け -->
+                        <button id="open-import-modal-btn" class="w-full text-xs bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 font-bold py-1.5 px-3 rounded-md transition-colors flex items-center justify-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            コードを直接貼り付ける
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="import-status-msg" class="text-xs font-semibold hidden py-1.5 px-2.5 rounded-md border text-center transition-all">
+                <!-- ステータスメッセージ表示領域 -->
+            </div>
+        </div>
+
+        <!-- 2. ピンリスト -->
+        <div class="w-[400px] shrink-0 p-5 flex flex-col border-r border-gray-100">
+            <div class="flex justify-between items-center mb-3">
+                <label class="block text-sm font-bold text-gray-700">2. 配置済みピン (x,y 編集可)</label>
+                <span id="pin-count" class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold border border-gray-200">0 / 0</span>
+            </div>
+            
+            <div id="empty-pins-msg" class="text-sm text-gray-400 text-center py-6 border-2 border-dashed border-gray-100 rounded-lg">
+                まだピンがありません。<br>マップをクリックして追加してください。
+            </div>
+
+            <div id="pin-list" class="space-y-3 flex-1 overflow-y-auto pr-2">
+                <!-- リストアイテムがJSで挿入される -->
+            </div>
+        </div>
+
+        <!-- 3. コード出力 -->
+        <div class="flex-1 min-w-[300px] p-5 bg-gray-50 flex flex-col">
+            <div class="flex justify-between items-center mb-2">
+                <label class="block text-sm font-bold text-gray-700">3. 出力コード (HTML)</label>
+                <button id="copy-btn" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded shadow-sm transition-all flex items-center gap-1 font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    <span id="copy-text">コピー</span>
+                </button>
+            </div>
+            <textarea id="output-code" class="w-full flex-1 p-3 text-[11px] leading-relaxed font-mono bg-gray-900 text-green-400 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none whitespace-pre overflow-x-auto shadow-inner" readonly placeholder="<!-- ピンを配置するとここにコードが生成されます -->"></textarea>
+        </div>
+    </div>
+
+    <!-- コピペ用インポートモーダル -->
+    <div id="import-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-[500px] max-w-[90vw] flex flex-col p-6 animate-in fade-in zoom-in-95 duration-150">
+            <h3 class="text-base font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                出力コード（HTML）からピンを復元
+            </h3>
+            <p class="text-xs text-gray-500 mb-4">
+                「3. 出力コード」にあるHTMLコードを下のテキストエリアに貼り付けてください。
+            </p>
+            <textarea id="import-paste-area" class="w-full h-48 p-3 text-[10px] font-mono bg-gray-900 text-green-400 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-4 shadow-inner" placeholder="<!-- 例：スポット名 -->&#10;<div class=&quot;absolute top-[15.2%] left-[20.5%] w-0 h-0 z-10&quot;>&#10;...&#10;</div>"></textarea>
+            
+            <!-- オプション -->
+            <div class="flex items-center gap-2 mb-6 text-xs text-gray-700">
+                <input type="checkbox" id="import-overwrite-check" checked class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label for="import-overwrite-check" class="font-medium cursor-pointer select-none">
+                    現在配置されているピンをすべて上書き（クリア）する
+                </label>
+            </div>
+
+            <!-- ボタンエリア -->
+            <div class="flex gap-3 justify-end">
+                <button id="close-import-modal-btn" class="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-md transition-colors">
+                    キャンセル
+                </button>
+                <button id="execute-import-btn" class="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow transition-colors flex items-center gap-1.5">
+                    解析してピンを復元
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- アプリケーションロジック -->
+    <script>
+        // --- 状態管理 ---
+        let pins = [];
+        let nextPinId = 1;
+        let objectUrl = null;
+
+        // ズーム関連の状態
+        const ZOOM_STEPS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0, 5.0];
+        let currentZoomIndex = 3; // 1.0 = index 3
+        let baseW = 0; // 100%時の画像の幅
+        let baseH = 0; // 100%時の画像の高さ
+
+        // --- DOM要素 ---
+        const imageUpload = document.getElementById('image-upload');
+        const workspaceInner = document.getElementById('workspace-inner');
+        const mapContainer = document.getElementById('map-container');
+        const mapImg = document.getElementById('map-img');
+        const pinsLayer = document.getElementById('pins-layer');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const pinList = document.getElementById('pin-list');
+        const emptyPinsMsg = document.getElementById('empty-pins-msg');
+        const pinCount = document.getElementById('pin-count');
+        const outputCode = document.getElementById('output-code');
+        const copyBtn = document.getElementById('copy-btn');
+        const copyText = document.getElementById('copy-text');
+        
+        // ズーム用DOM
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomLevelText = document.getElementById('zoom-level-text');
+
+        // インポート用DOM
+        const codeImportFile = document.getElementById('code-import-file');
+        const openImportModalBtn = document.getElementById('open-import-modal-btn');
+        const importModal = document.getElementById('import-modal');
+        const closeImportModalBtn = document.getElementById('close-import-modal-btn');
+        const executeImportBtn = document.getElementById('execute-import-btn');
+        const importPasteArea = document.getElementById('import-paste-area');
+        const importOverwriteCheck = document.getElementById('import-overwrite-check');
+        const importStatusMsg = document.getElementById('import-status-msg');
+
+        // --- ユーティリティ ---
+        const round1 = (num) => Math.round(num * 10) / 10;
+        
+        const escapeHTML = (str) => {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        };
+
+        // --- 0. ズーム処理 ---
+        function getZoom() {
+            return ZOOM_STEPS[currentZoomIndex];
+        }
+
+        function updateZoomUI() {
+            zoomLevelText.textContent = `${Math.round(getZoom() * 100)}%`;
+            zoomOutBtn.disabled = currentZoomIndex === 0;
+            zoomInBtn.disabled = currentZoomIndex === ZOOM_STEPS.length - 1;
+            zoomOutBtn.style.opacity = currentZoomIndex === 0 ? '0.3' : '1';
+            zoomInBtn.style.opacity = currentZoomIndex === ZOOM_STEPS.length - 1 ? '0.3' : '1';
+        }
+
+        function setZoom(index) {
+            currentZoomIndex = Math.max(0, Math.min(ZOOM_STEPS.length - 1, index));
+            updateZoomUI();
+            applyZoom();
+        }
+
+        zoomOutBtn.addEventListener('click', () => setZoom(currentZoomIndex - 1));
+        zoomInBtn.addEventListener('click', () => setZoom(currentZoomIndex + 1));
+        zoomLevelText.addEventListener('click', () => setZoom(3)); // 100%にリセット
+
+        // Ctrl + ホイールでのズーム
+        workspaceInner.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault(); // デフォルトのブラウザズームを防止
+                if (e.deltaY < 0) {
+                    setZoom(currentZoomIndex + 1); // 上スクロールで拡大
+                } else {
+                    setZoom(currentZoomIndex - 1); // 下スクロールで縮小
+                }
+            }
+        }, { passive: false });
+
+        // --- 1. 画像読み込みとリサイズ・ズーム適用処理 ---
+        function calculateBaseSize() {
+            if (!objectUrl || !mapImg.naturalWidth) return;
+
+            // ワークスペースの表示可能領域（スクロールバー分は除外される）
+            const rect = workspaceInner.getBoundingClientRect();
+            // scroll-content の padding (p-8 = 32px) の 2倍 = 64px を引く
+            const availableW = Math.max(100, rect.width - 64);
+            const availableH = Math.max(100, rect.height - 64);
+
+            const natW = mapImg.naturalWidth;
+            const natH = mapImg.naturalHeight;
+
+            const workspaceRatio = availableW / availableH;
+            const imgRatio = natW / natH;
+
+            // 100%時のベースサイズを計算
+            if (imgRatio > workspaceRatio) {
+                baseW = availableW;
+                baseH = availableW / imgRatio;
+            } else {
+                baseH = availableH;
+                baseW = availableH * imgRatio;
+            }
+        }
+
+        function applyZoom() {
+            if (baseW === 0 || baseH === 0) return;
+            const zoom = getZoom();
+            // 計算したベースサイズにズーム倍率をかけてコンテナサイズを直接変更
+            mapContainer.style.width = `${Math.floor(baseW * zoom)}px`;
+            mapContainer.style.height = `${Math.floor(baseH * zoom)}px`;
+        }
+
+        window.addEventListener('resize', () => {
+            calculateBaseSize();
+            applyZoom();
+        });
+
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (objectUrl) URL.revokeObjectURL(objectUrl); // メモリ解放
+            
+            objectUrl = URL.createObjectURL(file);
+            mapImg.src = objectUrl;
+
+            mapImg.onload = () => {
+                uploadPrompt.classList.add('hidden');
+                mapContainer.classList.remove('hidden');
+                
+                // 画像が変わったらズームを100%にリセット
+                setZoom(3);
+                calculateBaseSize();
+                applyZoom();
+            };
+        });
+
+        // --- 2. ピン追加処理 (クリック) ---
+        mapContainer.addEventListener('pointerdown', (e) => {
+            // ドラッグ用のハンドルや既存のピンをクリックした場合は追加しない
+            if (e.target.closest('.pin-drag-handle')) return;
+
+            const rect = mapContainer.getBoundingClientRect();
+            // コンテナ左上からの相対座標
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // パーセンテージ計算（小数点第1位）
+            // ※ズームでコンテナが大きくなっていても、rect.width/heightが比例して大きくなるため
+            // 常に正しい画像に対するパーセンテージが計算される
+            let leftPercent = round1((x / rect.width) * 100);
+            let topPercent = round1((y / rect.height) * 100);
+
+            // 0〜100の範囲内に収める（境界クリック時のフェイルセーフ）
+            leftPercent = Math.max(0, Math.min(100, leftPercent));
+            topPercent = Math.max(0, Math.min(100, topPercent));
+
+            const newPin = {
+                id: nextPinId++,
+                name: `スポット ${nextPinId - 1}`,
+                left: leftPercent,
+                top: topPercent
+            };
+
+            pins.push(newPin);
+            renderAll();
+        });
+
+        // --- 3. ドラッグ＆ドロップ処理 ---
+        let dragState = null;
+
+        pinsLayer.addEventListener('pointerdown', (e) => {
+            const handle = e.target.closest('.pin-drag-handle');
+            if (!handle) return;
+
+            e.stopPropagation(); // 新規ピン追加のイベント発火を防ぐ
+            e.preventDefault();
+
+            const pinElement = handle.closest('.pin-element');
+            const id = parseInt(pinElement.dataset.id);
+            const pin = pins.find(p => p.id === id);
+            if (!pin) return;
+
+            // ドラッグ開始時点のコンテナサイズを基準にする
+            const rect = mapContainer.getBoundingClientRect();
+
+            dragState = {
+                id: id,
+                element: pinElement,
+                startX: e.clientX,
+                startY: e.clientY,
+                startLeft: pin.left,
+                startTop: pin.top,
+                rectWidth: rect.width,
+                rectHeight: rect.height
+            };
+
+            handle.setPointerCapture(e.pointerId);
+            handle.classList.add('cursor-grabbing');
+            handle.classList.remove('cursor-grab');
+        });
+
+        document.addEventListener('pointermove', (e) => {
+            if (!dragState) return;
+
+            const dx = e.clientX - dragState.startX;
+            const dy = e.clientY - dragState.startY;
+
+            // 移動量と、ドラッグ開始時のコンテナサイズから新しいパーセンテージを計算
+            let newLeft = dragState.startLeft + (dx / dragState.rectWidth) * 100;
+            let newTop = dragState.startTop + (dy / dragState.rectHeight) * 100;
+
+            // 0〜100%の範囲に制限し、小数点第1位に丸める
+            newLeft = round1(Math.max(0, Math.min(100, newLeft)));
+            newTop = round1(Math.max(0, Math.min(100, newTop)));
+
+            // プレビューのDOMを即時更新（パフォーマンスとUXのため）
+            dragState.element.style.left = `${newLeft}%`;
+            dragState.element.style.top = `${newTop}%`;
+
+            // データを更新
+            const pin = pins.find(p => p.id === dragState.id);
+            if (pin) {
+                pin.left = newLeft;
+                pin.top = newTop;
+                // リストの座標表示と出力コードのみ更新
+                updatePinCoordinatesText(pin.id, newLeft, newTop);
+                renderOutput();
+            }
+        });
+
+        document.addEventListener('pointerup', (e) => {
+            if (dragState) {
+                const handle = dragState.element.querySelector('.pin-drag-handle');
+                if (handle) {
+                    handle.classList.remove('cursor-grabbing');
+                    handle.classList.add('cursor-grab');
+                    try { handle.releasePointerCapture(e.pointerId); } catch(err){}
+                }
+                dragState = null;
+            }
+        });
+
+        // --- 4. レンダリング処理 ---
+        function renderAll() {
+            renderPins();
+            renderList();
+            renderOutput();
+            updateUIState();
+        }
+
+        function updateUIState() {
+            pinCount.textContent = pins.length;
+            if (pins.length === 0) {
+                emptyPinsMsg.classList.remove('hidden');
+                copyBtn.disabled = true;
+            } else {
+                emptyPinsMsg.classList.add('hidden');
+                copyBtn.disabled = false;
+            }
+        }
+
+        // プレビューエリアにピンを描画
+        function renderPins() {
+            pinsLayer.innerHTML = '';
+            pins.forEach(pin => {
+                // 指定された3層構造 of HTMLをプレビュー用DOMとして生成
+                // 位置（top, left）はstyle属性で制御する
+                // 枠は border-marine-200、テキストは text-marine-900 に戻し、中のSVGのみを text-orange-500 にする
+                const pinHTML = `
+                <div class="absolute w-0 h-0 z-10 pin-element" data-id="${pin.id}" style="top: ${pin.top}%; left: ${pin.left}%;">
+                    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+                        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+                            <div class="pin-drag-handle bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-lg cursor-grab hover:scale-110 transition-transform" title="ドラッグして移動">
+                                <svg class="w-4 h-4 text-orange-500 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                                </svg>
+                            </div>
+                            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-md pointer-events-none select-none">
+                                ${escapeHTML(pin.name)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                pinsLayer.insertAdjacentHTML('beforeend', pinHTML);
+            });
+        }
+
+        // 右側のリストを描画
+        function renderList() {
+            pinList.innerHTML = '';
+            pins.forEach(pin => {
+                const item = document.createElement('div');
+                item.className = 'bg-white border border-gray-200 rounded-md p-3 shadow-sm hover:border-orange-300 transition-colors group';
+                item.innerHTML = `
+                    <div class="flex gap-2 items-start">
+                        <div class="mt-1.5 flex-shrink-0 text-orange-500">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="0" x2="12" y2="6"></line>
+                                <line x1="12" y1="18" x2="12" y2="24"></line>
+                                <line x1="0" y1="12" x2="6" y2="12"></line>
+                                <line x1="18" y1="12" x2="24" y2="12"></line>
+                            </svg>
+                        </div>
+                        <div class="flex-1 space-y-2">
+                            <input type="text" value="${escapeHTML(pin.name)}" data-id="${pin.id}" class="pin-name-input w-full text-sm font-bold text-gray-800 border-b border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent px-1 py-0.5 transition-colors" placeholder="スポット名を入力">
+                            <div class="flex justify-between items-center px-1">
+                                <div class="flex items-center gap-2 text-xs text-gray-600 font-mono">
+                                    <label class="flex items-center gap-1">
+                                        x: <input type="number" step="0.1" min="0" max="100" value="${pin.left}" data-id="${pin.id}" data-axis="left" class="coord-input w-16 px-1 py-0.5 border border-gray-300 rounded focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-right bg-gray-50">%
+                                    </label>
+                                    <label class="flex items-center gap-1">
+                                        y: <input type="number" step="0.1" min="0" max="100" value="${pin.top}" data-id="${pin.id}" data-axis="top" class="coord-input w-16 px-1 py-0.5 border border-gray-300 rounded focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-right bg-gray-50">%
+                                    </label>
+                                </div>
+                                <button class="delete-pin-btn text-gray-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-red-50 ml-2" data-id="${pin.id}" title="削除">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                pinList.appendChild(item);
+            });
+
+            // イベントリスナーの再設定
+            document.querySelectorAll('.pin-name-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    const pin = pins.find(p => p.id === id);
+                    if (pin) {
+                        pin.name = e.target.value;
+                        // 名前変更時はプレビューと出力を更新
+                        renderPins();
+                        renderOutput();
+                    }
+                });
+            });
+
+            // 座標の直接入力イベントリスナーを追加
+            document.querySelectorAll('.coord-input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    const axis = e.target.dataset.axis; // "left" or "top"
+                    let val = parseFloat(e.target.value);
+                    
+                    if (isNaN(val)) val = 0;
+                    val = round1(Math.max(0, Math.min(100, val))); // 0~100の範囲内に制限
+                    e.target.value = val;
+
+                    const pin = pins.find(p => p.id === id);
+                    if (pin) {
+                        pin[axis] = val;
+                        // プレビュー上のピン位置を即時更新
+                        const pinEl = document.querySelector(`.pin-element[data-id="${id}"]`);
+                        if (pinEl) {
+                            pinEl.style[axis] = `${val}%`;
+                        }
+                        renderOutput();
+                    }
+                });
+            });
+
+            document.querySelectorAll('.delete-pin-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    pins = pins.filter(p => p.id !== id);
+                    renderAll();
+                });
+            });
+        }
+
+        // リスト内の座標テキストのみを更新する（ドラッグ時の軽量更新用）
+        function updatePinCoordinatesText(id, left, top) {
+            const leftInput = document.querySelector(`.coord-input[data-id="${id}"][data-axis="left"]`);
+            const topInput = document.querySelector(`.coord-input[data-id="${id}"][data-axis="top"]`);
+            if (leftInput) leftInput.value = left;
+            if (topInput) topInput.value = top;
+        }
+
+        // --- 5. コード出力処理 ---
+        function renderOutput() {
+            if (pins.length === 0) {
+                outputCode.value = '';
+                return;
+            }
+
+            const htmlStrings = pins.map(pin => {
+                const name = escapeHTML(pin.name);
+                // 指定されたフォーマットに厳密に従い、top-[〇〇%] と left-[〇〇%] を差し込む
+                // 外枠は元の border-marine-200 / text-marine-900。アイコンSVGのみ text-orange-500 を指定。
+                return `<!-- ${name} -->
+<div class="absolute top-[${pin.top}%] left-[${pin.left}%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                ${name}
+            </div>
+        </div>
+    </div>
+</div>`;
+            });
+
+            outputCode.value = htmlStrings.join('\n\n');
+        }
+
+        // --- 6. コピー機能 ---
+        copyBtn.addEventListener('click', async () => {
+            if (!outputCode.value) return;
+            
+            try {
+                // navigator.clipboard が使える場合
+                await navigator.clipboard.writeText(outputCode.value);
+                showCopySuccess();
+            } catch (err) {
+                // fallback
+                outputCode.select();
+                document.execCommand('copy');
+                showCopySuccess();
+            }
+        });
+
+        function showCopySuccess() {
+            const originalText = copyText.textContent;
+            copyText.textContent = 'コピーしました！';
+            copyBtn.classList.replace('bg-blue-600', 'bg-green-600');
+            copyBtn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+            
+            setTimeout(() => {
+                copyText.textContent = originalText;
+                copyBtn.classList.replace('bg-green-600', 'bg-blue-600');
+                copyBtn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+            }, 2000);
+        }
+
+        // --- 7. インポート解析処理（ここが新しい機能の核心） ---
+
+        // HTMLテキストを解析してピン情報オブジェクトの配列を返す堅牢なヘルパー関数
+        function parseHTMLForPins(htmlText) {
+            const foundPins = [];
+            
+            // <!-- (コメント名) --> を基準にして分割
+            const blocks = htmlText.split(/<!--/);
+            
+            // 最初の要素は最初の <!-- より前なので読み飛ばす
+            for (let i = 1; i < blocks.length; i++) {
+                const block = blocks[i];
+                
+                // コメント終了（-->）までをスポット名として抽出
+                const nameMatch = block.match(/^\s*(.*?)\s*-->/);
+                if (!nameMatch) continue;
+                const name = nameMatch[1].trim();
+                
+                // ブロック内から top-[〇〇%]、left-[〇〇%] を抽出
+                const topMatch = block.match(/top-\[(\d+(?:\.\d+)?)%\]/);
+                const leftMatch = block.match(/left-\[(\d+(?:\.\d+)?)%\]/);
+                
+                if (topMatch && leftMatch) {
+                    foundPins.push({
+                        name: name,
+                        top: parseFloat(topMatch[1]),
+                        left: parseFloat(leftMatch[1])
+                    });
+                }
+            }
+            
+            return foundPins;
+        }
+
+        // 解析されたピン配列をアプリ状態に読み込む処理
+        function loadImportedPins(parsedPins, overwrite) {
+            if (parsedPins.length === 0) {
+                showImportStatus('有効なピン定義コードが見つかりませんでした。', 'error');
+                return;
+            }
+
+            if (overwrite) {
+                pins = [];
+                nextPinId = 1;
+            }
+
+            // 解析されたデータをインポート
+            parsedPins.forEach(parsed => {
+                pins.push({
+                    id: nextPinId++,
+                    name: parsed.name,
+                    top: parsed.top,
+                    left: parsed.left
+                });
+            });
+
+            renderAll();
+            showImportStatus(`${parsedPins.length}個のピンを復元しました！`, 'success');
+        }
+
+        // ステータスメッセージの表示制御
+        function showImportStatus(message, type) {
+            importStatusMsg.textContent = message;
+            importStatusMsg.className = "text-xs font-semibold py-1.5 px-2.5 rounded-md border text-center transition-all block";
+            
+            if (type === 'success') {
+                importStatusMsg.classList.add('bg-green-50', 'text-green-700', 'border-green-200');
+            } else if (type === 'error') {
+                importStatusMsg.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+            }
+
+            setTimeout(() => {
+                importStatusMsg.className = "hidden";
+            }, 4000);
+        }
+
+        // モーダルの開閉
+        openImportModalBtn.addEventListener('click', () => {
+            importPasteArea.value = '';
+            importModal.classList.remove('hidden');
+        });
+
+        closeImportModalBtn.addEventListener('click', () => {
+            importModal.classList.add('hidden');
+        });
+
+        // モーダルの外側クリックで閉じる
+        importModal.addEventListener('click', (e) => {
+            if (e.target === importModal) {
+                importModal.classList.add('hidden');
+            }
+        });
+
+        // コピペからのインポート実行
+        executeImportBtn.addEventListener('click', () => {
+            const rawCode = importPasteArea.value;
+            if (!rawCode.trim()) {
+                alert('HTMLコードをテキストエリアに入力してください。');
+                return;
+            }
+
+            const parsed = parseHTMLForPins(rawCode);
+            const overwrite = importOverwriteCheck.checked;
+            loadImportedPins(parsed, overwrite);
+            importModal.classList.add('hidden');
+        });
+
+        // ファイルからコードを読み込むインポート処理
+        codeImportFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const rawCode = event.target.result;
+                const parsed = parseHTMLForPins(rawCode);
+                
+                if (parsed.length === 0) {
+                    showImportStatus('選択されたファイルからピン情報を抽出できませんでした。', 'error');
+                    return;
+                }
+
+                // ファイル読み込み時は確認ダイアログ（カスタム確認の代わり）を表示して上書きを判断
+                const overwrite = confirm(`ファイルから ${parsed.length} 個のピンが検出されました。\n現在配置されているピンをすべて上書きして読み込みますか？\n(キャンセルすると既存のピンに追加されます)`);
+                
+                loadImportedPins(parsed, overwrite);
+            };
+            reader.readAsText(file);
+            // 連続して同じファイルを選択しても反応するようにリセット
+            codeImportFile.value = '';
+        });
+
+        // 初期化
+        updateUIState();
+        updateZoomUI();
+    </script>
+</body>
+</html>

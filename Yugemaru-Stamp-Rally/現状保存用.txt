@@ -10,14 +10,14 @@
     <!-- ======================================================================= -->
     <script>
         const CONFIG = {
-            storageKey: "yugemaru_stamps_v8_default", // ★キーを更新して今までのテストデータをリセットし、この設定をデフォルト化
+            storageKey: "yugemaru_stamps_v3_ui_refresh", // キーを変更してデータを一新
             isDemoMode: false,
             adminPin: "1234", // 管理メニューを開くための4桁パスワード
             
             // 📝 テキスト・リンク設定
-            welcomeTitle: "〇〇〇〇中学校の皆様", // ★ホーム画面の一番上のタイトル（オレンジ色）
+            welcomeTitle: "弓削中学校の皆様", // ★ホーム画面の一番上のタイトル（オレンジ色）
             welcomeSubtitle: "ようこそ弓削丸へ！", // ★タイトルの横に続くテキスト
-            welcomeMessage: "船長の加藤です。本日は「〇〇〇イベント」にご参加いただきありがとうございます。船内のいろいろな場所を巡りながらスタンプを集めてみましょう。安全に気をつけて弓削丸での時間を楽しんでください！", // ★船長からのメッセージ
+            welcomeMessage: "船長の〇〇です。本日は「〇〇〇イベント」にご参加いただき、ありがとうございます。船内のいろいろな場所を巡りながら、各ポイントでスタンプを集めてみましょう。それでは、安全に気をつけて、弓削丸での時間を楽しんでください！", // ★船長からのメッセージ
             surveyUrl: "", // ★アンケートのURL（例: "https://forms.gle/..."。空欄の場合は準備中メッセージが表示されます）
 
             // 🕒 スケジュール設定（項目を増やしたり減らしたりできます）
@@ -44,37 +44,19 @@
                 map: "./map.jpg", // マップ画面：船内マップ
                 badge: "https://placehold.co/200x200/fbbf24/0c4a6e?text=記念バッジ&font=Noto+Sans+JP", // スタンプ画面：特典バッジ
                 stamp: "./stamp.png" // スタンプ枠：達成時の画像
-            },
-
-            // 🚩 アプリ起動時の初期コース設定 ('sunny' または 'rainy')
-            defaultCourse: 'sunny',
-
-            // 🌦️ コース設定（晴れ・雨の切り替え用）
-            courses: {
-                sunny: {
-                    name: "☀️ 晴れの日コース",
-                    // 全9カ所の中から初期設定のIDを指定します
-                    spots: ['bridge', 'student_hall', 'control_room', 'chimney', 'bow', 'flying_deck']
-                },
-                rainy: {
-                    name: "☔️ 雨の日コース",
-                    // 全9カ所の中から初期設定のIDを指定します
-                    spots: ['bridge', 'student_hall', 'student_room', 'control_room', 'electrical_room', 'stern']
-                }
             }
         };
 
-        // --- スポットデータ定義 (全9個) ---
-        const ALL_SPOTS = [
+        // --- スポットデータ定義 (8個) ---
+        const SPOTS = [
             { id: 'bridge', name: 'ブリッジ', icon: '⚓️', description: '船の操縦を行う場所。見晴らし最高！' },
-            { id: 'student_hall', name: '学生ホール', icon: '👥', description: '学生たちが集まる憩いの場。' },
-            { id: 'student_room', name: '学生居室', icon: '🛏️', description: '学生たちが生活する居住スペース。' },
-            { id: 'control_room', name: '制御室', icon: '🖥️', description: '船の様々な機器を監視・制御する部屋。' },
-            { id: 'chimney', name: '煙突', icon: '💨', description: 'エンジンの排気を行う巨大な煙突。' },
-            { id: 'stern', name: '船尾', icon: '🚢', description: '船の後ろ側。航跡が見えます。' },
-            { id: 'electrical_room', name: '電気工作室', icon: '⚡', description: '電気設備のメンテナンスを行う部屋。' },
-            { id: 'flying_deck', name: 'フライングデッキ', icon: '🔭', description: 'ブリッジの上にある見張所。' },
-            { id: 'bow', name: '船首', icon: '🌊', description: '船の最前部。波を切って進みます。' },
+            { id: 'engine', name: '機関室', icon: '⚙️', description: '船の心臓部。巨大なエンジンが鎮座。' },
+            { id: 'dining', name: '食堂', icon: '🍽️', description: '美味しい食事が待っている憩いの場。' },
+            { id: 'deck', name: '甲板', icon: '🌊', description: '潮風を感じられる開放的なスペース。' },
+            { id: 'training', name: '実習室', icon: '📖', description: '航海や機関について学ぶ教室。' },
+            { id: 'student', name: '学生室', icon: '👥', description: '学生たちが生活する居住スペース。' },
+            { id: 'library', name: '図書室', icon: '📚', description: '海に関する専門書が揃っています。' },
+            { id: 'lounge', name: 'ラウンジ', icon: '☕', description: 'ゆったりとくつろげる談話室。' },
         ];
     </script>
     <!-- ======================================================================= -->
@@ -115,8 +97,7 @@
                     },
                     animation: {
                         'stamp': 'stamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                        // ★ アニメーション時間を 0.5s から 0.8s に変更してゆっくりに
-                        'stamp-press': 'stamp-press 1.0s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                        'stamp-press': 'stamp-press 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
                         'float': 'float 3s ease-in-out infinite',
                         'fade-in': 'fadeIn 0.5s ease-out forwards',
                         'zoom-in': 'zoomIn 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
@@ -124,7 +105,7 @@
                     },
                     keyframes: {
                         stamp: {
-                            '0%': { transform: 'scale(3) rotate(-0deg)', opacity: '0' },
+                            '0%': { transform: 'scale(3) rotate(-30deg)', opacity: '0' },
                             '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
                         },
                         'stamp-press': {
@@ -164,8 +145,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- 🔍 マップの拡大縮小(Panzoom)ライブラリ追加 -->
     <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom/dist/panzoom.min.js"></script>
-    <!-- 🎉 紙吹雪アニメーションライブラリ -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <style>
         body {
@@ -227,7 +206,7 @@
                     <!-- タイトルとサブタイトル (画像の右側、横並び) -->
                     <div id="welcome-title-wrapper" class="mb-3">
                         <span id="display-welcome-title" class="text-xl sm:text-2xl text-accent-600 font-black hidden align-middle mr-1.5"></span>
-                        <span id="display-welcome-subtitle" class="text-xl sm:text-2xl text-marine-900 font-bold hidden align-middle"></span>
+                        <span id="display-welcome-subtitle" class="text-lg sm:text-xl text-marine-900 font-bold hidden align-middle"></span>
                     </div>
                     
                     <!-- 挨拶文 (タイトル下、画像の右側から回り込む) -->
@@ -248,181 +227,45 @@
                             
                             <!-- マップピン -->
                             <!-- ブリッジ -->
-                            <div class="absolute top-[46%] left-[36%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="bridge">
+                            <div class="absolute top-[15%] left-[20%] w-0 h-0 z-10">
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+                                    <div class="map-pin flex items-center origin-[16px_50%]">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-2.12 2.12"/><path d="m7.76 16.24 2.12-2.12"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
                                         </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            ブリッジ
-                                        </div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">ブリッジ</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- 学生ホール -->
-                            <div class="absolute top-[54%] left-[32%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="student_hall">
+                            <!-- 機関室 -->
+                            <div class="absolute top-[35%] left-[10%] w-0 h-0 z-10">
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+                                    <div class="map-pin flex items-center origin-[16px_50%]">
                                         <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/></svg>
                                         </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            学生ホール
-                                        </div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">機関室</div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- 学生居室 -->
-                            <div class="absolute top-[54%] left-[51%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="student_room">
+                            <!-- 食堂 -->
+                            <div class="absolute top-[50%] left-[10%] w-0 h-0 z-10">
                                 <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            学生居室
-                                        </div>
+                                    <div class="map-pin flex items-center origin-[16px_50%]">
+                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 text-[13px] shadow-sm">🍽️</div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">食堂</div>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- 制御室 -->
-                            <div class="absolute top-[58%] left-[45%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="control_room">
-                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            制御室
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 煙突 -->
-                            <div class="absolute top-[46%] left-[64%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="chimney">
-                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            煙突
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 船尾 -->
-                            <div class="absolute top-[54%] left-[78%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="stern">
-                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            船尾
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 電気工作室 -->
-                            <div class="absolute top-[58%] left-[33%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="electrical_room">
-                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            電気工作室
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- フライングデッキ -->
-                            <div class="absolute top-[43%] left-[27%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="flying_deck">
-                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            フライングデッキ
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 船首 -->
-                            <div class="absolute top-[50%] left-[6%] w-0 h-0 z-10 map-pin-wrapper" data-spot-id="bow">
-                                <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
-                                    <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
-                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
-                                            <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="0" x2="12" y2="6"></line>
-                                                <line x1="12" y1="18" x2="12" y2="24"></line>
-                                                <line x1="0" y1="12" x2="6" y2="12"></line>
-                                                <line x1="18" y1="12" x2="24" y2="12"></line>
-                                            </svg>
-                                        </div>
-                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
-                                            船首
-                                        </div>
+                            
+                            <!-- 甲板 -->
+                            <div class="absolute bottom-[20%] right-[10%] w-0 h-0 z-10">
+                                <div class="absolute top-1/2 right-0 -translate-y-1/2 translate-x-[16px]">
+                                    <div class="map-pin flex items-center flex-row-reverse origin-[calc(100%-16px)_50%]">
+                                        <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 text-[13px] shadow-sm">⚓️</div>
+                                        <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-l-full -mr-2 pr-4 whitespace-nowrap border border-marine-200 border-r-0 shadow-sm">甲板</div>
                                     </div>
                                 </div>
                             </div>
@@ -583,44 +426,12 @@
                     <span id="demo-status-badge" class="bg-gray-200 text-gray-500 text-sm px-4 py-1.5 rounded-full font-black">OFF</span>
                 </button>
 
-                <!-- コース設定 -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-marine-100">
-                    <h3 class="font-bold text-xl text-marine-900 mb-2">コース設定 (天候)</h3>
-                    <p class="text-xs text-gray-500 mb-4 leading-relaxed">当日の天候に合わせてコースを変更します。<br><span class="text-red-500 font-bold">※変更すると現在の取得済みスタンプがリセットされます。</span></p>
-                    <div class="flex flex-col gap-3 mb-4">
-                        <button onclick="setCourse('sunny')" id="btn-course-sunny" class="border-2 border-gray-200 text-gray-500 py-3 rounded-xl font-bold flex justify-between px-4 items-center transition-colors">
-                            <span>☀️ 晴れの日コース</span>
-                            <span class="check-icon hidden text-xl">✅</span>
-                        </button>
-                        <button onclick="setCourse('rainy')" id="btn-course-rainy" class="border-2 border-gray-200 text-gray-500 py-3 rounded-xl font-bold flex justify-between px-4 items-center transition-colors">
-                            <span>☔️ 雨の日コース</span>
-                            <span class="check-icon hidden text-xl">✅</span>
-                        </button>
-                    </div>
-                    <div class="border-t border-gray-100 pt-4 mt-2">
-                        <h4 class="font-bold text-sm text-marine-800 mb-3">各コースのスポット指定</h4>
-                        <div class="flex gap-2">
-                            <button onclick="openCourseEditor('sunny')" class="flex-1 bg-marine-50 hover:bg-marine-100 text-marine-700 py-2.5 rounded-xl text-sm font-bold border border-marine-200 transition-colors">☀️ 晴れの設定を編集</button>
-                            <button onclick="openCourseEditor('rainy')" class="flex-1 bg-marine-50 hover:bg-marine-100 text-marine-700 py-2.5 rounded-xl text-sm font-bold border border-marine-200 transition-colors">☔️ 雨の設定を編集</button>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-marine-100">
                     <h3 class="font-bold text-xl text-marine-900 mb-3">テスト用QRコード</h3>
                     <p class="text-sm text-gray-500 mb-6">PCの画面に表示して、スマホのカメラで読み取ってテストしてください。</p>
                     <div id="qr-container" class="grid grid-cols-2 gap-4">
                         <!-- QRコード自動生成 -->
                     </div>
-                </div>
-
-                <!-- 初期化エリア -->
-                <div class="bg-white p-6 rounded-3xl shadow-sm border border-red-100">
-                    <h3 class="font-bold text-xl text-red-600 mb-2">データのリセット</h3>
-                    <p class="text-xs text-gray-500 mb-4 leading-relaxed">取得したスタンプや変更したコース設定などをすべて消去し、アプリを初期状態（現在のコードの設定）に戻します。</p>
-                    <button onclick="resetApplicationData()" id="btn-reset-app" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors">
-                        アプリを初期状態にリセット
-                    </button>
                 </div>
             </div>
         </div>
@@ -642,36 +453,12 @@
         
         <!-- コンプリート演出用オーバーレイ (新演出) -->
         <div id="complete-overlay" class="hidden fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
-            <div class="absolute inset-0 bg-white/90 backdrop-blur-md animate-fade-in"></div>
-            
-            <!-- 回転する光の演出 (後光/サンバースト) -->
-            <div class="absolute inset-0 flex items-center justify-center overflow-hidden opacity-60">
-                <div class="w-[200vw] h-[200vw] md:w-[150vw] md:h-[150vw] animate-[spin_15s_linear_infinite]" style="background: repeating-conic-gradient(from 0deg, transparent 0deg 10deg, #fde68a 10deg 20deg); mask-image: radial-gradient(circle, black 10%, transparent 50%); -webkit-mask-image: radial-gradient(circle, black 10%, transparent 50%);"></div>
-            </div>
-
+            <div class="absolute inset-0 bg-white/80 backdrop-blur-md animate-fade-in"></div>
             <div class="relative z-10 flex flex-col items-center animate-zoom-in">
-                <div class="absolute inset-0 bg-accent-400 blur-[80px] opacity-80 rounded-full animate-pulse"></div>
+                <div class="absolute inset-0 bg-accent-400 blur-[80px] opacity-60 rounded-full animate-pulse"></div>
                 <img id="complete-badge-img" src="" class="w-64 h-64 object-cover rounded-full shadow-2xl border-4 border-white mb-6 relative z-10">
                 <div class="text-3xl md:text-4xl font-black text-marine-900 drop-shadow-lg text-center tracking-widest bg-white/95 px-8 py-4 rounded-full border-4 border-accent-400 relative z-10">
                     コンプリート！
-                </div>
-            </div>
-        </div>
-
-        <!-- コース編集用モーダル -->
-        <div id="course-editor-overlay" class="hidden absolute inset-0 bg-marine-950/80 backdrop-blur-sm z-[90] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
-            <div id="course-editor-content" class="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 flex flex-col max-h-[90vh]">
-                <h2 id="course-editor-title" class="text-xl font-black text-marine-900 mb-1">コースの編集</h2>
-                <p class="text-xs text-red-500 font-bold mb-3">※現在選択中のコースを変更して保存した場合、スタンプはリセットされます。</p>
-                <p id="course-editor-error" class="text-red-500 text-sm font-bold hidden mb-2 bg-red-50 p-2 rounded-lg border border-red-200">少なくとも1つのスポットを選択してください。</p>
-                
-                <div id="course-editor-list" class="flex flex-col gap-2 mb-4 overflow-y-auto p-1 flex-1 min-h-0">
-                    <!-- JSで生成 -->
-                </div>
-
-                <div class="flex gap-3 pt-2">
-                    <button onclick="closeCourseEditor()" class="w-1/2 bg-gray-200 text-gray-600 hover:bg-gray-300 font-bold py-3 rounded-xl transition-colors">キャンセル</button>
-                    <button onclick="saveCourseEditor()" class="w-1/2 bg-accent-500 text-white hover:bg-accent-600 font-bold py-3 rounded-xl transition-colors shadow-md">保存する</button>
                 </div>
             </div>
         </div>
@@ -685,16 +472,6 @@
         let isScannerRunning = false;
         let currentView = 'home';
         let mapPanzoom = null; // Panzoomインスタンス
-        let currentCourseId = 'sunny';
-        let pendingCourseChange = null;
-        let customCourses = null;
-        let editingCourseId = null;
-        let pendingReset = false; // リセット確認用
-
-        function getActiveSpots() {
-            const spotIds = customCourses[currentCourseId].spots;
-            return ALL_SPOTS.filter(spot => spotIds.includes(spot.id));
-        }
 
         function setImgSrc(imgId, src, fallbackUrl) {
             const img = document.getElementById(imgId);
@@ -712,17 +489,6 @@
             setImgSrc('img-map', CONFIG.images.map, 'https://placehold.co/600x600/e2e8f0/64748b?text=600x600');
             setImgSrc('img-badge', CONFIG.images.badge, 'https://placehold.co/200x200/e2e8f0/64748b?text=200x200');
 
-            // 選択中のコースを読み込み
-            currentCourseId = localStorage.getItem(CONFIG.storageKey + "_course") || CONFIG.defaultCourse || 'sunny';
-
-            // カスタマイズされたコース設定を読み込み
-            const savedCourses = localStorage.getItem(CONFIG.storageKey + "_custom_courses");
-            if (savedCourses) {
-                try { customCourses = JSON.parse(savedCourses); } catch(e) { customCourses = JSON.parse(JSON.stringify(CONFIG.courses)); }
-            } else {
-                customCourses = JSON.parse(JSON.stringify(CONFIG.courses));
-            }
-
             const savedData = localStorage.getItem(CONFIG.storageKey);
             if (savedData) {
                 try { acquiredStamps = JSON.parse(savedData); } catch (e) { acquiredStamps = []; }
@@ -737,7 +503,6 @@
             updateUI();
             generateTestQRs();
             updateDemoModeUI();
-            updateCourseUI();
             
             initMapZoom();
             
@@ -925,9 +690,8 @@
 
         // --- UI全体更新 (個数ベース表示) ---
         function updateUI() {
-            const activeSpots = getActiveSpots();
             const count = acquiredStamps.length;
-            const total = activeSpots.length;
+            const total = SPOTS.length;
             const percent = Math.round((count / total) * 100);
 
             const countEl = document.getElementById('stamp-progress-count-main');
@@ -939,40 +703,22 @@
             if (barEl) barEl.style.width = `${percent}%`;
             
             renderStampGrid();
-            updateMapPins();
-        }
-
-        // --- マップピン表示更新 ---
-        function updateMapPins() {
-            const activeSpotIds = getActiveSpots().map(s => s.id);
-            document.querySelectorAll('.map-pin-wrapper').forEach(wrapper => {
-                const spotId = wrapper.getAttribute('data-spot-id');
-                if (activeSpotIds.includes(spotId)) {
-                    wrapper.classList.remove('hidden');
-                } else {
-                    wrapper.classList.add('hidden');
-                }
-            });
         }
 
         // --- スタンプグリッド描画 (差分更新対応) ---
         function renderStampGrid() {
             const grid = document.getElementById('stamp-grid');
-            const activeSpots = getActiveSpots();
-            
-            // カラム数を動的に変更 (6個なら3列、それ以上なら4列)
-            grid.className = `grid gap-4 w-full max-w-2xl mb-8 ${activeSpots.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`;
             
             // 初回のみ空のセル枠を生成
             if (grid.children.length === 0) {
-                activeSpots.forEach(spot => {
+                SPOTS.forEach(spot => {
                     const cell = document.createElement('div');
                     cell.id = `stamp-cell-${spot.id}`;
                     grid.appendChild(cell);
                 });
             }
 
-            activeSpots.forEach((spot, index) => {
+            SPOTS.forEach((spot, index) => {
                 const isAcquired = acquiredStamps.includes(spot.id);
                 const cell = document.getElementById(`stamp-cell-${spot.id}`);
                 
@@ -996,13 +742,12 @@
                 }
 
                 if (isAcquired) {
-                    // ★ ここの画像のクラス -right-3 を right-0 に変更（少し左に寄ります）
                     cell.innerHTML = `
                         <div class="flex flex-col items-center mt-6">
                             <div class="text-4xl mb-2 text-marine-900">${spot.icon}</div>
                             <div class="font-bold text-[11px] text-marine-900 whitespace-nowrap">${spot.name}</div>
                         </div>
-                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-2 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
+                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
                     `;
                 } else {
                     cell.innerHTML = `
@@ -1043,61 +788,28 @@
         // --- スタンプ処理 ---
         async function processStamp(scannedId) {
             const id = scannedId.trim();
-            const activeSpots = getActiveSpots();
-            const spot = activeSpots.find(s => s.id === id);
+            const spot = SPOTS.find(s => s.id === id);
             
-            if (!spot) { showModal('エラー', '無効なQRコード、または現在のコースに含まれていないスポットです。', '❓'); return; }
+            if (!spot) { showModal('エラー', '無効なQRコードです。', '❓'); return; }
             if (acquiredStamps.includes(id)) { showModal('お知らせ', '取得済みです！', spot.icon); return; }
 
             switchView('stamp');
-            
-            // 1. スタンプアニメーションが完了するのを待つ
             await playStampAnimation(spot);
 
-            // 2. 状態の更新
             acquiredStamps.push(id);
             localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
             updateUI();
 
-            // 3. その後の演出
-            if (acquiredStamps.length >= activeSpots.length) {
-                // コンプリート時も少し間を空ける
-                setTimeout(() => {
+            setTimeout(() => {
+                if (acquiredStamps.length >= SPOTS.length) {
                     triggerComplete();
-                }, 300);
-            } else {
-                // スタンプ動作の直後に紙吹雪
-                fireConfetti();
-                
-                // 紙吹雪のあとにポップアップを表示
-                setTimeout(() => {
+                } else {
                     showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
-                }, 2000);
-            }
+                }
+            }, 1000); // アニメーション終了から少し早めにポップアップ表示
         }
 
         // --- 演出関連 ---
-        // 通常のスタンプ獲得時の紙吹雪
-        function fireConfetti() {
-            const count = 200;
-            const defaults = {
-                origin: { y: 0.6 },
-                zIndex: 150
-            };
-
-            function fire(particleRatio, opts) {
-                confetti(Object.assign({}, defaults, opts, {
-                    particleCount: Math.floor(count * particleRatio)
-                }));
-            }
-
-            fire(0.25, { spread: 26, startVelocity: 55 });
-            fire(0.2, { spread: 60 });
-            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
-            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
-            fire(0.1, { spread: 120, startVelocity: 45 });
-        }
-
         function playStampAnimation(spot) {
             return new Promise(resolve => {
                 const cell = document.getElementById(`stamp-cell-${spot.id}`);
@@ -1108,8 +820,7 @@
                 setTimeout(() => {
                     const stampEl = document.createElement('img');
                     stampEl.src = CONFIG.images.stamp;
-                    // ★ ここも同様に -right-3 を right-0 に変更
-                    stampEl.className = `absolute -top-3 right-2 w-24 h-24 md:w-32 md:h-32 object-contain z-30 animate-stamp-press drop-shadow-md`;
+                    stampEl.className = `absolute -top-1 -right-1 w-16 h-16 md:w-20 md:h-20 object-contain z-30 animate-stamp-press drop-shadow-md`;
                     
                     stampEl.onerror = function() {
                         this.onerror = null;
@@ -1133,7 +844,7 @@
             setTimeout(() => document.getElementById('app').classList.remove('animate-screen-shake'), 600);
             
             overlay.classList.remove('hidden');
-
+            
             // 約3.5秒後にフェードアウトさせて通常のモーダルへ移行
             setTimeout(() => {
                 overlay.classList.add('animate-fade-out');
@@ -1255,174 +966,13 @@
 
         function generateTestQRs() {
             const container = document.getElementById('qr-container');
-            container.innerHTML = ''; // 再生成のため一度クリア
-            
-            // コース設定に関わらず全9カ所のQRコードを常に生成する
-            ALL_SPOTS.forEach(spot => {
+            if (container.children.length > 0) return;
+            SPOTS.forEach(spot => {
                 const wrapper = document.createElement('div'); wrapper.className = 'flex flex-col items-center p-3 border border-marine-200 rounded-xl bg-white';
                 wrapper.innerHTML = `<div class="font-bold text-xs text-marine-900 mb-2">${spot.name}</div><div id="qr-${spot.id}" class="bg-white p-1"></div><div class="text-[10px] text-gray-400 mt-2 font-mono">${spot.id}</div>`;
                 container.appendChild(wrapper);
                 new QRCode(document.getElementById(`qr-${spot.id}`), { text: spot.id, width: 80, height: 80, colorDark : "#0c4a6e", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
             });
-        }
-        
-        // --- コース変更機能 ---
-        function setCourse(courseId) {
-            if (currentCourseId === courseId) return;
-            
-            // 誤タップ防止のため、1回目のタップで確認メッセージを表示
-            if (pendingCourseChange !== courseId) {
-                pendingCourseChange = courseId;
-                updateCourseUI(); // 一旦UIをリセット
-                
-                const btn = document.getElementById(`btn-course-${courseId}`);
-                btn.innerHTML = `<span class="text-red-500 font-bold text-sm mx-auto">本当に変更しますか？<br>(タップで確定/リセット)</span>`;
-                btn.className = "border-2 border-red-500 bg-red-50 text-marine-900 py-3 rounded-xl font-bold flex justify-center px-4 items-center";
-                
-                // 4秒放置でキャンセル
-                setTimeout(() => {
-                    if (pendingCourseChange === courseId) {
-                        pendingCourseChange = null;
-                        updateCourseUI();
-                    }
-                }, 4000);
-                return;
-            }
-
-            // 2回目のタップで確定処理
-            pendingCourseChange = null;
-            currentCourseId = courseId;
-            localStorage.setItem(CONFIG.storageKey + "_course", currentCourseId);
-            
-            // スタンプ状態をリセット
-            acquiredStamps = []; 
-            localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
-            
-            document.getElementById('stamp-grid').innerHTML = ''; // グリッド枠を再生成させる
-            updateCourseUI();
-            updateUI();
-            generateTestQRs();
-        }
-
-        function updateCourseUI() {
-            const btnSunny = document.getElementById('btn-course-sunny');
-            const btnRainy = document.getElementById('btn-course-rainy');
-            
-            const sunnyText = `${customCourses.sunny.name} (${customCourses.sunny.spots.length}カ所)`;
-            const rainyText = `${customCourses.rainy.name} (${customCourses.rainy.spots.length}カ所)`;
-            
-            // テキストを状態に戻す
-            btnSunny.innerHTML = `<span>${sunnyText}</span><span class="check-icon hidden text-xl">✅</span>`;
-            btnRainy.innerHTML = `<span>${rainyText}</span><span class="check-icon hidden text-xl">✅</span>`;
-            
-            if (currentCourseId === 'sunny') {
-                btnSunny.className = "border-2 border-accent-500 bg-accent-50 text-marine-900 py-3 rounded-xl font-bold flex justify-between px-4 items-center transition-colors";
-                btnSunny.querySelector('.check-icon').classList.remove('hidden');
-                
-                btnRainy.className = "border-2 border-gray-200 hover:bg-gray-50 text-gray-500 py-3 rounded-xl font-bold flex justify-between px-4 items-center transition-colors cursor-pointer";
-                btnRainy.querySelector('.check-icon').classList.add('hidden');
-            } else {
-                btnRainy.className = "border-2 border-blue-500 bg-blue-50 text-marine-900 py-3 rounded-xl font-bold flex justify-between px-4 items-center transition-colors";
-                btnRainy.querySelector('.check-icon').classList.remove('hidden');
-                
-                btnSunny.className = "border-2 border-gray-200 hover:bg-gray-50 text-gray-500 py-3 rounded-xl font-bold flex justify-between px-4 items-center transition-colors cursor-pointer";
-                btnSunny.querySelector('.check-icon').classList.add('hidden');
-            }
-        }
-
-        // --- コーススポット編集機能 ---
-        function openCourseEditor(courseId) {
-            editingCourseId = courseId;
-            const isSunny = courseId === 'sunny';
-            document.getElementById('course-editor-title').innerText = isSunny ? "☀️ 晴れの日コースの編集" : "☔️ 雨の日コースの編集";
-            document.getElementById('course-editor-error').classList.add('hidden');
-            
-            const listContainer = document.getElementById('course-editor-list');
-            listContainer.innerHTML = '';
-            
-            const activeIds = customCourses[courseId].spots;
-            
-            ALL_SPOTS.forEach(spot => {
-                const isChecked = activeIds.includes(spot.id);
-                const label = document.createElement('label');
-                label.className = "flex items-center gap-3 p-3 border border-marine-100 rounded-xl hover:bg-marine-50 cursor-pointer transition-colors";
-                label.innerHTML = `
-                    <input type="checkbox" value="${spot.id}" class="w-6 h-6 accent-accent-500 cursor-pointer course-spot-checkbox" ${isChecked ? 'checked' : ''}>
-                    <span class="text-2xl">${spot.icon}</span>
-                    <div class="flex-1">
-                        <div class="font-bold text-marine-900 text-sm">${spot.name}</div>
-                    </div>
-                `;
-                listContainer.appendChild(label);
-            });
-
-            const overlay = document.getElementById('course-editor-overlay');
-            overlay.classList.remove('hidden');
-            setTimeout(() => {
-                overlay.classList.remove('opacity-0');
-                document.getElementById('course-editor-content').classList.remove('scale-95');
-            }, 10);
-        }
-
-        function closeCourseEditor() {
-            const overlay = document.getElementById('course-editor-overlay');
-            overlay.classList.add('opacity-0'); 
-            document.getElementById('course-editor-content').classList.add('scale-95');
-            setTimeout(() => overlay.classList.add('hidden'), 300);
-            editingCourseId = null;
-        }
-
-        function saveCourseEditor() {
-            const checkboxes = document.querySelectorAll('.course-spot-checkbox:checked');
-            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
-            
-            if (selectedIds.length === 0) {
-                document.getElementById('course-editor-error').classList.remove('hidden');
-                const content = document.getElementById('course-editor-content');
-                content.classList.add('animate-screen-shake');
-                setTimeout(() => content.classList.remove('animate-screen-shake'), 350);
-                return;
-            }
-            
-            customCourses[editingCourseId].spots = selectedIds;
-            localStorage.setItem(CONFIG.storageKey + "_custom_courses", JSON.stringify(customCourses));
-            
-            // 編集したコースが現在選択中のコースなら、スタンプをリセットしてUIを更新
-            if (editingCourseId === currentCourseId) {
-                acquiredStamps = [];
-                localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
-                document.getElementById('stamp-grid').innerHTML = '';
-                updateUI();
-            }
-            
-            updateCourseUI();
-            closeCourseEditor();
-        }
-
-        // --- データ初期化機能 ---
-        function resetApplicationData() {
-            const btn = document.getElementById('btn-reset-app');
-            
-            if (!pendingReset) {
-                pendingReset = true;
-                btn.innerHTML = `本当に初期化しますか？<br><span class="text-xs font-normal">(タップで確定して再読み込み)</span>`;
-                btn.className = "w-full bg-red-500 text-white border-2 border-red-600 py-2 rounded-xl font-bold";
-                
-                // 4秒経過でキャンセル
-                setTimeout(() => {
-                    if (pendingReset) {
-                        pendingReset = false;
-                        btn.innerText = "アプリを初期状態にリセット";
-                        btn.className = "w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors";
-                    }
-                }, 4000);
-            } else {
-                // 確定処理：ローカルストレージの該当データをすべて削除してリロード
-                localStorage.removeItem(CONFIG.storageKey);
-                localStorage.removeItem(CONFIG.storageKey + "_course");
-                localStorage.removeItem(CONFIG.storageKey + "_custom_courses");
-                location.reload();
-            }
         }
 
         window.addEventListener('DOMContentLoaded', init);

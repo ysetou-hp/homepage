@@ -1,0 +1,179 @@
+<!-- ブリッジ -->
+<div class="absolute top-[46%] left-[36%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                ブリッジ
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 学生ホール -->
+<div class="absolute top-[54%] left-[32%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                学生ホール
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 学生居室 -->
+<div class="absolute top-[54%] left-[51%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                学生居室
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 制御室 -->
+<div class="absolute top-[58%] left-[45%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                制御室
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 煙突 -->
+<div class="absolute top-[46%] left-[64%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                煙突
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 船尾 -->
+<div class="absolute top-[54%] left-[78%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                船尾
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 電気工作室 -->
+<div class="absolute top-[58%] left-[33%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                電気工作室
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- フライングデッキ -->
+<div class="absolute top-[43%] left-[27%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                フライングデッキ
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 船首 -->
+<div class="absolute top-[50%] left-[6%] w-0 h-0 z-10">
+    <div class="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-[16px]">
+        <div class="map-pin flex items-center origin-[16px_50%] transition-transform duration-75">
+            <div class="bg-white text-marine-900 w-[32px] h-[32px] flex items-center justify-center rounded-full z-10 relative flex-shrink-0 border border-marine-200 shadow-sm">
+                <svg class="w-4 h-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="0" x2="12" y2="6"></line>
+                    <line x1="12" y1="18" x2="12" y2="24"></line>
+                    <line x1="0" y1="12" x2="6" y2="12"></line>
+                    <line x1="18" y1="12" x2="24" y2="12"></line>
+                </svg>
+            </div>
+            <div class="bg-white/95 text-marine-900 text-xs font-bold px-3 py-1 rounded-r-full -ml-2 pl-4 whitespace-nowrap border border-marine-200 border-l-0 shadow-sm">
+                船首
+            </div>
+        </div>
+    </div>
+</div>
