@@ -150,8 +150,7 @@
 
     <script>
         // ==========================================
-        // レイアウト微調整用の初期設定（単位: mm）
-        // 手動数値入力およびドラッグ操作で動的に変更されます
+        // レイアウト微調整用の初期設定
         // ==========================================
         const LAYOUT_CONFIG = {
             titleOffset: '0mm',       // タイトルの上下位置
@@ -160,20 +159,25 @@
             logoTop: 13,              // 校章の上からの位置 (初期値13mm)
             logoLeft: 30,             // 校章の左からの位置 (初期値30mm)
             logoWidth: 30,            // 校章の横幅 (初期値30mm)
-            logoHeight: 30            // 校章の高さ (初期値30mm)
+            logoHeight: 30,           // 校章の高さ (初期値30mm)
+            
+            // --- 追加されたカスタム調整パラメータ ---
+            spotIconSize: 250,         // スポットアイコン画像の縦横サイズ (px単位, 初期値176)
+            spotNameFontSize: '3.0rem' // スポット名のフォントサイズ (CSS単位, 初期値 '5.5rem')
         };
 
         // --- スポットデータ定義 (全9個) ---
+        // 各アイコン画像を icon/ フォルダに配置された指定の画像パスに更新しました
         const ALL_SPOTS = [
-            { id: 'bridge', name: 'ブリッジ', icon: '⚓️', description: '船の操縦を行う場所。見晴らし最高！' },
-            { id: 'student_hall', name: '学生ホール', icon: '👥', description: '学生たちが集まる憩いの場。' },
-            { id: 'student_room', name: '学生居室', icon: '🛏️', description: '学生たちが生活する居住スペース。' },
-            { id: 'control_room', name: '制御室', icon: '🖥️', description: '船の様々な機器を監視・制御する部屋。' },
-            { id: 'chimney', name: '煙突', icon: '💨', description: 'エンジンの排気を行う巨大な煙突。' },
-            { id: 'stern', name: '船尾', icon: '🚢', description: '船の後ろ側。航跡が見えます。' },
-            { id: 'electrical_room', name: '電気工作室', icon: '⚡', description: '電気設備のメンテナンスを行う部屋。' },
-            { id: 'flying_deck', name: 'フライングデッキ', icon: '🔭', description: 'ブリッジの上にある見張所。' },
-            { id: 'bow', name: '船首', icon: '🌊', description: '船の最前部。波を切って進みます。' },
+            { id: 'bridge', name: 'ブリッジ', icon: 'icon/s512_f_object_89_1nbg.png' },
+            { id: 'student_hall', name: '学生ホール', icon: 'icon/s512_f_object_111_1nbg.png' },
+            { id: 'student_room', name: '学生居室', icon: 'icon/s512_f_object_149_0nbg.png' },
+            { id: 'control_room', name: '制御室', icon: 'icon/s512_f_object_151_0nbg.png' },
+            { id: 'chimney', name: '煙突', icon: 'icon/s512_f_object_169_2nbg.png' },
+            { id: 'stern', name: '船尾', icon: 'icon/s512_f_object_174_0nbg.png' },
+            { id: 'electrical_room', name: '電気工作室', icon: 'icon/s512_f_object_102_0nbg.png' },
+            { id: 'flying_deck', name: 'フライングデッキ', icon: 'icon/s512_f_object_81_0nbg.png' },
+            { id: 'bow', name: '船首', icon: 'icon/s512_f_object_152_0nbg.png' },
         ];
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -201,7 +205,7 @@
                     </div>
                 `;
 
-                // コンテンツ部分を定義（中部から説明書き description を削除）
+                // コンテンツ部分を定義（中部を絵文字から画像タグに変更）
                 const content = `
                     <!-- 校章（独立配置、サイズ可変、ドラッグ対応） -->
                     <img src="" class="logo-img hidden absolute object-contain drop-shadow-md z-20" style="top: ${LAYOUT_CONFIG.logoTop}mm; left: ${LAYOUT_CONFIG.logoLeft}mm; width: ${LAYOUT_CONFIG.logoWidth}mm; height: ${LAYOUT_CONFIG.logoHeight}mm;" alt="校章">
@@ -215,10 +219,10 @@
                         </div>
                     </div>
 
-                    <!-- ② 中部：極大アイコンとスポット名 -->
+                    <!-- ② 中部：極大アイコン（画像）とスポット名（LAYOUT_CONFIGのサイズが動的に適用されます） -->
                     <div class="z-10 flex flex-col items-center justify-center flex-1 w-full my-4" style="transform: translateY(${LAYOUT_CONFIG.iconNameOffset});">
-                        <div class="text-[9.5rem] leading-none drop-shadow-xl mb-4">${spot.icon}</div>
-                        <h1 class="text-[5.5rem] font-black text-blue-900 tracking-widest drop-shadow-sm whitespace-nowrap leading-tight">
+                        <img src="${spot.icon}" class="object-contain drop-shadow-lg mb-6" style="width: ${LAYOUT_CONFIG.spotIconSize}px; height: ${LAYOUT_CONFIG.spotIconSize}px;" alt="${spot.name}のアイコン">
+                        <h1 class="font-black text-blue-900 tracking-widest drop-shadow-sm whitespace-nowrap leading-tight" style="font-size: ${LAYOUT_CONFIG.spotNameFontSize};">
                             ${spot.name}
                         </h1>
                     </div>

@@ -10,6 +10,7 @@
     <!-- ======================================================================= -->
     <script>
         const CONFIG = {
+            useLocalMode: true, // true: ./css と ./libs を使う完全ローカル運用 / false: CDNを使うオンライン運用
             storageKey: "yugemaru_stamps_v9_default", // ★キーを更新して古い設定のキャッシュを強制リセット
             isDemoMode: false,
             adminPin: "1234", // 管理メニューを開くための4桁パスワード
@@ -17,7 +18,9 @@
             // 📝 テキスト・リンク設定
             welcomeTitle: "〇〇〇〇中学校の皆様", // ★ホーム画面の一番上のタイトル（オレンジ色）
             welcomeSubtitle: "ようこそ弓削丸へ！", // ★タイトルの横に続くテキスト
-            welcomeMessage: "船長の加藤です。本日は「〇〇〇イベント」にご参加いただきありがとうございます。船内のいろいろな場所を巡りながらスタンプを集めてみましょう。安全に気をつけて弓削丸での時間を楽しんでください！", // ★船長からのメッセージ
+            welcomeMessage: "本日は「〇〇〇イベント」にご参加いただきありがとうございます。\n船内のいろいろな場所を巡りながらスタンプを集めてみましょう。\n安全に気をつけて弓削丸での時間を楽しんでください！", // ★船長からのメッセージ
+            captainGreetingTitle: "初めまして船長の加藤です", // ★船長画像をタップした時のポップアップタイトル
+            captainGreetingMessage: "わからないことがあれば\n遠慮なく声をかけてくださいね。", // ★船長画像をタップした時のポップアップ本文
             surveyUrl: "", // ★アンケートのURL（例: "https://forms.gle/..."。空欄の場合は準備中メッセージが表示されます）
 
             // 🕒 スケジュール設定（項目を増やしたり減らしたりできます）
@@ -46,6 +49,13 @@
                 stamp: "./stamp.png" // スタンプ枠：達成時の画像
             },
 
+            // 🏷️ スタンプ獲得済みカード内の表示サイズ設定（右上の「獲得」画像サイズは変更されません）
+            stampCard: {
+                iconSize: 150, // スポット画像アイコンの縦横サイズ(px)
+                nameFontSize: "25px", // スポット名の文字サイズ
+                nameMarginTop: "0.35rem" // 画像とスポット名の間隔
+            },
+
             // 🚩 アプリ起動時の初期コース設定 ('sunny' または 'rainy')
             defaultCourse: 'sunny',
 
@@ -66,32 +76,47 @@
 
         // --- スポットデータ定義 (全9個) ---
         const ALL_SPOTS = [
-            { id: 'bridge', name: 'ブリッジ', icon: '⚓️', description: '船の操縦を行う場所。見晴らし最高！' },
-            { id: 'student_hall', name: '学生ホール', icon: '👥', description: '学生たちが集まる憩いの場。' },
-            { id: 'student_room', name: '学生居室', icon: '🛏️', description: '学生たちが生活する居住スペース。' },
-            { id: 'control_room', name: '制御室', icon: '🖥️', description: '船の様々な機器を監視・制御する部屋。' },
-            { id: 'chimney', name: '煙突', icon: '💨', description: 'エンジンの排気を行う巨大な煙突。' },
-            { id: 'stern', name: '船尾', icon: '🚢', description: '船の後ろ側。航跡が見えます。' },
-            { id: 'electrical_room', name: '電気工作室', icon: '⚡', description: '電気設備のメンテナンスを行う部屋。' },
-            { id: 'flying_deck', name: 'フライングデッキ', icon: '🔭', description: 'ブリッジの上にある見張所。' },
-            { id: 'bow', name: '船首', icon: '🌊', description: '船の最前部。波を切って進みます。' },
+            { id: 'bridge', name: 'ブリッジ', icon: '⚓️', iconImage: 'icon/s512_f_object_89_1nbg.png', description: '船の操縦を行う場所。見晴らし最高！' },
+            { id: 'student_hall', name: '学生ホール', icon: '👥', iconImage: 'icon/s512_f_object_111_1nbg.png', description: '学生たちが集まる憩いの場。' },
+            { id: 'student_room', name: '学生居室', icon: '🛏️', iconImage: 'icon/s512_f_object_149_0nbg.png', description: '学生たちが生活する居住スペース。' },
+            { id: 'control_room', name: '制御室', icon: '🖥️', iconImage: 'icon/s512_f_object_151_0nbg.png', description: '船の様々な機器を監視・制御する部屋。' },
+            { id: 'chimney', name: '煙突', icon: '💨', iconImage: 'icon/s512_f_object_169_2nbg.png', description: 'エンジンの排気を行う巨大な煙突。' },
+            { id: 'stern', name: '船尾', icon: '🚢', iconImage: 'icon/s512_f_object_174_0nbg.png', description: '船の後ろ側。航跡が見えます。' },
+            { id: 'electrical_room', name: '電気工作室', icon: '⚡', iconImage: 'icon/s512_f_object_102_0nbg.png', description: '電気設備のメンテナンスを行う部屋。' },
+            { id: 'flying_deck', name: 'フライングデッキ', icon: '🔭', iconImage: 'icon/s512_f_object_81_0nbg.png', description: 'ブリッジの上にある見張所。' },
+            { id: 'bow', name: '船首', icon: '🌊', iconImage: 'icon/s512_f_object_152_0nbg.png', description: '船の最前部。波を切って進みます。' },
         ];
+
+        const SPOT_BY_ID = new Map(ALL_SPOTS.map(spot => [spot.id, spot]));
+        const SPOT_BY_ICON = new Map(ALL_SPOTS.map(spot => [spot.icon, spot]));
+        const SPOT_BY_NAME = new Map(ALL_SPOTS.map(spot => [spot.name, spot]));
+
+        if (CONFIG.useLocalMode) {
+            CONFIG.images.badge = "./badge.png";
+        }
     </script>
     <!-- ======================================================================= -->
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!--
+    完全ローカル運用手順:
+    サーバー機で以下を実行:
+    python -m http.server 8000
 
-    <!-- Tailwind CSS (スタイリング) -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    Androidタブレットから以下へアクセス:
+    http://サーバー機のIPアドレス:8000/index.html
+
+    Android Chromeでカメラが起動しない場合:
+    1. サイト設定でカメラ許可を確認
+    2. Chromeのカメラ権限を確認
+    3. 必要に応じて chrome://flags/#unsafely-treat-insecure-origin-as-secure に
+       http://サーバー機IP:8000 を登録して検証
+    -->
     <script>
-        tailwind.config = {
+        const TAILWIND_CONFIG = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                        sans: ['"Noto Sans JP"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Yu Gothic"', '"Meiryo"', 'sans-serif'],
                     },
                     colors: {
                         marine: {
@@ -104,18 +129,18 @@
                             600: '#0284c7',
                             700: '#0369a1',
                             800: '#075985',
-                            900: '#0c4a6e', // 濃紺
+                            900: '#0c4a6e',
                             950: '#082f49',
                         },
                         accent: {
+                            50: '#fffbeb',
                             400: '#fbbf24',
-                            500: '#f59e0b', // オレンジ
+                            500: '#f59e0b',
                             600: '#d97706',
                         }
                     },
                     animation: {
                         'stamp': 'stamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                        // ★ アニメーション時間を 0.5s から 0.8s に変更してゆっくりに
                         'stamp-press': 'stamp-press 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards',
                         'float': 'float 3s ease-in-out infinite',
                         'fade-in': 'fadeIn 0.5s ease-out forwards',
@@ -155,60 +180,69 @@
                     }
                 }
             }
+        };
+
+        if (CONFIG.useLocalMode) {
+            document.write('<link rel="stylesheet" href="./css/app.css">');
+            document.write('<script src="./libs/html5-qrcode.min.js"><\/script>');
+            document.write('<script src="./libs/qrcode.min.js"><\/script>');
+            document.write('<script src="./libs/panzoom.min.js"><\/script>');
+            document.write('<script src="./libs/confetti.browser.min.js"><\/script>');
+        } else {
+            window.tailwind = window.tailwind || {};
+            window.tailwind.config = TAILWIND_CONFIG;
+            document.write('<link rel="preconnect" href="https://fonts.googleapis.com">');
+            document.write('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>');
+            document.write('<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">');
+            document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+            document.write('<link rel="stylesheet" href="./css/app.css">');
+            document.write('<script src="https://unpkg.com/html5-qrcode"><\/script>');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>');
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom/dist/panzoom.min.js"><\/script>');
+            document.write('<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"><\/script>');
         }
     </script>
 
-    <!-- HTML5 QR Code Scanner -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <!-- QRコード生成 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- 🔍 マップの拡大縮小(Panzoom)ライブラリ追加 -->
-    <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom/dist/panzoom.min.js"></script>
-    <!-- 🎉 紙吹雪アニメーションライブラリ -->
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
     <style>
         body {
-            background-color: #f0f9ff; /* marine-50 */
+            background-color: #f0f9ff;
             -webkit-tap-highlight-color: transparent;
         }
-        /* スクロールバー非表示 */
         ::-webkit-scrollbar { display: none; }
         * { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* グラスモーフィズム */
         .glass-panel {
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
-
-        /* QRスキャナーのUI調整 */
-        #reader { 
-            width: 100%; 
-            aspect-ratio: 1 / 1 !important; /* ★強制的に正方形にする */
-            border-radius: 1rem; 
-            overflow: hidden; 
-            border: 4px solid rgba(255,255,255,0.2); 
+        #reader {
+            width: 100%;
+            aspect-ratio: 1 / 1 !important;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 4px solid rgba(255,255,255,0.2);
             background: #000;
         }
-        #reader > div { 
+        #reader > div {
             width: 100% !important;
             height: 100% !important;
         }
-        #reader video { 
+        #reader video {
             width: 100% !important;
             height: 100% !important;
-            object-fit: cover !important; /* ★映像の形を無視して正方形の枠いっぱいに敷き詰める */
-            border-radius: 0.8rem; 
+            object-fit: cover !important;
+            border-radius: 0.8rem;
         }
         #reader__dashboard_section_csr span { color: white !important; }
         #reader__dashboard_section_swaplink { color: #38bdf8 !important; text-decoration: none; }
-
-        /* ナビゲーションアイコンのアクティブ状態 */
         nav button.active svg { color: #f59e0b; }
         nav button.active span { color: #f59e0b; font-weight: 900; }
+        .local-image-fallback {
+            background:
+                linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(245, 158, 11, 0.12)),
+                #e0f2fe;
+        }
     </style>
 </head>
 <body class="text-marine-900 antialiased select-none">
@@ -238,7 +272,7 @@
                 <!-- メッセージ (タブレット対応幅 max-w-2xl) -->
                 <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 mb-6 overflow-hidden">
                     <!-- 画像を左側に回り込みさせる -->
-                    <img id="img-captain" src="" alt="船長" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-white object-cover bg-marine-100 shadow-md float-left mr-4 sm:mr-5 mb-2">
+                    <img id="img-captain" src="" alt="船長" onclick="showCaptainGreeting()" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-white object-cover bg-marine-100 shadow-md float-left mr-4 sm:mr-5 mb-2 cursor-pointer active:scale-95 transition-transform">
                     
                     <!-- タイトルとサブタイトル (画像の右側、横並び) -->
                     <div id="welcome-title-wrapper" class="mb-3">
@@ -710,16 +744,44 @@
         let pendingReset = false; // リセット確認用
 
         function getActiveSpots() {
-            const spotIds = customCourses[currentCourseId].spots;
-            return ALL_SPOTS.filter(spot => spotIds.includes(spot.id));
+            const spotIds = new Set(customCourses[currentCourseId].spots);
+            return ALL_SPOTS.filter(spot => spotIds.has(spot.id));
         }
 
-        function setImgSrc(imgId, src, fallbackUrl) {
+        function spotIconImageHtml(spot, sizePx = 56, extraClass = '') {
+            if (!spot || !spot.iconImage) {
+                return `<span>${spot ? spot.icon : ''}</span>`;
+            }
+            const safeName = spot.name.replace(/"/g, '&quot;');
+            return `<img src="${spot.iconImage}" alt="${safeName}のアイコン" class="object-contain drop-shadow-sm ${extraClass}" style="width:${sizePx}px;height:${sizePx}px;" onerror="this.onerror=null; this.replaceWith(document.createTextNode('${spot.icon}'));">`;
+        }
+
+        function renderModalIcon(icon) {
+            const iconEl = document.getElementById('modal-icon');
+            if (!iconEl) return;
+            if (icon === 'captain') {
+                iconEl.innerHTML = `<img src="${CONFIG.images.captain}" alt="船長" class="object-cover shadow-md mx-auto" style="width:80%; max-width:320px; aspect-ratio:1/1; border-radius:9999px;" onerror="this.onerror=null; this.replaceWith(document.createTextNode('🚢'));">`;
+                return;
+            }
+            const spot = SPOT_BY_ID.get(icon) || SPOT_BY_ICON.get(icon) || SPOT_BY_NAME.get(icon);
+            if (spot && spot.iconImage) {
+                iconEl.innerHTML = spotIconImageHtml(spot, 96, 'mx-auto');
+            } else {
+                iconEl.innerText = icon || '';
+            }
+        }
+
+        function setImgSrc(imgId, src, fallbackUrl = '') {
             const img = document.getElementById(imgId);
             if (!img) return;
             img.onerror = function() {
                 this.onerror = null;
-                this.src = fallbackUrl;
+                if (!CONFIG.useLocalMode && fallbackUrl) {
+                    this.src = fallbackUrl;
+                } else {
+                    this.removeAttribute('src');
+                    this.classList.add('local-image-fallback');
+                }
             };
             img.src = src;
         }
@@ -820,6 +882,14 @@
             }
         }
 
+        function showCaptainGreeting() {
+            showModal(
+                CONFIG.captainGreetingTitle || '船長からのごあいさつ',
+                CONFIG.captainGreetingMessage || '',
+                'captain'
+            );
+        }
+
         // --- 動的スケジュール描画 (時間連動対応) ---
         function renderSchedule() {
             const list = document.getElementById('schedule-list');
@@ -847,6 +917,7 @@
                 }
             }
 
+            const fragment = document.createDocumentFragment();
             CONFIG.schedule.forEach((item, index) => {
                 const isCurrent = index === currentIndex;
                 const isLast = index === CONFIG.schedule.length - 1;
@@ -866,8 +937,9 @@
                     <h3 class="font-black ${timeClass} text-base tracking-wider">${item.time}</h3>
                     <p class="${titleClass} text-sm mt-1">${item.title}</p>
                 `;
-                list.appendChild(li);
+                fragment.appendChild(li);
             });
+            list.appendChild(fragment);
         }
 
         // --- 動的注意事項描画 ---
@@ -881,11 +953,13 @@
                 return;
             }
 
+            const fragment = document.createDocumentFragment();
             CONFIG.notices.forEach(notice => {
                 const li = document.createElement('li');
                 li.innerText = notice;
-                list.appendChild(li);
+                fragment.appendChild(li);
             });
+            list.appendChild(fragment);
         }
 
         // --- マップズーム機能 ---
@@ -956,16 +1030,16 @@
             const barEl = document.getElementById('stamp-progress-bar');
             if (barEl) barEl.style.width = `${percent}%`;
             
-            renderStampGrid();
-            updateMapPins();
+            renderStampGrid(activeSpots);
+            updateMapPins(activeSpots);
         }
 
         // --- マップピン表示更新 ---
-        function updateMapPins() {
-            const activeSpotIds = getActiveSpots().map(s => s.id);
+        function updateMapPins(activeSpots = getActiveSpots()) {
+            const activeSpotIds = new Set(activeSpots.map(s => s.id));
             document.querySelectorAll('.map-pin-wrapper').forEach(wrapper => {
                 const spotId = wrapper.getAttribute('data-spot-id');
-                if (activeSpotIds.includes(spotId)) {
+                if (activeSpotIds.has(spotId)) {
                     wrapper.classList.remove('hidden');
                 } else {
                     wrapper.classList.add('hidden');
@@ -974,9 +1048,14 @@
         }
 
         // --- スタンプグリッド描画 (差分更新対応) ---
-        function renderStampGrid() {
+        function renderStampGrid(activeSpots = getActiveSpots()) {
             const grid = document.getElementById('stamp-grid');
-            const activeSpots = getActiveSpots();
+            const acquiredSet = new Set(acquiredStamps);
+            const demoModeValue = String(CONFIG.isDemoMode);
+            const stampCard = CONFIG.stampCard || {};
+            const iconSize = Number(stampCard.iconSize) || 76;
+            const nameFontSize = stampCard.nameFontSize || "14px";
+            const nameMarginTop = stampCard.nameMarginTop || "0.35rem";
             
             // カラム数を動的に変更 (6個なら3列、それ以上なら4列)
             grid.className = `grid gap-4 w-full max-w-2xl mb-8 ${activeSpots.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`;
@@ -991,17 +1070,17 @@
             }
 
             activeSpots.forEach((spot, index) => {
-                const isAcquired = acquiredStamps.includes(spot.id);
+                const isAcquired = acquiredSet.has(spot.id);
                 const cell = document.getElementById(`stamp-cell-${spot.id}`);
                 
                 // 既に状態が反映されていれば、再描画をスキップ（チラつき・他のスタンプが動く現象を防止）
-                if (cell.dataset.acquired === String(isAcquired) && cell.dataset.demo === String(CONFIG.isDemoMode)) {
+                if (cell.dataset.acquired === String(isAcquired) && cell.dataset.demo === demoModeValue) {
                     return;
                 }
 
                 // 現在の状態を記録
                 cell.dataset.acquired = String(isAcquired);
-                cell.dataset.demo = String(CONFIG.isDemoMode);
+                cell.dataset.demo = demoModeValue;
 
                 cell.className = `aspect-[3/4] rounded-xl relative overflow-hidden flex flex-col items-center justify-center p-2 transition-all duration-200 ${isAcquired ? 'bg-white shadow-md border-2 border-accent-400' : 'bg-marine-100/50 border-2 border-dashed border-marine-200'}`;
                 
@@ -1017,10 +1096,10 @@
                     // ★ ここの画像のクラス -right-3 を right-0 に変更（少し左に寄ります）
                     cell.innerHTML = `
                         <div class="flex flex-col items-center mt-6">
-                            <div class="text-4xl mb-2 text-marine-900">${spot.icon}</div>
-                            <div class="font-bold text-[11px] text-marine-900 whitespace-nowrap">${spot.name}</div>
+                            <div class="flex items-center justify-center">${spotIconImageHtml(spot, iconSize)}</div>
+                            <div class="font-bold text-marine-900 whitespace-nowrap" style="font-size:${nameFontSize}; margin-top:${nameMarginTop};">${spot.name}</div>
                         </div>
-                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp';">
+                        <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; if (CONFIG.useLocalMode) { this.remove(); } else { this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp'; }">
                     `;
                 } else {
                     cell.innerHTML = `
@@ -1041,7 +1120,7 @@
             } catch (err) {
                 console.error(err);
                 stopScanner();
-                showModal('カメラエラー', 'カメラの起動に失敗しました。\nブラウザの設定を確認してください。', '📷');
+                showModal('カメラエラー', 'カメラの起動に失敗しました。\nAndroidタブレットのChrome設定、カメラ権限、またはローカル接続設定を確認してください。', '📷');
             }
         }
 
@@ -1062,10 +1141,11 @@
         async function processStamp(scannedId) {
             const id = scannedId.trim();
             const activeSpots = getActiveSpots();
-            const spot = activeSpots.find(s => s.id === id);
+            const activeSpotIds = new Set(activeSpots.map(s => s.id));
+            const spot = activeSpotIds.has(id) ? SPOT_BY_ID.get(id) : null;
             
             if (!spot) { showModal('エラー', '無効なQRコード、または現在のコースに含まれていないスポットです。', '❓'); return; }
-            if (acquiredStamps.includes(id)) { showModal('お知らせ', '取得済みです！', spot.icon); return; }
+            if (acquiredStamps.includes(id)) { showModal('お知らせ', '取得済みです！', spot.id); return; }
 
             switchView('stamp');
             
@@ -1089,7 +1169,7 @@
                 
                 // 紙吹雪のあとにポップアップを表示
                 setTimeout(() => {
-                    showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.icon);
+                    showModal('スタンプGET！', `${spot.name}のスタンプを獲得しました！\n\n${spot.description}`, spot.id);
                 }, 800);
             }
         }
@@ -1131,7 +1211,11 @@
                     
                     stampEl.onerror = function() {
                         this.onerror = null;
-                        this.src = 'https://placehold.co/200x200/transparent/94a3b8?text=Stamp';
+                        if (CONFIG.useLocalMode) {
+                            this.remove();
+                        } else {
+                            this.src = 'https://placehold.co/200x200/transparent/94a3b8?text=Stamp';
+                        }
                     };
                     cell.appendChild(stampEl);
 
@@ -1167,7 +1251,7 @@
         function showModal(title, message, icon = '', qrText = '') {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-message').innerText = message;
-            document.getElementById('modal-icon').innerText = icon;
+            renderModalIcon(icon);
             
             const qrWrapper = document.getElementById('modal-qr-wrapper');
             const qrContainer = document.getElementById('modal-qr-container');
@@ -1274,12 +1358,16 @@
         function generateTestQRs() {
             const container = document.getElementById('qr-container');
             container.innerHTML = ''; // 再生成のため一度クリア
+            const fragment = document.createDocumentFragment();
             
             // コース設定に関わらず全9カ所のQRコードを常に生成する
             ALL_SPOTS.forEach(spot => {
                 const wrapper = document.createElement('div'); wrapper.className = 'flex flex-col items-center p-3 border border-marine-200 rounded-xl bg-white';
                 wrapper.innerHTML = `<div class="font-bold text-xs text-marine-900 mb-2">${spot.name}</div><div id="qr-${spot.id}" class="bg-white p-1"></div><div class="text-[10px] text-gray-400 mt-2 font-mono">${spot.id}</div>`;
-                container.appendChild(wrapper);
+                fragment.appendChild(wrapper);
+            });
+            container.appendChild(fragment);
+            ALL_SPOTS.forEach(spot => {
                 new QRCode(document.getElementById(`qr-${spot.id}`), { text: spot.id, width: 80, height: 80, colorDark : "#0c4a6e", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
             });
         }
@@ -1358,21 +1446,23 @@
             const listContainer = document.getElementById('course-editor-list');
             listContainer.innerHTML = '';
             
-            const activeIds = customCourses[courseId].spots;
+            const activeIds = new Set(customCourses[courseId].spots);
+            const fragment = document.createDocumentFragment();
             
             ALL_SPOTS.forEach(spot => {
-                const isChecked = activeIds.includes(spot.id);
+                const isChecked = activeIds.has(spot.id);
                 const label = document.createElement('label');
                 label.className = "flex items-center gap-3 p-3 border border-marine-100 rounded-xl hover:bg-marine-50 cursor-pointer transition-colors";
                 label.innerHTML = `
                     <input type="checkbox" value="${spot.id}" class="w-6 h-6 accent-accent-500 cursor-pointer course-spot-checkbox" ${isChecked ? 'checked' : ''}>
-                    <span class="text-2xl">${spot.icon}</span>
+                    <span class="flex items-center justify-center" style="width:40px;height:40px;">${spotIconImageHtml(spot, 40)}</span>
                     <div class="flex-1">
                         <div class="font-bold text-marine-900 text-sm">${spot.name}</div>
                     </div>
                 `;
-                listContainer.appendChild(label);
+                fragment.appendChild(label);
             });
+            listContainer.appendChild(fragment);
 
             const overlay = document.getElementById('course-editor-overlay');
             overlay.classList.remove('hidden');
