@@ -1,0 +1,33 @@
+# Ignore everything by default.
+*
+
+# Keep this ignore rule file.
+!.gitignore
+
+# Main app.
+!index.html
+
+# Local libraries required when CONFIG.useLocalMode is true.
+!libs/
+!libs/html5-qrcode.min.js
+!libs/qrcode.min.js
+!libs/panzoom.min.js
+!libs/confetti.browser.min.js
+
+# Local images required by index.html.
+!map.jpg
+!captain.jpg
+!stamp.png
+!badge.png
+
+# Spot icons used by index.html.
+!icon/
+!icon/s512_f_object_89_1nbg.png
+!icon/s512_f_object_111_1nbg.png
+!icon/s512_f_object_149_0nbg.png
+!icon/f_f_object_112_s512_f_object_112_0nbg.png
+!icon/s512_f_object_169_2nbg.png
+!icon/s512_f_object_174_0nbg.png
+!icon/f_f_object_94_s512_f_object_94_1nbg.png
+!icon/f_f_object_95_s512_f_object_95_1nbg.png
+!icon/s512_f_object_152_0nbg.png

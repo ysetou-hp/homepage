@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>弓削丸スタンプラリー - ポスター一括印刷</title>
+    <title>一括印刷</title>
     
     <!-- Tailwind CSS (CDN) -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -155,7 +155,7 @@
         const LAYOUT_CONFIG = {
             titleOffset: '0mm',       // タイトルの上下位置
             iconNameOffset: '0mm',    // アイコンとスポット名の上下位置
-            qrOffset: '10mm',         // QRコードの上下位置
+            qrOffset: '0mm',         // QRコードの上下位置
             logoTop: 13,              // 校章の上からの位置 (初期値13mm)
             logoLeft: 30,             // 校章の左からの位置 (初期値30mm)
             logoWidth: 30,            // 校章の横幅 (初期値30mm)
@@ -163,7 +163,7 @@
             
             // --- 追加されたカスタム調整パラメータ ---
             spotIconSize: 250,         // スポットアイコン画像の縦横サイズ (px単位, 初期値176)
-            spotNameFontSize: '3.0rem' // スポット名のフォントサイズ (CSS単位, 初期値 '5.5rem')
+            spotNameFontSize: '2.5rem' // スポット名のフォントサイズ (CSS単位, 初期値 '5.5rem')
         };
 
         // --- スポットデータ定義 (全9個) ---
@@ -172,11 +172,11 @@
             { id: 'bridge', name: 'ブリッジ', icon: 'icon/s512_f_object_89_1nbg.png' },
             { id: 'student_hall', name: '学生ホール', icon: 'icon/s512_f_object_111_1nbg.png' },
             { id: 'student_room', name: '学生居室', icon: 'icon/s512_f_object_149_0nbg.png' },
-            { id: 'control_room', name: '制御室', icon: 'icon/s512_f_object_151_0nbg.png' },
+            { id: 'control_room', name: '制御室', icon: 'icon/f_f_object_112_s512_f_object_112_0nbg.png' },
             { id: 'chimney', name: '煙突', icon: 'icon/s512_f_object_169_2nbg.png' },
             { id: 'stern', name: '船尾', icon: 'icon/s512_f_object_174_0nbg.png' },
-            { id: 'electrical_room', name: '電気工作室', icon: 'icon/s512_f_object_102_0nbg.png' },
-            { id: 'flying_deck', name: 'フライングデッキ', icon: 'icon/s512_f_object_81_0nbg.png' },
+            { id: 'electrical_room', name: '電気工作室', icon: 'icon/f_f_object_94_s512_f_object_94_1nbg.png' },
+            { id: 'flying_deck', name: 'フライングデッキ', icon: 'icon/f_f_object_95_s512_f_object_95_1nbg.png' },
             { id: 'bow', name: '船首', icon: 'icon/s512_f_object_152_0nbg.png' },
         ];
 
@@ -198,7 +198,7 @@
                         <!-- 内枠 (マリンブルー) -->
                         <div class="absolute inset-2 border-4 border-sky-400 rounded-2xl pointer-events-none"></div>
                         <!-- 船の窓（舷窓）をイメージした四隅の装飾 -->
-                        <div class="absolute top-4 left-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
+                        <div class="hidden absolute top-4 left-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
                         <div class="absolute top-4 right-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
                         <div class="absolute bottom-4 left-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
                         <div class="absolute bottom-4 right-4 w-10 h-10 bg-blue-900 rounded-full border-4 border-white shadow-inner"></div>
@@ -213,8 +213,8 @@
                     <!-- ① 上部：タイトル -->
                     <div class="z-10 w-full flex justify-center items-center mt-4" style="transform: translateY(${LAYOUT_CONFIG.titleOffset});">
                         <div class="bg-white px-8 py-3 rounded-full border-4 border-sky-400 shadow-sm">
-                            <h2 class="text-3xl font-black text-blue-900 tracking-widest m-0">
-                                弓削丸デジタルスタンプラリー
+                            <h2 class="text-3xl font-black text-blue-900 tracking-widest m-0 text-center">
+                                内航総連  <span class="text-lg">presents</span><br>デジタルスタンプラリー
                             </h2>
                         </div>
                     </div>
