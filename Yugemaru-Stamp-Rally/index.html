@@ -17,6 +17,15 @@
             storageKey: "yugemaru_stamps_v9_default", // 内容を大きく変更した時は末尾の番号などを変えると、古い端末データをリセットできます。
             isDemoMode: false, // 通常は false。起動直後から設定モードにしたい時だけ true にします。
             adminPin: "1234", // 設定メニューを開くための4桁パスワード
+            sound: {
+                enabled: true, // スタンプ獲得時の効果音を鳴らす場合は true、無音にする場合は false
+                volume: 0.25, // 0.0〜1.0。会場で聞こえすぎる場合は 0.15 などに下げます。
+                stampFile: "./sounds/Party_Popper01-2(Reverb).mp3", // 紙吹雪の破裂音
+                applauseFile: "./sounds/Applause03-5(Far-Mid).mp3", // 紙吹雪がちらついているときの拍手
+                applauseDelayMs: 350, // 破裂音から拍手を鳴らすまでの待ち時間
+                completeFile: "./sounds/ooatari1.mp3", // コンプリート時の音楽
+                useFallbackTone: true // 音声ファイルが未配置・再生失敗の時、内蔵の短い音を鳴らします。
+            },
             
             // ホーム画面の文章
             welcomeTitle: "〇〇〇〇中学校の皆様",
@@ -811,6 +820,8 @@
         let customCourses = null;
         let editingCourseId = null;
         let pendingReset = false; // リセット確認用
+        let stampAudioContext = null;
+        const stampSoundElements = {};
 
         function getActiveSpots() {
             const spotIds = new Set(customCourses[currentCourseId].spots);
@@ -1091,7 +1102,7 @@
                 contain: false,
                 panOnlyWhenZoomed: true,
                 step: 0.6,
-                origin: '0 0'
+                origin: '50% 50%'
             });
 
             wrapper.addEventListener('wheel', function(e) {
@@ -1104,8 +1115,15 @@
                 const scale = e.detail.scale;
                 if (zoomRaf) cancelAnimationFrame(zoomRaf);
                 zoomRaf = requestAnimationFrame(() => {
+                    const isBaseScale = scale <= 1.001;
+                    if (isBaseScale) {
+                        const pan = mapPanzoom.getPan();
+                        if (Math.abs(pan.x) > 0.5 || Math.abs(pan.y) > 0.5) {
+                            mapPanzoom.pan(0, 0, { animate: true, contain: false, force: true });
+                        }
+                    }
                     document.querySelectorAll('.map-pin').forEach(pin => {
-                        pin.style.transform = `scale(${1 / scale})`;
+                        pin.style.transform = `scale(${isBaseScale ? 1 : 1 / scale})`;
                     });
                 });
             });
@@ -1153,13 +1171,30 @@
             if (!elem || !wrapper) return;
 
             const targetScale = Number(CONFIG.mapFocusZoomScale) || 3;
-            const pinX = pinWrapper.offsetLeft;
-            const pinY = pinWrapper.offsetTop;
-            const targetX = (wrapper.clientWidth / (2 * targetScale)) - pinX;
-            const targetY = (wrapper.clientHeight / (2 * targetScale)) - pinY;
+            const currentScale = mapPanzoom.getScale();
+            const currentPan = mapPanzoom.getPan();
+            const wrapperRect = wrapper.getBoundingClientRect();
+            const icon = pinWrapper.querySelector('.map-pin-icon') || pinWrapper;
+            const iconRect = icon.getBoundingClientRect();
+            const origin = {
+                x: elem.clientWidth / 2,
+                y: elem.clientHeight / 2
+            };
+            const iconScreen = {
+                x: iconRect.left + iconRect.width / 2 - wrapperRect.left,
+                y: iconRect.top + iconRect.height / 2 - wrapperRect.top
+            };
+            const iconLocal = {
+                x: (iconScreen.x - (1 - currentScale) * origin.x) / currentScale - currentPan.x,
+                y: (iconScreen.y - (1 - currentScale) * origin.y) / currentScale - currentPan.y
+            };
+            const targetPan = {
+                x: (wrapper.clientWidth / 2 - (1 - targetScale) * origin.x) / targetScale - iconLocal.x,
+                y: (wrapper.clientHeight / 2 - (1 - targetScale) * origin.y) / targetScale - iconLocal.y
+            };
 
             mapPanzoom.zoom(targetScale, { animate: true });
-            mapPanzoom.pan(targetX, targetY, { animate: true, contain: false, force: true });
+            mapPanzoom.pan(targetPan.x, targetPan.y, { animate: true, contain: false, force: true });
             document.querySelectorAll('.map-pin').forEach(pin => {
                 pin.style.transform = `scale(${1 / targetScale})`;
             });
@@ -1391,7 +1426,8 @@
                     triggerComplete();
                 }, 300);
             } else {
-                // スタンプ動作の直後に紙吹雪
+                // スタンプ動作の直後に効果音と紙吹雪
+                playStampCelebrationSound();
                 fireConfetti();
                 
                 // 紙吹雪のあとにポップアップを表示
@@ -1402,6 +1438,127 @@
         }
 
         // --- 演出関連 ---
+        function getStampAudioContext() {
+            if (!CONFIG.sound || CONFIG.sound.enabled === false || CONFIG.sound.useFallbackTone === false) return null;
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return null;
+            if (!stampAudioContext) {
+                stampAudioContext = new AudioContextClass();
+            }
+            return stampAudioContext;
+        }
+
+        function getStampSoundFile(type = 'stamp') {
+            if (!CONFIG.sound || CONFIG.sound.enabled === false) return '';
+            if (type === 'complete') return CONFIG.sound.completeFile;
+            if (type === 'applause') return CONFIG.sound.applauseFile;
+            return CONFIG.sound.stampFile;
+        }
+
+        function getStampSoundElement(type = 'stamp') {
+            const soundFile = getStampSoundFile(type);
+            if (!soundFile) return null;
+            if (!stampSoundElements[type] || stampSoundElements[type].src.indexOf(soundFile) === -1) {
+                const audio = new Audio(soundFile);
+                audio.preload = 'auto';
+                stampSoundElements[type] = audio;
+            }
+            stampSoundElements[type].volume = Math.min(Math.max(Number(CONFIG.sound.volume) || 0.25, 0), 1);
+            return stampSoundElements[type];
+        }
+
+        function unlockStampAudio() {
+            ['stamp', 'applause', 'complete'].forEach(type => {
+                const audio = getStampSoundElement(type);
+                if (audio) audio.load();
+            });
+
+            const audioContext = getStampAudioContext();
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => {});
+            }
+        }
+
+        function playFallbackStampSound(type = 'stamp') {
+            const audioContext = getStampAudioContext();
+            if (!audioContext) return;
+
+            const startSound = () => {
+                const volume = Math.min(Math.max(Number(CONFIG.sound.volume) || 0.25, 0), 1);
+                const startAt = audioContext.currentTime + 0.02;
+                const masterGain = audioContext.createGain();
+                masterGain.gain.setValueAtTime(volume, startAt);
+                masterGain.connect(audioContext.destination);
+
+                const playTone = (frequency, offset, duration, waveType = 'sine', peak = 1) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    const toneStart = startAt + offset;
+                    const toneEnd = toneStart + duration;
+
+                    oscillator.type = waveType;
+                    oscillator.frequency.setValueAtTime(frequency, toneStart);
+                    gain.gain.setValueAtTime(0.001, toneStart);
+                    gain.gain.exponentialRampToValueAtTime(Math.max(0.001, peak), toneStart + 0.025);
+                    gain.gain.exponentialRampToValueAtTime(0.001, toneEnd);
+
+                    oscillator.connect(gain);
+                    gain.connect(masterGain);
+                    oscillator.start(toneStart);
+                    oscillator.stop(toneEnd + 0.03);
+                };
+
+                if (type === 'complete') {
+                    playTone(523.25, 0.00, 0.16, 'triangle', 0.70);
+                    playTone(659.25, 0.12, 0.16, 'triangle', 0.78);
+                    playTone(783.99, 0.24, 0.18, 'triangle', 0.86);
+                    playTone(1046.50, 0.38, 0.34, 'sine', 0.95);
+                    playTone(261.63, 0.00, 0.55, 'sine', 0.28);
+                    setTimeout(() => masterGain.disconnect(), 1100);
+                    return;
+                }
+
+                playTone(392.00, 0.00, 0.10, 'triangle', 0.65);
+                playTone(587.33, 0.08, 0.12, 'triangle', 0.78);
+                playTone(783.99, 0.18, 0.20, 'sine', 0.90);
+                playTone(196.00, 0.00, 0.16, 'sine', 0.25);
+                setTimeout(() => masterGain.disconnect(), 700);
+            };
+
+            if (audioContext.state === 'suspended') {
+                audioContext.resume().then(startSound).catch(() => {});
+            } else {
+                startSound();
+            }
+        }
+
+        function playStampSound(type = 'stamp') {
+            if (!CONFIG.sound || CONFIG.sound.enabled === false) return;
+
+            if (type === 'complete' && !getStampSoundFile('complete')) return;
+
+            const audio = getStampSoundElement(type);
+            if (!audio) {
+                playFallbackStampSound(type);
+                return;
+            }
+
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = Math.min(Math.max(Number(CONFIG.sound.volume) || 0.25, 0), 1);
+            audio.play().catch(() => playFallbackStampSound(type));
+        }
+
+        function playStampCelebrationSound() {
+            playStampSound('stamp');
+            const applauseDelay = Number(CONFIG.sound.applauseDelayMs) || 350;
+            if (getStampSoundFile('applause')) {
+                setTimeout(() => playStampSound('applause'), applauseDelay);
+            }
+        }
+
+        window.addEventListener('pointerdown', unlockStampAudio, { once: true, passive: true });
+        window.addEventListener('keydown', unlockStampAudio, { once: true });
         // 通常のスタンプ獲得時の紙吹雪
         function fireConfetti() {
             if (typeof confetti !== 'function') return;
@@ -1498,6 +1655,7 @@
             if (badgeImg) badgeImg.src = CONFIG.images.badge;
             
             overlay.classList.remove('hidden');
+            playStampSound('complete');
             fireFallingConfetti();
 
             // 約3.5秒後にフェードアウトさせて通常のモーダルへ移行
