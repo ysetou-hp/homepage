@@ -56,9 +56,7 @@
                 badge:
                     "https://placehold.co/200x200/fbbf24/0c4a6e?text=" +
                     "記念バッジ&font=Noto+Sans+JP", // 全達成時の記念バッジ
-                stamp: "./stamp.png", // スタンプ獲得済み画像
-                puzzleComplete: "./kamirin04.png", // スタンプ画面の影・コンプリート演出・演出後表示に使う透過PNG
-                complete: "./kamirin04.png" // 互換用。通常は puzzleComplete を変更してください。
+                stamp: "./stamp.png" // スタンプ獲得済み画像
             },
 
             // ================================================================
@@ -316,57 +314,6 @@
             background:
                 linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(245, 158, 11, 0.12)),
                 #e0f2fe;
-        }
-        #view-stamp { position: relative; overflow: visible; }
-        .stamp-puzzle-bg {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 90%;
-            aspect-ratio: 1 / 1;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, 1fr);
-            gap: 7px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 0;
-        }
-        .stamp-puzzle-bg.is-complete {
-            display: block;
-            z-index: 40;
-        }
-        .stamp-puzzle-piece {
-            position: relative;
-            overflow: hidden;
-            border-radius: 10px;
-            mix-blend-mode: multiply;
-            transition: opacity 700ms ease-out, transform 700ms ease-out;
-        }
-        .stamp-puzzle-bg.is-complete .stamp-puzzle-piece {
-            display: none;
-        }
-        .stamp-puzzle-piece-img {
-            position: absolute;
-            width: 300%;
-            height: 200%;
-            max-width: none;
-            object-fit: fill;
-            filter: brightness(0);
-            opacity: 1;
-        }
-        .stamp-puzzle-complete-img {
-            display: none;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            filter: none;
-        }
-        .stamp-puzzle-bg.is-complete .stamp-puzzle-complete-img {
-            display: block;
-        }
-        @media (max-width: 420px) {
-            .stamp-puzzle-bg { width: 90%; }
         }
     </style>
 </head>
@@ -641,11 +588,8 @@
                 </div>
 
                 <!-- スタンプグリッド (8個) -->
-                <div class="relative w-full max-w-2xl mb-8">
-                    <div id="stamp-puzzle-bg" class="stamp-puzzle-bg" aria-hidden="true"></div>
-                    <div id="stamp-grid" class="grid grid-cols-4 gap-4 w-full relative z-10">
-                        <!-- JSで生成 -->
-                    </div>
+                <div id="stamp-grid" class="grid grid-cols-4 gap-4 w-full max-w-2xl mb-8">
+                    <!-- JSで生成 -->
                 </div>
                 
                 <!-- 新機能: 船や海の豆知識 -->
@@ -837,7 +781,7 @@
 
             <div class="relative z-10 flex flex-col items-center animate-zoom-in">
                 <div class="absolute inset-0 bg-accent-400 blur-[80px] opacity-80 rounded-full animate-pulse"></div>
-                <img id="complete-badge-img" src="" alt="コンプリート画像" class="object-contain drop-shadow-xl mb-6 relative z-10" style="width:min(90vw, 37.8rem); aspect-ratio:1/1;">
+                <img id="complete-badge-img" src="" class="w-64 h-64 object-contain drop-shadow-xl mb-6 relative z-10">
                 <div class="text-3xl md:text-4xl font-black text-marine-900 drop-shadow-lg text-center tracking-widest bg-white/95 px-8 py-4 rounded-full border-4 border-accent-400 relative z-10">
                     コンプリート
                 </div>
@@ -876,7 +820,6 @@
         let customCourses = null;
         let editingCourseId = null;
         let pendingReset = false; // リセット確認用
-        let stampPuzzleCompleteRevealed = false;
         let stampAudioContext = null;
         const stampSoundElements = {};
 
@@ -904,64 +847,21 @@
 
         function acquiredStampCellHtml(spot, settings = getStampCardSettings()) {
             return `
-                <div class="relative z-30 flex flex-col items-center mt-6">
+                <div class="flex flex-col items-center mt-6">
                     <div class="flex items-center justify-center">${spotIconImageHtml(spot, settings.iconSize)}</div>
                     <div class="font-bold text-marine-900 whitespace-nowrap" style="font-size:${settings.nameFontSize}; margin-top:${settings.nameMarginTop};">${spot.name}</div>
                 </div>
-                <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-30 pointer-events-none drop-shadow-md" onerror="this.onerror=null; if (CONFIG.useLocalMode) { this.remove(); } else { this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp'; }">
+                <img src="${CONFIG.images.stamp}" alt="達成" class="absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-20 pointer-events-none drop-shadow-md" onerror="this.onerror=null; if (CONFIG.useLocalMode) { this.remove(); } else { this.src='https://placehold.co/200x200/transparent/94a3b8?text=Stamp'; }">
             `;
         }
 
         function preloadStampAssets() {
-            [...ALL_SPOTS.map(spot => spot.iconImage), CONFIG.images.stamp, CONFIG.images.puzzleComplete, CONFIG.images.complete].filter(Boolean).forEach(src => {
+            [...ALL_SPOTS.map(spot => spot.iconImage), CONFIG.images.stamp].filter(Boolean).forEach(src => {
                 const img = new Image();
                 img.src = src;
             });
         }
 
-        function renderStampPuzzleBackground(count = acquiredStamps.length, total = getActiveSpots().length) {
-            const puzzle = document.getElementById('stamp-puzzle-bg');
-            const imageSrc = CONFIG.images.puzzleComplete || CONFIG.images.complete || CONFIG.images.badge;
-            if (!puzzle || !imageSrc) return;
-
-            let pieces = Array.from(puzzle.querySelectorAll('.stamp-puzzle-piece'));
-            let completeImg = puzzle.querySelector('.stamp-puzzle-complete-img');
-
-            if (pieces.length !== 6 || !completeImg) {
-                puzzle.innerHTML = '';
-                for (let i = 0; i < 6; i++) {
-                    const piece = document.createElement('div');
-                    piece.className = 'stamp-puzzle-piece';
-                    const col = i % 3;
-                    const row = Math.floor(i / 3);
-                    const img = document.createElement('img');
-                    img.className = 'stamp-puzzle-piece-img';
-                    img.src = imageSrc;
-                    img.alt = '';
-                    img.style.left = (-col * 100) + '%';
-                    img.style.top = (-row * 100) + '%';
-                    piece.appendChild(img);
-                    puzzle.appendChild(piece);
-                }
-
-                completeImg = document.createElement('img');
-                completeImg.className = 'stamp-puzzle-complete-img';
-                completeImg.alt = 'コンプリート画像';
-                puzzle.appendChild(completeImg);
-                pieces = Array.from(puzzle.querySelectorAll('.stamp-puzzle-piece'));
-            }
-
-            completeImg.src = imageSrc;
-            const isComplete = total > 0 && count >= total;
-            puzzle.classList.toggle('is-complete', isComplete && stampPuzzleCompleteRevealed);
-
-            const completedPieces = total > 0 ? Math.min(6, Math.round((count / total) * 6)) : 0;
-            pieces.forEach((piece, index) => {
-                const isVisible = index < completedPieces;
-                piece.style.opacity = isVisible ? '0.36' : '0.10';
-                piece.style.transform = isVisible ? 'scale(1.015)' : 'scale(1)';
-            });
-        }
         function prepareAcquiredStampCell(spot) {
             const cell = document.getElementById(`stamp-cell-${spot.id}`);
             if (!cell) return;
@@ -1378,7 +1278,7 @@
             const activeSpots = getActiveSpots();
             const count = acquiredStamps.length;
             const total = activeSpots.length;
-            const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+            const percent = Math.round((count / total) * 100);
 
             const countEl = document.getElementById('stamp-progress-count-main');
             if (countEl) countEl.innerText = count;
@@ -1387,7 +1287,6 @@
 
             const barEl = document.getElementById('stamp-progress-bar');
             if (barEl) barEl.style.width = `${percent}%`;
-            renderStampPuzzleBackground(count, total);
             
             renderStampGrid(activeSpots);
             updateMapPins(activeSpots);
@@ -1414,7 +1313,7 @@
             const stampCardSettings = getStampCardSettings();
             
             // カラム数を動的に変更 (6個なら3列、それ以上なら4列)
-            grid.className = `grid gap-4 w-full relative z-10 ${activeSpots.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`;
+            grid.className = `grid gap-4 w-full max-w-2xl mb-8 ${activeSpots.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`;
             
             // 初回のみ空のセル枠を生成
             if (grid.children.length === 0) {
@@ -1453,7 +1352,7 @@
                     cell.innerHTML = acquiredStampCellHtml(spot, stampCardSettings);
                 } else {
                     cell.innerHTML = `
-                        <div class="relative z-30 text-3xl font-black text-marine-200 mt-6">${index + 1}</div>
+                        <div class="text-3xl font-black text-marine-200 mt-6">${index + 1}</div>
                     `;
                 }
             });
@@ -1753,7 +1652,7 @@
         function triggerComplete() {
             const overlay = document.getElementById('complete-overlay');
             const badgeImg = document.getElementById('complete-badge-img');
-            if (badgeImg) badgeImg.src = CONFIG.images.puzzleComplete || CONFIG.images.complete || CONFIG.images.badge;
+            if (badgeImg) badgeImg.src = CONFIG.images.badge;
             
             overlay.classList.remove('hidden');
             playStampSound('complete');
@@ -1765,8 +1664,6 @@
                 setTimeout(() => {
                     overlay.classList.add('hidden');
                     overlay.classList.remove('animate-fade-out');
-                    stampPuzzleCompleteRevealed = true;
-                    renderStampPuzzleBackground(acquiredStamps.length, getActiveSpots().length);
                     showModal('🎉 コンプリート 🎉', 'おめでとうございます！\nすべてのスタンプを集めました。', '');
                 }, 500);
             }, 3500);
@@ -1873,7 +1770,6 @@
             if (!CONFIG.isDemoMode) return;
             if (acquiredStamps.includes(id)) {
                 acquiredStamps = acquiredStamps.filter(stampId => stampId !== id);
-                stampPuzzleCompleteRevealed = false;
                 localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
                 updateUI();
             } else {
@@ -1928,7 +1824,6 @@
             
             // スタンプ状態をリセット
             acquiredStamps = []; 
-            stampPuzzleCompleteRevealed = false;
             localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
             
             document.getElementById('stamp-grid').innerHTML = ''; // グリッド枠を再生成させる
@@ -2025,8 +1920,7 @@
             // 編集したコースが現在選択中のコースなら、スタンプをリセットしてUIを更新
             if (editingCourseId === currentCourseId) {
                 acquiredStamps = [];
-                stampPuzzleCompleteRevealed = false;
-            localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
+                localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
                 document.getElementById('stamp-grid').innerHTML = '';
                 updateUI();
             }
