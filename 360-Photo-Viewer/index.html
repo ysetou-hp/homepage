@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>360度写真ビューア</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 320px;
+      height: 100vh;
+      z-index: 9999;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25);
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding: 12px;
+    }
+
+    #sidebar h2 {
+      font-size: 18px;
+      margin: 0 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .photo-button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      font-size: 13px;
+      padding: 9px 8px;
+      margin-bottom: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #ffffff;
+      cursor: pointer;
+      box-sizing: border-box;
+      word-break: break-all;
+    }
+
+    .photo-button:hover {
+      background: #eef5ff;
+    }
+
+    .photo-button.active {
+      background: #1e88e5;
+      color: white;
+      border-color: #1e88e5;
+      font-weight: bold;
+    }
+
+    #message {
+      position: fixed;
+      bottom: 10px;
+      left: 340px;
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.55);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    a-scene {
+      position: fixed;
+      top: 0;
+      left: 320px;
+      width: calc(100vw - 320px);
+      height: 100vh;
+    }
+
+    @media (max-width: 700px) {
+      #sidebar {
+        width: 210px;
+      }
+
+      a-scene {
+        left: 210px;
+        width: calc(100vw - 210px);
+      }
+
+      #message {
+        left: 220px;
+        font-size: 12px;
+      }
+
+      .photo-button {
+        font-size: 11px;
+        padding: 8px 6px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="sidebar">
+    <h2>360度写真</h2>
+
+    <button class="photo-button active" data-file="photos/IMG_20260702_140252_00_002.jpg">IMG_20260702_140252_00_002.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140308_00_003.jpg">IMG_20260702_140308_00_003.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140317_00_004.jpg">IMG_20260702_140317_00_004.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140345_00_005.jpg">IMG_20260702_140345_00_005.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140434_00_006.jpg">IMG_20260702_140434_00_006.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140444_00_007.jpg">IMG_20260702_140444_00_007.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140512_00_008.jpg">IMG_20260702_140512_00_008.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140619_00_009.jpg">IMG_20260702_140619_00_009.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140631_00_010.jpg">IMG_20260702_140631_00_010.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140746_00_011.jpg">IMG_20260702_140746_00_011.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140810_00_012.jpg">IMG_20260702_140810_00_012.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140912_00_013.jpg">IMG_20260702_140912_00_013.jpg</button>
+    <button class="photo-button" data-file="photos/IMG_20260702_140917_00_014.jpg">IMG_20260702_140917_00_014.jpg</button>
+  </div>
+
+  <div id="message">マウスでドラッグして視点を動かせます</div>
+
+  <a-scene embedded>
+    <a-sky
+      id="sky"
+      src="photos/IMG_20260702_140252_00_002.jpg"
+      rotation="0 -90 0">
+    </a-sky>
+
+    <a-camera
+      look-controls="reverseMouseDrag: true"
+      wasd-controls-enabled="false">
+    </a-camera>
+  </a-scene>
+
+  <script>
+    const buttons = document.querySelectorAll(".photo-button");
+    const sky = document.getElementById("sky");
+
+    buttons.forEach(button => {
+      button.addEventListener("click", function () {
+        const selectedFile = this.dataset.file;
+
+        sky.setAttribute("src", selectedFile);
+
+        buttons.forEach(btn => btn.classList.remove("active"));
+        this.classList.add("active");
+      });
+    });
+  </script>
+
+</body>
+</html>
