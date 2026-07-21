@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>みんなに届け！つながるチカラ。 - 弓削商船高専</title>
+    <style>
+        /* 素人っぽさを出すためのスタイル */
+        body {
+            font-family: 'MS PGothic', 'ＭＳ Ｐゴシック', sans-serif; /* 少し古いフォント指定 */
+            background-color: #f0f8ff; /* 昔よくあった薄い青背景 */
+            color: #333;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        #container {
+            width: 90%;
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            border: 2px solid #000080; /* 濃い青の枠線 */
+            padding: 15px;
+            box-shadow: 5px 5px 0px #aaa; /* レトロな影 */
+        }
+
+        h1 {
+            color: #000080;
+            border-bottom: 3px double #000080;
+            padding-bottom: 5px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.9em;
+            color: #555;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .hero-section {
+            background-color: #e6e6fa; /* ラベンダー色 */
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px dashed #666;
+        }
+
+        .hero-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #cc0000; /* 赤色で強調 */
+            margin-bottom: 10px;
+        }
+
+        .buttons {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        button {
+            background-color: #e0e0e0;
+            border: 2px outset #ccc;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        
+        button:active {
+            border-style: inset;
+        }
+
+        button:disabled {
+            color: #999;
+            cursor: not-allowed;
+            border: 2px solid #ccc;
+        }
+
+        h2 {
+            background-color: #000080;
+            color: white;
+            padding: 5px 10px;
+            font-size: 1.2em;
+            margin-top: 30px;
+        }
+
+        .step-box {
+            border: 1px solid #999;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #fafafa;
+        }
+
+        .step-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #006600; /* 緑色 */
+            margin-bottom: 10px;
+        }
+
+        .placeholder-image {
+            width: 100%;
+            height: 100px;
+            background-color: #ddd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #666;
+            border: 1px dotted #999;
+            margin-bottom: 10px;
+        }
+
+        .footer-box {
+            margin-top: 40px;
+            border: 3px ridge #ccc;
+            padding: 15px;
+            background-color: #ffffe0; /* 薄い黄色 */
+        }
+        
+        .footer-box h3 {
+            margin-top: 0;
+            color: #8b4513;
+        }
+
+        /* --- 選択用スタイル --- */
+        .router-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr); /* ルーターは横4列 */
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .location-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 設置場所は横3列 */
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .router-option, .location-option {
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            cursor: pointer;
+            overflow: hidden;
+            background-color: #fff;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            aspect-ratio: 4 / 3; /* 画像を綺麗に並べるため比率を固定 */
+        }
+
+        .router-option:hover, .location-option:hover {
+            border-color: #000080;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .router-option.selected, .location-option.selected {
+            border-color: #cc0000;
+            border-width: 3px;
+            box-shadow: 0 0 8px rgba(204,0,0,0.5);
+            background-color: #fff0f0;
+            padding: 9px; /* 枠線が太くなる分のズレを調整 */
+        }
+
+        .router-image, .location-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 画像の比率を保ったまま枠内に収める */
+            color: #999;
+            font-size: 0.8em;
+        }
+
+        /* 昔ながらの点滅テキスト (CSSアニメーションで代用) */
+        .blink {
+            animation: blinker 1.5s linear infinite;
+            color: red;
+            font-weight: bold;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        marquee {
+            /* 現代では非推奨ですが、素人っぽさの演出として */
+            background-color: #000;
+            color: #00ff00;
+            padding: 2px;
+            font-family: monospace;
+        }
+
+    </style>
+</head>
+<body>
+<div id="container">
+
+    <div style="margin-bottom: 30px;">
+        <h1 style="text-align: left; border: none; padding: 0; margin-bottom: 5px; font-size: 1.8em; color: #000;">みんなに届け！つながるチカラ。</h1>
+        
+        <div style="margin-bottom: 20px; line-height: 1.8;">
+            第23回 全国高等専門学校デザインコンペティション2026 in 函館<br>
+            AMデザイン部門 「広げる／広がる」<br>
+            テーマ：誰かの世界を広げるものづくり
+        </div>
+
+        <h2 style="background: none; color: #000; padding: 0; margin-bottom: 15px; font-size: 1.4em;">みんなのデータで、つながる環境を広げる</h2>
+
+        <div style="line-height: 1.8; margin-bottom: 20px;">
+            <p style="margin-bottom: 15px;">本プロジェクトは、Wi-Fiルーターの形状や設置場所、部屋の間取り、電波を届けたい方向などの環境データを共有し、効果的なWi-Fi反射板の形状や設置方法を検討する学生プロジェクトです。</p>
+            <p style="margin-bottom: 15px;">実際に反射板を製作・設置して電波状況を計測し、得られた結果を研究や設計に活用します。集まったデータを次の反射板づくりにつなげることで、より快適な通信環境を実現し、誰かの世界を広げることを目指します。</p>
+        </div>
+    </div>
+
+    <hr style="border-top: 1px dashed #999; margin-bottom: 30px;">
+
+    <h2>■ 選択する情報</h2>
+
+    <div class="step-box">
+        <div class="step-title">① ルーター形状</div>
+        <p>お使いのルーターに近い形状を選んでください。</p>
+        
+        <div class="router-grid" id="router-grid">
+            <!-- JavaScriptで12個の画像を読み込んで生成します -->
+        </div>
+        <input type="hidden" id="selected-router-id" value="">
+    </div>
+
+    <div class="step-box">
+        <div class="step-title">② 設置場所</div>
+        <p>ルーターを設置している場所を選びます。</p>
+        
+        <div class="location-grid" id="location-grid">
+            <!-- JavaScriptで生成します -->
+        </div>
+        <input type="hidden" id="selected-location-id" value="">
+    </div>
+
+    <div class="step-box">
+        <div class="step-title">③ 間取り</div>
+        <p>お住まいの間取り図（画像）をアップロードしてください。アップロード前はサンプル画像を表示しています。</p>
+        <input type="file" id="floorplan-upload" accept="image/*" style="margin-bottom: 10px;">
+    </div>
+
+    <div class="step-box">
+        <div class="step-title">④ 反射方向</div>
+        <p>アップロードした画像上で、<strong>1. ルーターの場所をクリック</strong>し、<strong>2. マウスを動かして反射させたい方向でもう一度クリック</strong>してください。</p>
+        
+        <div id="canvas-container" style="border: 2px inset #999; background-color: #e0e0e0; text-align: center; position: relative; padding: 5px;">
+            <canvas id="interactive-canvas" width="600" height="400" style="max-width: 100%; height: auto; cursor: crosshair; background-color: #fff; border: 1px solid #ccc;"></canvas>
+            <div id="canvas-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #333; font-weight: bold; pointer-events: none; text-shadow: 1px 1px 0 #fff;">
+                サンプル画像を読み込んでいます
+            </div>
+        </div>
+        <div style="text-align: right; margin-top: 10px;">
+            <button id="reset-btn" disabled onclick="resetCanvas()">やり直す</button>
+        </div>
+    </div>
+
+    <div class="submit-section" style="text-align: center; margin-top: 20px;">
+        <button class="submit-btn" style="padding: 15px 30px; font-weight: bold; background-color: #ffe4e1;" onclick="alert('投稿フォームへ移動します（現在準備中）')">情報を投稿する</button>
+    </div>
+
+    <div style="margin-top: 60px; padding-top: 20px; border-top: 2px dotted #aaa; font-size: 0.9em; color: #555;">
+        <p style="margin-top: 0; margin-bottom: 10px;">本サイトは、弓削商船高等専門学校の学生が自主的に取り組む研究・実験のために運営しています。収集した情報は研究目的にのみ使用し、個人が特定されることはありません。</p>
+        <p style="margin-bottom: 20px;">皆さまのご協力をよろしくお願いいたします。</p>
+        <p style="font-weight: bold; margin-bottom: 0; color: #333;">作成者：弓削商船高等専門学校　〇〇〇チーム</p>
+    </div>
+
+</div>
+
+<script>
+    // --- 学生実験：Canvasを使った座標取得プログラム ---
+    
+    var uploadInput = document.getElementById('floorplan-upload');
+    var canvas = document.getElementById('interactive-canvas');
+    var ctx = canvas.getContext('2d');
+    var msg = document.getElementById('canvas-msg');
+    var resetBtn = document.getElementById('reset-btn');
+
+    var floorImage = null; // 読み込んだ画像データ
+    var routerPos = null;  // ルーターの座標 {x, y}
+    var targetPos = null;  // 反射方向の座標 {x, y}
+    var currentMousePos = null; // マウスの現在位置
+    var isImageLoaded = false;
+
+    // --- ルーター選択UIの生成 ---
+    var routerGrid = document.getElementById('router-grid');
+    var selectedRouterInput = document.getElementById('selected-router-id');
+    var totalRouters = 12;
+
+    for (let i = 0; i < totalRouters; i++) {
+        let optionDiv = document.createElement('div');
+        optionDiv.className = 'router-option';
+        let routerId = i + 1;
+        optionDiv.dataset.id = routerId;
+        
+        // 1から12までの数値を "01" のようにゼロ埋めする
+        let paddedId = routerId.toString().padStart(2, '0');
+        
+        let imgEl = document.createElement('img');
+        imgEl.className = 'router-image';
+        imgEl.src = `router${paddedId}.png`;
+        imgEl.alt = `ルーター ${paddedId}`;
+        
+        // （プレビュー環境等でローカル画像が無い場合の予備措置）
+        imgEl.onerror = function() {
+            this.onerror = null;
+            this.src = `https://placehold.co/200x150/eee/999?text=Router+${paddedId}`;
+        };
+        
+        optionDiv.appendChild(imgEl);
+        
+        optionDiv.addEventListener('click', function() {
+            // 選択状態のクリア
+            document.querySelectorAll('.router-option').forEach(el => el.classList.remove('selected'));
+            // クリックされたものに選択状態を付与
+            this.classList.add('selected');
+            selectedRouterInput.value = this.dataset.id;
+        });
+
+        routerGrid.appendChild(optionDiv);
+    }
+
+    // --- 設置場所選択UIの生成 ---
+    var locationGrid = document.getElementById('location-grid');
+    var selectedLocationInput = document.getElementById('selected-location-id');
+    
+    // 指定されたファイル名のリスト
+    var locationFiles = [
+        { id: 'loc01', name: 'ワンルーム', file: 'room01.png' },
+        { id: 'loc02', name: 'リビング', file: 'room02.png' },
+        { id: 'loc03', name: 'キッチン', file: 'room03.png' },
+        { id: 'loc04', name: '寝室', file: 'room04.png' },
+        { id: 'loc05', name: '仕事部屋', file: 'room05.png' }
+    ];
+
+    locationFiles.forEach(function(loc) {
+        let optionDiv = document.createElement('div');
+        optionDiv.className = 'location-option';
+        optionDiv.dataset.id = loc.id;
+        
+        let imgEl = document.createElement('img');
+        imgEl.className = 'location-image';
+        imgEl.src = loc.file;
+        imgEl.alt = loc.name;
+        
+        // （プレビュー環境等でローカル画像が無い場合の予備措置）
+        imgEl.onerror = function() {
+            this.onerror = null;
+            // エラー時は代替画像に部屋の名前を表示
+            this.src = `https://placehold.co/200x150/eee/999?text=${encodeURIComponent(loc.name)}`;
+        };
+        
+        optionDiv.appendChild(imgEl);
+        
+        optionDiv.addEventListener('click', function() {
+            // 選択状態のクリア
+            document.querySelectorAll('.location-option').forEach(el => el.classList.remove('selected'));
+            // クリックされたものに選択状態を付与
+            this.classList.add('selected');
+            selectedLocationInput.value = this.dataset.id;
+        });
+
+        locationGrid.appendChild(optionDiv);
+    });
+
+    // 画像をCanvasへ読み込む（初期表示はサンプル画像）
+    function loadFloorplan(source) {
+        var img = new Image();
+        img.onload = function() {
+            floorImage = img;
+            isImageLoaded = true;
+            msg.style.display = 'none';
+            resetBtn.disabled = false;
+
+            // 画像の縦横比に合わせてCanvasの高さを調整 (幅は600px基準)
+            canvas.width = 600;
+            canvas.height = (img.height / img.width) * 600;
+            resetCanvasState();
+        };
+        img.src = source;
+    }
+
+    loadFloorplan('heatmap.png');
+
+    // 画像アップロード時の処理
+    uploadInput.addEventListener('change', function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            loadFloorplan(event.target.result);
+        };
+        reader.readAsDataURL(file);
+    });
+    // 状態を初期化する関数
+    function resetCanvasState() {
+        routerPos = null;
+        targetPos = null;
+        currentMousePos = null;
+        draw();
+    }
+
+    // 「やり直す」ボタンから呼ばれる関数
+    function resetCanvas() {
+        if(!isImageLoaded) return;
+        resetCanvasState();
+    }
+
+    // 描画メイン処理
+    function draw() {
+        // 全体を消去
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 画像があれば描画
+        if (floorImage) {
+            ctx.drawImage(floorImage, 0, 0, canvas.width, canvas.height);
+        }
+        
+        // ルーター（青い丸）を描画
+        if (routerPos) {
+            ctx.fillStyle = '#000080'; 
+            ctx.beginPath();
+            ctx.arc(routerPos.x, routerPos.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 白い縁取りで目立たせる
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // テキストラベル
+            ctx.fillStyle = '#000080';
+            ctx.font = 'bold 16px "MS PGothic", sans-serif';
+            // 縁取りテキスト（見やすくするため）
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.strokeText('ルーター', routerPos.x + 12, routerPos.y + 5);
+            ctx.fillText('ルーター', routerPos.x + 12, routerPos.y + 5);
+        }
+        
+        // 反射方向の矢印を描画
+        var drawTargetX = null;
+        var drawTargetY = null;
+        var arrowColor = '#cc0000'; // 基本は赤
+        
+        if (targetPos) {
+            // 決定済みの座標
+            drawTargetX = targetPos.x;
+            drawTargetY = targetPos.y;
+        } else if (routerPos && currentMousePos) {
+            // マウス移動中のプレビュー座標（ちょっと薄くする）
+            drawTargetX = currentMousePos.x;
+            drawTargetY = currentMousePos.y;
+            ctx.globalAlpha = 0.5; 
+        }
+        
+        if (drawTargetX !== null && drawTargetY !== null) {
+            drawArrow(ctx, routerPos.x, routerPos.y, drawTargetX, drawTargetY, arrowColor);
+            ctx.globalAlpha = 1.0; // 透明度を戻す
+        }
+    }
+
+    // 矢印を描く関数（ネットの参考コードを改変した設定）
+    function drawArrow(context, fromx, fromy, tox, toy, color) {
+        var headlen = 15; // 矢印の頭の長さ
+        var dx = tox - fromx;
+        var dy = toy - fromy;
+        var angle = Math.atan2(dy, dx);
+        
+        context.strokeStyle = color;
+        context.fillStyle = color;
+        context.lineWidth = 3;
+        
+        // 点線にする（実験っぽさ）
+        context.setLineDash([5, 5]);
+        
+        context.beginPath();
+        context.moveTo(fromx, fromy);
+        context.lineTo(tox, toy);
+        context.stroke();
+        
+        // 矢印の頭は実線
+        context.setLineDash([]);
+        
+        context.beginPath();
+        context.moveTo(tox, toy);
+        context.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+        context.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+        context.lineTo(tox, toy);
+        context.fill();
+    }
+
+    // マウス・タッチの座標をCanvas内の座標に変換する
+    function getMousePos(evt) {
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = canvas.width / rect.width;
+        var scaleY = canvas.height / rect.height;
+        
+        var clientX = evt.clientX;
+        var clientY = evt.clientY;
+        
+        if (evt.touches && evt.touches.length > 0) {
+            clientX = evt.touches[0].clientX;
+            clientY = evt.touches[0].clientY;
+        }
+        
+        return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+        };
+    }
+
+    // クリック（タップ）イベント
+    function handleClick(e) {
+        if (!isImageLoaded) return;
+        
+        var pos = getMousePos(e);
+        
+        if (!routerPos) {
+            routerPos = pos; // 1回目：ルーター位置
+        } else if (!targetPos) {
+            targetPos = pos; // 2回目：反射方向
+        }
+        draw();
+    }
+
+    canvas.addEventListener('mousedown', handleClick);
+    canvas.addEventListener('touchstart', function(e){ 
+        // 操作中は画面スクロールを止める
+        if(isImageLoaded && !targetPos) e.preventDefault(); 
+        handleClick(e); 
+    }, {passive: false});
+
+    // マウス移動（スワイプ）イベントで矢印をプレビュー
+    function handleMove(e) {
+        if (!isImageLoaded || !routerPos || targetPos) return;
+        
+        currentMousePos = getMousePos(e);
+        draw();
+    }
+
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('touchmove', function(e){ 
+        if(isImageLoaded && routerPos && !targetPos) e.preventDefault(); 
+        handleMove(e); 
+    }, {passive: false});
+
+</script>
+</body>
+</html>
