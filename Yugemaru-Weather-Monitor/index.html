@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AtomCAM Stream</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000; /* 全体の黒背景 */
+      overflow: hidden; /* スクロールバーを非表示にする */
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 画面上部のヘッダー領域 */
+    .top-header {
+      width: 100%;
+      background: #111;
+      border-bottom: 1px dashed #555;
+      padding: 12px 24px;
+      font-size: 18px;
+      font-weight: bold;
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+    
+    /* ヘッダー以下の画面全体を左右に分割するレイアウト */
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr; /* 左は380px固定、右は残りすべて */
+      grid-template-rows: 1fr auto; /* 上段は柔軟に、下段はパネルの高さに合わせる */
+      width: 100%;
+      flex: 1;
+      min-height: 0; /* はみ出し防止 */
+    }
+
+    /* 左側上部：数値データ領域 */
+    .sidebar-top {
+      grid-column: 1;
+      grid-row: 1;
+      background: #000;
+      border-right: 1px solid #333;
+      padding: 16px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto; /* 縦スクロールを有効にする */
+      font-family: monospace;
+    }
+
+    /* 左側下部：Raspberry Pi領域 */
+    .sidebar-bottom {
+      grid-column: 1;
+      grid-row: 2;
+      background: #000;
+      border-right: 1px solid #333;
+      padding: 0 16px 16px 16px; /* 上段との隙間を調整 */
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+
+    /* 左下パネルの高さを右下に合わせる */
+    .sidebar-bottom .data-section {
+      height: 100%;
+      box-sizing: border-box;
+      justify-content: flex-start;
+    }
+
+    /* 右側上部：メイン領域（映像） */
+    .main-top {
+      grid-column: 2;
+      grid-row: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      padding: 16px 24px 16px 24px; /* パネルの外側の余白を設定 */
+      box-sizing: border-box;
+    }
+
+    /* 右側下部：船舶・航行データ領域 */
+    .main-bottom {
+      grid-column: 2;
+      grid-row: 2;
+      padding: 0 24px 24px 24px;
+      box-sizing: border-box;
+    }
+
+    .data-section {
+      background: #111; /* パネルの背景色 */
+      border: 1px solid #333; /* パネルの枠線 */
+      border-radius: 8px; /* パネルの角丸 */
+      padding: 16px; /* パネル内側の余白 */
+      display: flex;
+      flex-direction: column;
+      gap: 8px; /* 各行の間隔を調整 */
+    }
+
+    .section-title {
+      color: #888;
+      font-size: 14px;
+      margin-top: 0;
+      margin-bottom: 12px; /* タイトル下の余白を統一 */
+    }
+
+    .data-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .data-label {
+      color: #ccc;
+    }
+
+    .data-value {
+      font-weight: bold;
+      color: #4ade80; /* 数値を目立たせる薄緑 */
+      text-align: right;
+    }
+    
+    .data-value.warning {
+      color: #fca5a5; /* エラーや未取得時の色 */
+    }
+
+    /* カメラ映像のパネル */
+    .video-panel {
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 16px 24px;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      width: 100%;
+      font-family: monospace;
+    }
+
+    /* 16:9を維持するラッパー */
+    .video-wrapper {
+      width: 100%;
+      /* 画面の高さからヘッダーやデータ領域の概算高さを引いたサイズで最大幅を制限 */
+      max-width: calc((100vh - 300px) * 16 / 9);
+      aspect-ratio: 16 / 9;
+      position: relative;
+      margin: 0 auto; /* パネル内で中央に配置 */
+    }
+
+    /* 動画の表示枠（プレースホルダー） */
+    .video-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 2px dashed #444;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      font-size: 20px;
+    }
+
+    iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 8px;
+      display: block;
+    }
+
+    /* 下部の船舶・航行データ領域 */
+    .bottom-panel {
+      background: #111;
+      border: 1px solid #333; /* 境界線を全体に */
+      border-radius: 8px; /* パネル風に角丸を追加 */
+      padding: 16px 24px;
+      font-family: monospace;
+      height: 100%; /* 左下のRaspberry Piパネルと高さを揃える */
+      box-sizing: border-box;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 8px 32px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 画面上部のヘッダー -->
+  <div class="top-header">気象・映像統合観測システム</div>
+
+  <div class="layout">
+    <!-- 左側上部：数値データ表示領域 -->
+    <div class="sidebar-top">
+      <div class="data-section">
+        <div class="section-title">【位置情報】</div>
+        <div class="data-row">
+          <span class="data-label">JST</span>
+          <span class="data-value" style="color: #fff;">2026/06/02 16:17:12</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">緯度</span>
+          <span class="data-value" style="color: #fff;">34-21.6828N</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">経度</span>
+          <span class="data-value" style="color: #fff;">133-15.0537E</span>
+        </div>
+      </div>
+
+      <div class="data-section">
+        <div class="section-title">【気象・環境データ】</div>
+        <div class="data-row"><span class="data-label">気温</span><span class="data-value">21.8 ℃</span></div>
+        <div class="data-row"><span class="data-label">湿度</span><span class="data-value">90.9 %</span></div>
+        <div class="data-row"><span class="data-label">気圧</span><span class="data-value">1006.1 hPa</span></div>
+        <div class="data-row"><span class="data-label">露点温度</span><span class="data-value">20.2 ℃</span></div>
+        <div class="data-row"><span class="data-label">水温</span><span class="data-value">20.5 ℃</span></div>
+        <div class="data-row"><span class="data-label">日射</span><span class="data-value">23 W/m2</span></div>
+        <div class="data-row"><span class="data-label">光量子</span><span class="data-value">75 umol/m2/s</span></div>
+        <div class="data-row"><span class="data-label">真風向</span><span class="data-value">46 deg</span></div>
+        <div class="data-row"><span class="data-label">真風速</span><span class="data-value">7.6 m/s</span></div>
+        <div class="data-row"><span class="data-label">相対風向</span><span class="data-value">319 deg</span></div>
+        <div class="data-row"><span class="data-label">相対風速</span><span class="data-value">7.8 m/s</span></div>
+      </div>
+    </div>
+
+    <!-- 右側上部：メイン領域（映像） -->
+    <div class="main-top">
+      <!-- カメラ映像パネル -->
+      <div class="video-panel">
+        <div class="section-title">【カメラ映像】</div>
+        <div class="video-wrapper">
+          <div class="video-placeholder">
+            カメラ映像表示エリア (16:9)
+
+            <!-- 本番用のカメラストリーム（現在はコメントアウト）
+            <iframe
+              src="http://192.168.68.22:1984/stream.html?src=atomcam&mode=webrtc"
+              allow="autoplay; fullscreen; microphone; camera">
+            </iframe>
+            -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 左側下部：Raspberry Pi領域 -->
+    <div class="sidebar-bottom">
+      <div class="data-section">
+        <div class="section-title">【Raspberry Pi】</div>
+        <div class="data-row"><span class="data-label">CPU温度</span><span class="data-value">42.4 ℃</span></div>
+        <div class="data-row"><span class="data-label">CPU負荷</span><span class="data-value">0.11</span></div>
+        <div class="data-row"><span class="data-label">メモリ使用</span><span class="data-value">23.0 %</span></div>
+        <div class="data-row"><span class="data-label">ディスク使用</span><span class="data-value">19.0 %</span></div>
+      </div>
+    </div>
+
+    <!-- 右側下部：船舶・航行データ領域 -->
+    <div class="main-bottom">
+      <div class="bottom-panel">
+        <div class="section-title">【船舶・航行データ】</div>
+        <div class="data-grid">
+          <div class="data-row"><span class="data-label">船首方位(GPS)</span><span class="data-value">89.8 deg</span></div>
+          <div class="data-row"><span class="data-label">船首方位(光ﾌｧｲﾊﾞｰ)</span><span class="data-value">89.8 deg</span></div>
+          <div class="data-row"><span class="data-label">真針路</span><span class="data-value">125.7 deg</span></div>
+          <div class="data-row"><span class="data-label">対地速力</span><span class="data-value">0.4 kn</span></div>
+          <div class="data-row"><span class="data-label">対水船速</span><span class="data-value">0.5 kn</span></div>
+          <div class="data-row"><span class="data-label">ターンレート</span><span class="data-value">-5.2 deg/min</span></div>
+          <div class="data-row"><span class="data-label">ピッチ(光ﾌｧｲﾊﾞｰ)</span><span class="data-value">0.8 deg</span></div>
+          <div class="data-row"><span class="data-label">ロール(光ﾌｧｲﾊﾞｰ)</span><span class="data-value">0.6 deg</span></div>
+          <div class="data-row"><span class="data-label">水深</span><span class="data-value">13.6 m</span></div>
+          <div class="data-row"><span class="data-label">現在波高</span><span class="data-value warning">未取得</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
