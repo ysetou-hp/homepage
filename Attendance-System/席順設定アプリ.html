@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>席順設定アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-50 min-h-screen p-8 font-sans text-slate-800 flex items-center justify-center">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div class="flex items-center gap-3 mb-8">
+            <i data-lucide="blocks" class="text-blue-500 w-8 h-8"></i>
+            <h1 class="text-2xl font-bold text-slate-800">席順設定アプリ</h1>
+        </div>
+
+        <div class="space-y-6">
+            <!-- CSVドロップゾーン -->
+            <div id="csvZone" class="relative border-2 border-dashed border-blue-300 bg-blue-50/30 rounded-2xl p-10 text-center hover:bg-blue-50 transition-all cursor-pointer group">
+                <input type="file" id="csvFile" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <div class="flex flex-col items-center gap-3 pointer-events-none">
+                    <i data-lucide="file-spreadsheet" class="w-12 h-12 text-blue-400 group-hover:text-blue-500 group-hover:scale-110 transition-all"></i>
+                    <p class="font-bold text-lg text-slate-700">1. 席順表.csv</p>
+                    <p class="text-sm text-slate-500 bg-white px-4 py-1 rounded-full shadow-sm" id="csvLabel">ドラッグ＆ドロップ または クリック</p>
+                </div>
+            </div>
+
+            <!-- HTMLドロップゾーン -->
+            <div id="htmlZone" class="relative border-2 border-dashed border-orange-300 bg-orange-50/30 rounded-2xl p-10 text-center hover:bg-orange-50 transition-all cursor-pointer group">
+                <input type="file" id="htmlFile" accept=".html" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                <div class="flex flex-col items-center gap-3 pointer-events-none">
+                    <i data-lucide="file-code-2" class="w-12 h-12 text-orange-400 group-hover:text-orange-500 group-hover:scale-110 transition-all"></i>
+                    <p class="font-bold text-lg text-slate-700">2. 出欠アプリ.html</p>
+                    <p class="text-sm text-slate-500 bg-white px-4 py-1 rounded-full shadow-sm" id="htmlLabel">ドラッグ＆ドロップ または クリック</p>
+                </div>
+            </div>
+            
+            <input type="hidden" id="variableName" value="initialSeatingChart">
+
+            <!-- 実行ボタン -->
+            <button id="mergeBtn" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-6 rounded-xl shadow-sm transition-all mt-4">
+                <i data-lucide="download" class="w-5 h-5"></i>
+                結合してダウンロード
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        const csvInput = document.getElementById('csvFile');
+        const htmlInput = document.getElementById('htmlFile');
+        const csvLabel = document.getElementById('csvLabel');
+        const htmlLabel = document.getElementById('htmlLabel');
+        const csvZone = document.getElementById('csvZone');
+        const htmlZone = document.getElementById('htmlZone');
+
+        // ファイル選択時の表示更新
+        csvInput.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) {
+                csvLabel.textContent = e.target.files[0].name;
+                csvLabel.classList.add('bg-blue-100', 'text-blue-700', 'font-bold');
+                csvZone.classList.add('border-blue-500', 'bg-blue-50');
+            }
+        });
+
+        htmlInput.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) {
+                htmlLabel.textContent = e.target.files[0].name;
+                htmlLabel.classList.add('bg-orange-100', 'text-orange-700', 'font-bold');
+                htmlZone.classList.add('border-orange-500', 'bg-orange-50');
+            }
+        });
+
+        // ドラッグ＆ドロップのスタイル制御
+        const setupDragEvents = (zone, input) => {
+            zone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                zone.classList.add('border-solid', 'opacity-80', 'scale-[0.98]');
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('border-solid', 'opacity-80', 'scale-[0.98]');
+            });
+            zone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                zone.classList.remove('border-solid', 'opacity-80', 'scale-[0.98]');
+                if (e.dataTransfer.files.length > 0) {
+                    input.files = e.dataTransfer.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        };
+
+        setupDragEvents(csvZone, csvInput);
+        setupDragEvents(htmlZone, htmlInput);
+
+        document.getElementById('mergeBtn').addEventListener('click', async () => {
+            const variableName = document.getElementById('variableName').value;
+            
+            if (!csvInput.files[0] || !htmlInput.files[0]) return;
+
+            try {
+                const csvText = await readFileAsText(csvInput.files[0]);
+                const seatingData = parseCSVToObject(csvText);
+                const jsArrayStr = JSON.stringify(seatingData, null, 2);
+                
+                const htmlFile = htmlInput.files[0];
+                const htmlText = await readFileAsText(htmlFile);
+
+                const newHtmlText = replaceJSArray(htmlText, variableName, jsArrayStr);
+
+                if (!newHtmlText) return;
+
+                // 読み込んだHTMLファイルの名前をそのまま使ってダウンロード
+                downloadFile(newHtmlText, htmlFile.name);
+            } catch (error) {
+                // エラー時は何もしない
+            }
+        });
+
+        function replaceJSArray(html, varName, newArrayStr) {
+            const regex = new RegExp(`(const|let|var)\\s+${varName}\\s*=\\s*`, 's');
+            const match = html.match(regex);
+            if (!match) return null;
+
+            const startIdx = match.index + match[0].length;
+            const arrayStartIdx = html.indexOf('[', startIdx);
+            if (arrayStartIdx === -1 || arrayStartIdx > startIdx + 20) return null; 
+
+            let bracketCount = 0;
+            let inString = false;
+            let stringChar = '';
+            let escape = false;
+            let arrayEndIdx = -1;
+
+            for (let i = arrayStartIdx; i < html.length; i++) {
+                const char = html[i];
+                
+                if (inString) {
+                    if (escape) escape = false;
+                    else if (char === '\\') escape = true;
+                    else if (char === stringChar) inString = false;
+                } else {
+                    if (char === '"' || char === "'" || char === '`') {
+                        inString = true;
+                        stringChar = char;
+                    } else if (char === '[') {
+                        bracketCount++;
+                    } else if (char === ']') {
+                        bracketCount--;
+                        if (bracketCount === 0) {
+                            arrayEndIdx = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (arrayEndIdx === -1) return null; 
+
+            const before = html.substring(0, arrayStartIdx);
+            const after = html.substring(arrayEndIdx + 1);
+            return before + newArrayStr + after;
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject();
+                reader.readAsText(file);
+            });
+        }
+
+        function parseCSVToObject(text) {
+            const lines = text.replace(/\r\n/g, '\n').split('\n');
+            const result = [];
+            for (let line of lines) {
+                if (line.trim() === '') continue;
+                const cells = line.split(',');
+                
+                const row = cells.map(cell => {
+                    const trimmed = cell.trim();
+                    if (!trimmed) return null;
+
+                    const match = trimmed.match(/^(\d+)\s+(.+)$/);
+                    if (match) {
+                        return { id: parseInt(match[1], 10), name: match[2] };
+                    } else {
+                        return { id: null, name: trimmed };
+                    }
+                });
+                result.push(row);
+            }
+            return result;
+        }
+
+        function downloadFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/html;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

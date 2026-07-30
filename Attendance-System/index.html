@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出欠入力アプリ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel (for JSX) バージョン固定 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- タッチデバイス用 ドラッグ＆ドロップPolyfill -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/default.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mobile-drag-drop@2.3.0-rc.2/index.min.js"></script>
+
+    <style>
+        body { font-family: sans-serif; }
+        /* ドラッグ中のスタイル */
+        .dragging { opacity: 0.5; transform: scale(0.95); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        // タッチデバイス対応
+        window.addEventListener('DOMContentLoaded', () => {
+            MobileDragDrop.polyfill({
+                dragImageTranslateOverride: MobileDragDrop.scrollBehaviourDragImageTranslateOverride
+            });
+            window.addEventListener('touchmove', function() {}, {passive: false});
+        });
+    </script>
+
+    <!-- data-presets を追加 -->
+    <script type="text/babel" data-presets="react,env">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // 初期座席データ
+        const initialSeatingChart = [
+  [
+    {
+      "id": 44,
+      "name": "青木 悠真"
+    },
+    {
+      "id": 2,
+      "name": "石川 結菜"
+    },
+    {
+      "id": 3,
+      "name": "伊藤 蒼空"
+    },
+    null,
+    null,
+    null
+  ],
+  [
+    {
+      "id": 7,
+      "name": "井上 美月"
+    },
+    {
+      "id": 8,
+      "name": "上野 陽翔"
+    },
+    {
+      "id": 9,
+      "name": "遠藤 心春"
+    },
+    {
+      "id": 10,
+      "name": "大西 蓮"
+    },
+    {
+      "id": 11,
+      "name": "岡田 葵"
+    },
+    {
+      "id": 12,
+      "name": "小川 湊"
+    }
+  ],
+  [
+    {
+      "id": 13,
+      "name": "加藤 彩葉"
+    },
+    {
+      "id": 14,
+      "name": "木下 大和"
+    },
+    {
+      "id": 15,
+      "name": "久保 さくら"
+    },
+    {
+      "id": 16,
+      "name": "小林 颯真"
+    },
+    {
+      "id": 17,
+      "name": "斉藤 琴音"
+    },
+    {
+      "id": 18,
+      "name": "坂本 陸"
+    }
+  ],
+  [
+    {
+      "id": 19,
+      "name": "佐々木 陽菜"
+    },
+    {
+      "id": 20,
+      "name": "清水 朝陽"
+    },
+    {
+      "id": 21,
+      "name": "杉本 莉子"
+    },
+    {
+      "id": 22,
+      "name": "鈴木 樹"
+    },
+    {
+      "id": 23,
+      "name": "高橋 結衣"
+    },
+    {
+      "id": 24,
+      "name": "田辺 海斗"
+    }
+  ],
+  [
+    {
+      "id": 25,
+      "name": "中川 凛"
+    },
+    {
+      "id": 26,
+      "name": "中村 晴翔"
+    },
+    {
+      "id": 27,
+      "name": "西村 愛佳"
+    },
+    {
+      "id": 29,
+      "name": "野口 悠斗"
+    },
+    {
+      "id": 30,
+      "name": "橋本 菜月"
+    },
+    {
+      "id": 31,
+      "name": "林 颯太"
+    }
+  ],
+  [
+    {
+      "id": 32,
+      "name": "原口 美咲"
+    },
+    {
+      "id": 33,
+      "name": "福田 湊斗"
+    },
+    {
+      "id": 34,
+      "name": "藤田 ひなた"
+    },
+    {
+      "id": 35,
+      "name": "松井 大輝"
+    },
+    {
+      "id": 36,
+      "name": "松本 紬"
+    },
+    {
+      "id": 37,
+      "name": "三浦 悠人"
+    }
+  ],
+  [
+    {
+      "id": 38,
+      "name": "宮崎 結月"
+    },
+    {
+      "id": 39,
+      "name": "村上 奏太"
+    },
+    {
+      "id": 1,
+      "name": "森川 杏奈"
+    },
+    {
+      "id": 41,
+      "name": "山口 陽向"
+    },
+    {
+      "id": 42,
+      "name": "山崎 心音"
+    },
+    {
+      "id": 43,
+      "name": "吉田 蒼"
+    }
+  ],
+  [
+    {
+      "id": 40,
+      "name": "渡辺 莉央"
+    },
+    {
+      "id": 45,
+      "name": "黒田 新"
+    },
+    {
+      "id": 46,
+      "name": "白石 優奈"
+    },
+    {
+      "id": 4,
+      "name": "橘 直樹"
+    },
+    {
+      "id": 5,
+      "name": "水野 花音"
+    },
+    {
+      "id": 6,
+      "name": "星野 陽介"
+    }
+  ]
+];
+
+        // アイコンコンポーネント
+        const IconUserCheck = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+        );
+        const IconUserX = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="23" y2="14"/><line x1="23" y1="8" x2="17" y2="14"/></svg>
+        );
+        const IconClock = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        );
+        const IconInfo = ({ size = 16, className = "" }) => (
+             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        );
+        const IconRefreshCw = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        );
+        const IconSave = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        );
+        const IconSettings = ({ size = 16, className = "" }) => (
+             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        );
+        const IconUpload = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        );
+        const IconDownload = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        );
+        const IconX = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        );
+        const IconMove = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="19 9 22 12 19 15"/><polyline points="9 19 12 22 15 19"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+        );
+        const IconLayoutGrid = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        );
+        const IconList = ({ size = 16, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        );
+
+        function App() {
+          const [chartData, setChartData] = useState(initialSeatingChart);
+          const [attendance, setAttendance] = useState({});
+          const [notification, setNotification] = useState('');
+          const [currentDateTime, setCurrentDateTime] = useState('');
+          const [showSettings, setShowSettings] = useState(false);
+          const [showResetConfirm, setShowResetConfirm] = useState(false);
+          const [draggedPos, setDraggedPos] = useState(null);
+          const [viewMode, setViewMode] = useState('seat');
+          const [isMoveEnabled, setIsMoveEnabled] = useState(false);
+          const fileInputRef = useRef(null);
+
+          useEffect(() => {
+            // アプリ起動時に出欠データをリセット（前回の状態を引き継がない）
+            localStorage.removeItem('seatingAttendanceData_v3');
+            setAttendance({});
+
+            const savedChart = localStorage.getItem('seatingChartData_v3');
+            if (savedChart) setChartData(JSON.parse(savedChart));
+            
+            const updateDateTime = () => {
+              const now = new Date();
+              setCurrentDateTime(`${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`);
+            };
+            updateDateTime();
+            const intervalId = setInterval(updateDateTime, 1000);
+            return () => clearInterval(intervalId);
+          }, []);
+
+          const showNotification = (message) => {
+            setNotification(message);
+            setTimeout(() => setNotification(''), 3000);
+          };
+
+          const handleViewModeChange = (mode) => {
+            if (viewMode !== mode) {
+              setViewMode(mode);
+              setAttendance({}); // モード切り替え時に出欠をリセット
+              if (mode === 'number') setIsMoveEnabled(false);
+            }
+          };
+
+          const handleReset = () => {
+            setShowResetConfirm(true);
+          };
+
+          const executeReset = () => {
+            setAttendance({});
+            localStorage.removeItem('seatingAttendanceData_v3');
+            showNotification('出欠をリセットしました');
+            setShowResetConfirm(false);
+          };
+
+          const handleSeatClick = (id) => {
+            if (isMoveEnabled && viewMode === 'seat') return;
+            setAttendance(prev => {
+              const currentStatus = prev[id];
+              
+              if (viewMode === 'number') {
+                // 番号順： 未選択(欠席扱い) ⇔ 出席
+                if (currentStatus === 'present') {
+                  const newAttendance = { ...prev };
+                  delete newAttendance[id]; // 状態を消す＝未選択(欠席扱い)に戻る
+                  return newAttendance;
+                } else {
+                  return { ...prev, [id]: 'present' };
+                }
+              } else {
+                // 席順： 未選択(出席扱い) -> 欠席 -> 遅刻 -> 未選択(出席扱い)
+                if (!currentStatus || currentStatus === 'present') {
+                  return { ...prev, [id]: 'absent' };
+                } else if (currentStatus === 'absent') {
+                  return { ...prev, [id]: 'late' };
+                } else if (currentStatus === 'late') {
+                  const newAttendance = { ...prev };
+                  delete newAttendance[id]; // 状態を消す＝未選択(出席扱い)に戻る
+                  return newAttendance;
+                }
+              }
+              return prev;
+            });
+          };
+
+          const handleDragStart = (e, rowIndex, colIndex) => setDraggedPos({ rowIndex, colIndex });
+          const handleDragOver = (e) => e.preventDefault();
+          const handleDrop = (e, targetRowIndex, targetColIndex) => {
+            e.preventDefault();
+            if (!draggedPos) return;
+            const { rowIndex: dragRow, colIndex: dragCol } = draggedPos;
+            if (dragRow === targetRowIndex && dragCol === targetColIndex) {
+              setDraggedPos(null);
+              return;
+            }
+            const newChart = chartData.map(row => [...row]);
+            const temp = newChart[dragRow][dragCol];
+            newChart[dragRow][dragCol] = newChart[targetRowIndex][targetColIndex];
+            newChart[targetRowIndex][targetColIndex] = temp;
+            setChartData(newChart);
+            localStorage.setItem('seatingChartData_v3', JSON.stringify(newChart));
+            setDraggedPos(null);
+            showNotification('席を入れ替えました');
+          };
+
+          const handleSave = () => {
+            localStorage.setItem('seatingAttendanceData_v3', JSON.stringify(attendance));
+            localStorage.setItem('seatingChartData_v3', JSON.stringify(chartData));
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+            const headerDate = `${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+            const students = chartData.flat().filter(s => s !== null);
+            const uniqueStudents = Array.from(new Map(students.map(s => [s.id, s])).values()).sort((a, b) => parseInt(a.id) - parseInt(b.id));
+            let csv = `番号,氏名,${headerDate}\n`;
+            
+            uniqueStudents.forEach(s => {
+              const status = attendance[s.id];
+              let statusValue = '';
+              
+              if (status === 'absent') {
+                statusValue = '1';
+              } else if (status === 'late') {
+                statusValue = '2';
+              } else if (status === 'present') {
+                statusValue = '';
+              } else {
+                // 未選択の場合、モードに依存して扱いを変える
+                statusValue = viewMode === 'seat' ? '' : '1';
+              }
+
+              csv += `${s.id},${s.name},${statusValue}\n`;
+            });
+            
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${timestamp}.csv`;
+            link.click();
+            showNotification('出欠を保存し、CSVを出力しました');
+          };
+
+          const handleExportChart = () => {
+            const csv = chartData.map(row => row.map(s => s ? `${s.id} ${s.name}` : '').join(',')).join('\n');
+            const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+            const blob = new Blob([bom, csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = '席順表.csv';
+            link.click();
+            setShowSettings(false);
+          };
+
+          const handleImportCSV = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              try {
+                const lines = event.target.result.trim().split('\n');
+                const newChart = lines.map(l => l.split(',').map(cell => {
+                  const t = cell.trim();
+                  if (!t) return null;
+                  const m = t.match(/^(\d+)[\s　]+(.+)$/);
+                  return m ? { id: m[1], name: m[2] } : { id: Math.random().toString(36).substr(2,9), name: t };
+                }));
+                setChartData(newChart);
+                setAttendance({});
+                localStorage.setItem('seatingChartData_v3', JSON.stringify(newChart));
+                localStorage.removeItem('seatingAttendanceData_v3');
+                showNotification('座席表を更新しました');
+                setShowSettings(false);
+              } catch (err) { alert('読み込み失敗'); }
+            };
+            reader.readAsText(file);
+          };
+
+          const uniqueStudentsList = useMemo(() => {
+            const list = chartData.flat().filter(s => s !== null);
+            return Array.from(new Map(list.map(s => [s.id, s])).values()).sort((a,b) => parseInt(a.id) - parseInt(b.id));
+          }, [chartData]);
+
+          const stats = useMemo(() => {
+              let pCount = 0;
+              let aCount = 0;
+              let lCount = 0;
+              uniqueStudentsList.forEach(s => {
+                  const status = attendance[s.id];
+                  if (status === 'present') pCount++;
+                  else if (status === 'absent') aCount++;
+                  else if (status === 'late') lCount++;
+                  else {
+                      // 未選択の場合
+                      if (viewMode === 'seat') pCount++;
+                      else aCount++;
+                  }
+              });
+              return { present: pCount, absent: aCount, late: lCount };
+          }, [attendance, uniqueStudentsList, viewMode]);
+
+          return (
+            <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans selection:bg-blue-100 relative">
+              <div className="max-w-6xl mx-auto space-y-6">
+                
+                {/* ヘッダー */}
+                <div className="bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-center md:justify-start">
+                    <p className="text-slate-600 text-sm font-bold bg-slate-100 px-3 py-1.5 rounded-lg font-mono shadow-inner">{currentDateTime}</p>
+                    
+                    {/* 統計アイコンエリア */}
+                    <div className="flex gap-2">
+                      {/* 出席の統計 */}
+                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border shadow-sm transition-colors ${viewMode === 'number' ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200'}`}>
+                          <IconUserCheck size={16} className={viewMode === 'number' ? 'text-emerald-500' : 'text-slate-300'} />
+                          <span className={`text-sm font-bold ${viewMode === 'number' ? 'text-emerald-700' : 'text-slate-700'}`}>
+                              出席 <span className={`ml-1 ${viewMode === 'number' ? 'text-emerald-500' : 'text-slate-500'}`}>{stats.present}名</span>
+                          </span>
+                      </div>
+                      {/* 欠席の統計 */}
+                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border shadow-sm transition-colors ${viewMode === 'seat' ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+                          <IconUserX size={16} className={viewMode === 'seat' ? 'text-red-500' : 'text-slate-300'} />
+                          <span className={`text-sm font-bold ${viewMode === 'seat' ? 'text-red-700' : 'text-slate-700'}`}>
+                              欠席 <span className={`ml-1 ${viewMode === 'seat' ? 'text-red-500' : 'text-slate-500'}`}>{stats.absent}名</span>
+                          </span>
+                      </div>
+                      {/* 遅刻の統計 (席順モードのときだけアクティブになる想定のカラーリング) */}
+                      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border shadow-sm transition-colors ${viewMode === 'seat' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+                          <IconClock size={16} className={viewMode === 'seat' ? 'text-amber-500' : 'text-slate-300'} />
+                          <span className={`text-sm font-bold ${viewMode === 'seat' ? 'text-amber-700' : 'text-slate-700'}`}>
+                              遅刻 <span className={`ml-1 ${viewMode === 'seat' ? 'text-amber-500' : 'text-slate-500'}`}>{stats.late}名</span>
+                          </span>
+                      </div>
+                    </div>
+
+                    {/* タイトル */}
+                    <h1 className="text-2xl font-extrabold text-slate-800 ml-1">S4</h1>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2 justify-center md:justify-end w-full md:w-auto items-center">
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                      <button onClick={() => handleViewModeChange('seat')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${viewMode === 'seat' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>
+                        <IconLayoutGrid size={16} /> 席順
+                      </button>
+                      <button onClick={() => handleViewModeChange('number')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-all ${viewMode === 'number' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500'}`}>
+                        <IconList size={16} /> 番号
+                      </button>
+                    </div>
+
+                    {/* 席替ボタン */}
+                    <button 
+                      disabled={viewMode !== 'seat'}
+                      onClick={() => setIsMoveEnabled(!isMoveEnabled)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm border-2 transition-all shadow-sm 
+                        ${viewMode !== 'seat' 
+                          ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-60' 
+                          : isMoveEnabled 
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-inner translate-y-0.5' 
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-white'}`}
+                    >
+                      <IconMove size={16} className={isMoveEnabled ? 'text-emerald-500' : ''} />
+                      席替
+                    </button>
+
+                    <div className="h-8 w-px bg-slate-200 mx-1 hidden md:block"></div>
+                    <button onClick={handleReset} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all hover:shadow-sm" title="出欠リセット"><IconRefreshCw size={20} /></button>
+                    <button onClick={handleSave} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all hover:shadow-sm" title="保存 & CSV出力"><IconSave size={20} /></button>
+                    <button onClick={() => setShowSettings(true)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all hover:shadow-sm" title="設定"><IconSettings size={20} /></button>
+                  </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+                  <div className="min-w-[800px] max-w-[1000px] mx-auto">
+                    {viewMode === 'seat' ? (
+                      /* 席順表示: 出席＝白(アイコンなし)、欠席＝赤(アイコンあり)、遅刻＝黄(アイコンあり) */
+                      <>
+                        <div className="grid gap-2 md:gap-3" style={{ gridTemplateColumns: `repeat(${chartData[0].length}, minmax(0, 1fr))` }}>
+                          {chartData.map((row, rIdx) => (
+                            <React.Fragment key={`r-${rIdx}`}>
+                              {row.map((s, cIdx) => {
+                                if (!s) return (
+                                  <div 
+                                    key={`e-${rIdx}-${cIdx}`}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => isMoveEnabled && handleDrop(e, rIdx, cIdx)}
+                                    className={`h-20 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 transition-all ${isMoveEnabled ? 'hover:bg-blue-50 hover:border-blue-300' : ''}`}
+                                  ></div>
+                                );
+                                
+                                const currentStatus = attendance[s.id];
+                                const isAbsent = currentStatus === 'absent';
+                                const isLate = currentStatus === 'late';
+                                
+                                let cardClass = 'bg-white border-slate-200 text-slate-700';
+                                if (isAbsent) cardClass = 'bg-red-50 border-red-300 text-red-700';
+                                else if (isLate) cardClass = 'bg-amber-50 border-amber-300 text-amber-700';
+                                
+                                return (
+                                  <button
+                                    key={`s-${rIdx}-${cIdx}`}
+                                    draggable={isMoveEnabled}
+                                    onDragStart={(e) => isMoveEnabled && handleDragStart(e, rIdx, cIdx)}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => isMoveEnabled && handleDrop(e, rIdx, cIdx)}
+                                    onClick={() => handleSeatClick(s.id)}
+                                    className={`relative p-2 h-20 rounded-2xl border-2 transition-all duration-200 flex flex-col items-center justify-center 
+                                      ${cardClass} 
+                                      ${isMoveEnabled ? 'cursor-grab active:cursor-grabbing' : 'hover:shadow-md hover:-translate-y-0.5'}`}
+                                  >
+                                    <span className="absolute top-2 left-3 text-xs font-extrabold">{s.id}</span>
+                                    {/* 欠席・遅刻の時だけアイコンを表示 */}
+                                    <div className="absolute top-2 right-2">
+                                      {isAbsent && <IconUserX size={16} className="text-red-500" />}
+                                      {isLate && <IconClock size={16} className="text-amber-500" />}
+                                    </div>
+                                    <span className="text-base font-bold tracking-widest mt-1">{s.name}</span>
+                                  </button>
+                                );
+                              })}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                        <div className="mt-12 relative flex justify-center items-center">
+                          <div className="relative p-2 h-20 w-60 rounded-2xl border-2 border-slate-200 bg-white text-slate-700 flex items-center justify-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                            <span className="text-xl font-bold tracking-[1em] ml-[1em]">教卓</span>
+                          </div>
+                          <div className="absolute left-1/2 ml-36 pl-4 flex items-center pointer-events-none">
+                            {notification && (
+                              <div className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2 rounded-xl text-sm font-bold animate-pulse flex items-center gap-2 shadow-sm whitespace-nowrap">
+                                <IconInfo size={16} />{notification}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      /* 番号順表示: デフォルト欠席、クリックで出席のトグル */
+                      <div 
+                        className="grid gap-2 grid-flow-col"
+                        style={{ 
+                          gridTemplateRows: 'repeat(10, minmax(0, 1fr))',
+                          gridTemplateColumns: 'repeat(5, minmax(0, 1fr))'
+                        }}
+                      >
+                        {uniqueStudentsList.map((s) => {
+                          const currentStatus = attendance[s.id];
+                          const isPresent = currentStatus === 'present';
+                          
+                          let bgClass = 'bg-white border-slate-200 hover:bg-slate-50';
+                          let textClass = 'text-slate-600';
+                          let numClass = 'text-slate-600';
+                          
+                          if (isPresent) {
+                            bgClass = 'bg-emerald-50 border-emerald-300 shadow-sm';
+                            textClass = 'text-emerald-900';
+                            numClass = 'text-emerald-600';
+                          }
+
+                          return (
+                            <button
+                              key={`num-${s.id}`}
+                              onClick={() => handleSeatClick(s.id)}
+                              className={`flex items-center gap-3 pl-6 pr-2 h-20 rounded-xl border-2 transition-all active:scale-95 text-left w-full focus:outline-none focus:ring-2 focus:ring-emerald-200
+                                ${bgClass}`}
+                            >
+                              <span className={`w-8 shrink-0 text-center font-mono font-bold text-base md:text-lg ${numClass}`}>
+                                {s.id}
+                              </span>
+                              <span className={`flex-1 font-bold text-sm md:text-base tracking-widest whitespace-nowrap overflow-hidden text-ellipsis ${textClass}`}>
+                                {s.name}
+                              </span>
+                              {/* アイコンの表示 */}
+                              <div className="shrink-0 mr-2">
+                                {isPresent && <IconUserCheck size={18} className="text-emerald-500" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* リセット確認モーダル */}
+              {showResetConfirm && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-3xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 space-y-6 text-center">
+                    <h3 className="text-lg font-bold text-slate-800">出欠状況のリセット</h3>
+                    <p className="text-slate-600 text-sm">
+                      すべての出欠状況を初期状態に戻します。<br/>本当によろしいですか？
+                    </p>
+                    <div className="flex gap-3 justify-center pt-2">
+                      <button 
+                        onClick={() => setShowResetConfirm(false)} 
+                        className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold text-sm transition-all"
+                      >
+                        キャンセル
+                      </button>
+                      <button 
+                        onClick={executeReset} 
+                        className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold text-sm transition-all shadow-sm"
+                      >
+                        リセットする
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 設定モーダル */}
+              {showSettings && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50">
+                      <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><IconSettings size={20} className="text-slate-500" /> 座席データ設定</h2>
+                      <button onClick={() => setShowSettings(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors"><IconX size={20} /></button>
+                    </div>
+                    <div className="p-6 space-y-6">
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-slate-700">座席表を読み込む（インポート）</h3>
+                        <button onClick={() => fileInputRef.current.click()} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 border-2 border-blue-200 hover:bg-blue-100 rounded-xl transition-all font-bold text-sm">
+                          <IconUpload size={18} /> CSVファイルを選択
+                        </button>
+                        <input type="file" ref={fileInputRef} className="hidden" accept=".csv" onChange={handleImportCSV} />
+                      </div>
+                      <div className="h-px bg-slate-100 w-full"></div>
+                      <div className="space-y-3">
+                        <h3 className="font-bold text-slate-700">現在の座席表を保存（エクスポート）</h3>
+                        <button onClick={handleExportChart} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl transition-all font-bold text-sm">
+                          <IconDownload size={18} /> CSVをダウンロード
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
