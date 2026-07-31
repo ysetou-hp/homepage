@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth scroll-pt-24">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PythonSCADでサイコロを作ろう | 創造工学科</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Noto Sans JP & Montserrat -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans JP"', 'sans-serif'],
+                        en: ['"Montserrat"', 'sans-serif'],
+                    },
+                    colors: {
+                        event: {
+                            dark: '#0f172a',     // ベース背景
+                            card: '#1e293b',     // カード背景
+                            primary: '#0ea5e9',  // アクセント（水色）
+                            secondary: '#3b82f6', // アクセント（青色）
+                            accent: '#d946ef',   // アクセント（ピンク/紫）
+                        }
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS Styles -->
+    <style>
+        body { 
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #0f172a; 
+            color: #f8fafc; 
+        }
+        
+        /* 共通ユーティリティ */
+        .text-gradient {
+            background: linear-gradient(135deg, #a5b4fc 0%, #d946ef 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* アニメーション */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* タイムラインUIの縦線装飾 */
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: -24px;
+            width: 2px;
+            background: linear-gradient(to bottom, #6366f1, #d946ef);
+            z-index: 0;
+        }
+        .timeline-item:last-child .timeline-line::before {
+            display: none;
+        }
+        
+        /* 背景の浮遊エフェクト */
+        .floating-blob {
+            animation: blob 10s infinite alternate;
+        }
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+
+        /* コードブロックの基本スタイル */
+        pre {
+            background-color: rgba(15, 23, 42, 0.8) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="antialiased overflow-x-hidden selection:bg-event-secondary selection:text-white">
+
+    <!-- ======================================================== -->
+    <!-- ▼▼▼ 簡単設定エリア：画像やURLはこちらで変更できます ▼▼▼ -->
+    <!-- ======================================================== -->
+    <script>
+        const EVENT_CONFIG = {
+            pageTitle: "PythonSCADでサイコロを作ろう | 創造工学科",
+            heroBackgroundImage: "https://placehold.co/1920x1080/1e293b/0ea5e9?text=Creative%0ATechnology%0AEngineering",
+            
+            // PythonSCADの起動URL
+            pythonScadUrl: "https://www.pythonscad.org/playground/",
+            
+            // 各ステップの出力画像（LPと同じフォルダにある画像ファイル名を指定）
+            step1Image: "./image01.png", // ステップ1：立方体
+            step2Image: "./image02.png", // ステップ2：原点に配置された立方体
+            step3Image: "./image03.png", // ステップ3：球
+            step4Image: "./image04.png", // ステップ4：移動した球
+            step5Image: "./image05.png", // ステップ5：完成したサイコロ
+        };
+    </script>
+    <!-- ======================================================== -->
+    <!-- ▲▲▲ 簡単設定エリア ここまで ▲▲▲ -->
+    <!-- ======================================================== -->
+
+    <!-- Navigation / Header -->
+    <header class="fixed w-full z-50 transition-all duration-300" id="navbar">
+        <div class="absolute inset-0 bg-event-dark/80 backdrop-blur-md shadow-sm border-b border-white/10 transition-opacity duration-300" id="nav-bg"></div>
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="flex items-center justify-between h-20">
+                <!-- Title -->
+                <div class="flex-shrink-0">
+                    <span class="text-xl font-bold text-white tracking-wider">東温市ジュニア体験塾</span>
+                </div>
+                
+                <!-- Tagline Badge (Desktop only) -->
+                <div class="hidden md:flex items-center ml-auto">
+                    <div class="bg-white/5 border border-white/10 rounded-full px-5 py-1.5 flex items-center gap-3 backdrop-blur-md shadow-sm">
+                        <span class="text-gray-200 text-sm font-bold tracking-wider">プログラミング</span>
+                        <span class="text-event-primary text-[10px]"><i class="fa-solid fa-xmark"></i></span>
+                        <span class="text-gray-200 text-sm font-bold tracking-wider">3DCAD</span>
+                        <span class="text-event-primary text-[10px]"><i class="fa-solid fa-xmark"></i></span>
+                        <span class="text-white text-sm font-bold tracking-wider">創造工学科</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero-section" class="relative min-h-screen flex items-center pt-20 overflow-hidden bg-cover bg-center bg-no-repeat bg-fixed">
+        <!-- Background Effects -->
+        <div class="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-event-primary rounded-full mix-blend-screen filter blur-[120px] opacity-40 floating-blob"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-event-secondary rounded-full mix-blend-screen filter blur-[120px] opacity-40 floating-blob" style="animation-delay: -5s;"></div>
+        </div>
+
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 py-20">
+            <div class="max-w-4xl mx-auto text-center fade-in-up">
+                <!-- Badge -->
+                <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 text-white px-4 py-2 rounded-full text-sm font-bold mb-8">
+                    <span class="w-2 h-2 rounded-full bg-event-secondary animate-pulse"></span>
+                    PythonSCAD WORKSHOP
+                </div>
+                
+                <!-- Main Title -->
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-6 tracking-tight">
+                    PythonSCADで<br />
+                    <span class="text-gradient">サイコロ</span>を作ろう
+                </h1>
+                
+                <!-- Subtitle -->
+                <p class="text-lg md:text-2xl text-gray-300 mb-10 max-w-2xl mx-auto font-medium">
+                    立方体に「1の目」を作る<br class="hidden sm:block">
+                </p>
+
+                <!-- CTA Button -->
+                <div class="flex justify-center items-center">
+                    <a href="#goal" class="w-full sm:w-auto bg-white/10 border border-white/20 text-white hover:bg-white/20 px-8 py-4 rounded-full font-bold text-lg transition duration-300 flex items-center justify-center gap-2">
+                        チュートリアルを始める <i class="fa-solid fa-arrow-down"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Content Wrapper for Steps -->
+    <div class="bg-event-dark relative z-10 border-t border-white/5 py-24">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+            
+            <!-- Goal Section -->
+            <section id="goal" class="mb-24 fade-in-up scroll-mt-24">
+                <div class="text-center mb-8">
+                    <span class="font-en tracking-[0.2em] text-event-primary font-bold text-sm">GOAL</span>
+                    <h2 class="text-3xl md:text-4xl font-bold text-white mt-2 mb-4">今回の<span class="text-gradient">目標</span></h2>
+                </div>
+                
+                <!-- Goal Description -->
+                <div class="bg-event-card border border-white/10 p-8 rounded-2xl shadow-lg relative overflow-hidden">
+                    <div class="absolute -inset-4 bg-gradient-to-r from-event-primary to-event-secondary rounded-2xl opacity-10 blur-xl"></div>
+                    <p class="text-lg leading-relaxed text-gray-200 relative z-10 text-center font-medium">
+                        一辺60 mmの立方体を作り、その上面を直径16 mmの球でくりぬいて、サイコロの「1の目」を作ります。
+                    </p>
+                </div>
+                
+                <!-- Playground Launch Button -->
+                <div class="flex justify-center mt-10">
+                    <a id="pythonscad-link" href="#" target="_blank" rel="noopener noreferrer" class="group relative inline-flex items-center justify-center gap-3 bg-gradient-to-r from-event-primary to-event-secondary text-white font-bold py-4 px-10 rounded-full transition-all duration-300 hover:scale-105 shadow-[0_0_20px_rgba(14,165,233,0.4)] hover:shadow-[0_0_30px_rgba(14,165,233,0.6)] border border-white/20 overflow-hidden">
+                        <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+                        <i class="fa-solid fa-code relative z-10 text-lg"></i>
+                        <span class="relative z-10 tracking-wider">PythonSCADを開く</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square relative z-10 text-sm ml-1 opacity-80"></i>
+                    </a>
+                </div>
+            </section>
+
+            <!-- Timeline Layout -->
+            <div class="relative fade-in-up">
+                
+                <!-- Step 0: Preparation -->
+                <div id="step0" class="timeline-item relative pl-12 mb-16 group">
+                    <div class="timeline-line"></div>
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-event-dark border-4 border-event-accent z-10 group-hover:scale-125 transition-transform duration-300"></div>
+                    <div class="bg-event-card border border-white/10 rounded-xl p-6 hover:border-event-accent/50 transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="font-en text-3xl font-black text-event-accent/80">00</span>
+                            <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                            <h3 class="text-2xl font-bold text-white">準備：PythonSCADの使い方を知ろう</h3>
+                        </div>
+                        
+                        <div class="space-y-6">
+                            <p class="text-gray-300 leading-relaxed">
+                                上のボタンからPythonSCADの画面を開いてみましょう。画面が左右に大きく分かれているのがわかりますか？<br>
+                                <strong>左側</strong>がプログラムの「コード」を書く場所、<strong>右側</strong>が完成した3Dモデルが表示される場所です。
+                            </p>
+                            
+                            <!-- UI Explanation Cards -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="bg-[#0a101d] border border-white/5 p-5 rounded-lg flex flex-col items-center justify-center text-center shadow-inner">
+                                    <i class="fa-solid fa-code text-3xl text-gray-400 mb-3"></i>
+                                    <h4 class="font-bold text-white mb-1">左側：コードエディタ</h4>
+                                    <p class="text-sm text-gray-400">ここにPythonの命令を打ち込みます。</p>
+                                </div>
+                                <div class="bg-event-dark/50 border border-white/5 p-5 rounded-lg flex flex-col items-center justify-center text-center relative overflow-hidden">
+                                    <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-event-primary/20 blur-xl rounded-full"></div>
+                                    <i class="fa-solid fa-cube text-3xl text-event-primary mb-3 relative z-10"></i>
+                                    <h4 class="font-bold text-white mb-1 relative z-10">右側：3Dプレビュー</h4>
+                                    <p class="text-sm text-gray-400 relative z-10">コードの結果がすぐに3Dで表示されます。</p>
+                                </div>
+                            </div>
+
+                            <!-- Execution Instructions (CRITICAL) -->
+                            <div class="mt-6 bg-gradient-to-r from-green-500/10 to-transparent border-l-4 border-green-500 p-5 rounded-r-lg relative overflow-hidden shadow-lg shadow-green-500/5">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-play text-green-400 animate-pulse"></i>
+                                    <h4 class="font-bold text-lg text-green-400">【超重要】コードを実行して3D表示するには？</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed mb-4">
+                                    コードを書いただけでは右側の画面に形は現れません。3Dモデルを表示（更新）するには、以下の<strong>どちらかの方法</strong>で「実行」する必要があります。毎回使うので覚えておきましょう！
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg flex items-center gap-4 hover:border-green-400/50 transition-colors">
+                                        <div class="w-10 h-10 rounded-full bg-event-card border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                                            <i class="fa-solid fa-play text-green-400"></i>
+                                        </div>
+                                        <div>
+                                            <span class="block text-xs text-gray-400 mb-1 font-bold">方法1（マウスで操作）</span>
+                                            <strong class="text-white text-sm">左側の「再生ボタン」を押す</strong>
+                                        </div>
+                                    </div>
+                                    <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg flex items-center gap-4 hover:border-event-primary/50 transition-colors relative overflow-hidden">
+                                        <div class="absolute -right-6 top-1 text-[10px] font-bold bg-event-primary text-white px-8 py-0.5 transform rotate-45 shadow-md z-10 tracking-widest">おすすめ!</div>
+                                        <div class="w-10 h-10 rounded-full bg-event-card border border-white/20 flex items-center justify-center shrink-0 shadow-inner relative z-10">
+                                            <i class="fa-regular fa-keyboard text-event-primary"></i>
+                                        </div>
+                                        <div class="relative z-10">
+                                            <span class="block text-xs text-gray-400 mb-1 font-bold">方法2（キーボードで操作）</span>
+                                            <strong class="text-white text-sm font-sans flex items-center gap-1.5">
+                                                <kbd class="bg-[#1e293b] px-2 py-1 rounded text-gray-200 border border-gray-600 border-b-[3px] shadow-sm text-xs font-mono">Shift</kbd> <span class="text-gray-500 font-bold">+</span> <kbd class="bg-[#1e293b] px-2 py-1 rounded text-gray-200 border border-gray-600 border-b-[3px] shadow-sm text-xs font-mono">Enter</kbd> を押す
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sample Interaction -->
+                            <div class="bg-event-primary/5 border border-event-primary/20 p-5 rounded-lg mt-6">
+                                <h4 class="font-bold text-event-primary mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-mouse"></i>
+                                    まずはサンプルを動かしてみよう！
+                                </h4>
+                                <p class="text-gray-300 text-sm leading-relaxed mb-3">
+                                    PythonSCADを開くと、最初からサンプルのコードが入力されています。<br>
+                                    まずは、上の方法（「再生ボタン」か「<kbd class="bg-[#1e293b] px-1 py-0.5 rounded text-gray-300 border border-gray-600 border-b-2 text-[10px] mx-1 font-mono">Shift</kbd>+<kbd class="bg-[#1e293b] px-1 py-0.5 rounded text-gray-300 border border-gray-600 border-b-2 text-[10px] mx-1 font-mono">Enter</kbd>」）で３Dモデルを表示してみましょう。
+                                </p>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    表示されたら、右側の画面をマウスで操作して、３Dモデルを色々な角度から観察してみましょう。
+                                </p>
+                                <ul class="list-disc list-inside text-gray-400 text-xs mt-3 space-y-1 ml-2">
+                                    <li><strong>左ボタンでドラッグ：</strong> 視点の回転</li>
+                                    <li><strong>マウスホイール：</strong> ズームイン・アウト</li>
+                                </ul>
+                            </div>
+
+                            <!-- New File Instruction -->
+                            <div class="bg-event-accent/5 border border-event-accent/20 p-5 rounded-lg mt-6">
+                                <h4 class="font-bold text-event-accent mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-file-code"></i>
+                                    新しいファイルを作ろう！
+                                </h4>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    今回はゼロからサイコロを作っていくので、画面の右上にある「<strong>Code</strong>」ボタンをクリックして、新しい画面を準備しましょう。これで準備は完了です！
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 1: Create Cube -->
+                <div id="step1" class="timeline-item relative pl-12 mb-16 group scroll-mt-24">
+                    <div class="timeline-line"></div>
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-event-dark border-4 border-event-primary z-10 group-hover:scale-125 transition-transform duration-300"></div>
+                    <div class="bg-event-card border border-white/10 rounded-xl p-6 hover:border-event-primary/50 transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="font-en text-3xl font-black text-event-primary/80">01</span>
+                            <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                            <h3 class="text-2xl font-bold text-white">立方体を作成する</h3>
+                        </div>
+                        
+                        <!-- Task Area -->
+                        <div class="mb-6 space-y-5">
+                            <div class="flex items-start gap-3 bg-event-primary/5 p-4 rounded-lg border border-event-primary/20">
+                                <span class="bg-event-primary/20 text-event-primary px-2 py-1 rounded text-xs font-bold mt-0.5 shrink-0">課題</span>
+                                <div class="space-y-3">
+                                    <p class="text-gray-200 text-base leading-relaxed">はじめに、一辺60 mmの立方体を作ります。どのようなコードを書けばよいか考えてみましょう。</p>
+                                    
+                                    <!-- Hint Box -->
+                                    <div class="bg-[#0a101d] p-4 rounded-lg border border-event-primary/20">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <i class="fa-regular fa-lightbulb text-yellow-400"></i>
+                                            <span class="font-bold text-gray-300 text-sm">ヒント：以下のコードの続きを考えてみよう</span>
+                                        </div>
+                                        <div class="rounded-md bg-[#0f172a] border border-white/5 overflow-hidden mb-2">
+<pre class="p-3 text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 一辺60 mmの立方体を作成</span>
+box = <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
+
+show(box)
+</pre>
+                                        </div>
+                                        <p class="text-xs text-gray-400">
+                                            立方体を作る命令は <code class="text-event-accent font-mono bg-event-dark px-1 py-0.5 rounded">cube([Xの長さ, Yの長さ, Zの長さ])</code> です。今回作りたいのは一辺が60mmなので、X・Y・Zすべてに同じ数字を入れます。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Target Image -->
+                            <div class="rounded-xl overflow-hidden border border-white/10 shadow-lg bg-[#0a101d] p-4 text-center">
+                                 <h4 class="text-sm font-bold text-gray-400 mb-3 text-left"><i class="fa-solid fa-image mr-1"></i> 目標のカタチ</h4>
+                                 <img id="img-step1" src="" alt="立方体の出力結果" class="max-w-full h-auto mx-auto rounded-lg border border-white/5">
+                            </div>
+                        </div>
+
+                        <!-- Accordion Button -->
+                        <button class="answer-toggle-btn w-full bg-[#0f172a] hover:bg-event-primary/20 border border-white/10 hover:border-event-primary/50 text-gray-300 hover:text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-between group/btn">
+                            <span class="btn-text">正解のコードを見る</span>
+                            <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
+                        </button>
+
+                        <!-- Answer Content -->
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            
+                            <!-- Answer Code -->
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-event-primary/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 一辺60 mmの立方体を作成</span>
+box = cube([<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>])
+
+<span class="text-gray-500"># 画面に表示</span>
+show(box)
+</pre>
+                            </div>
+
+                            <!-- Code Explanation -->
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-event-primary to-event-secondary"></div>
+                                <h4 class="font-bold text-lg mb-3 text-event-primary">コードの意味</h4>
+                                <code class="bg-[#0a101d] px-3 py-1.5 rounded-md text-event-accent mb-3 inline-block font-mono border border-white/10">cube([60, 60, 60])</code>
+                                <p class="mb-4 text-gray-300"><code>cube()</code>は直方体を作る命令です。<br>角かっこの中は、次の順番で大きさを指定します。</p>
+                                <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg text-center font-mono text-sm mb-4 text-gray-200">
+                                    [X方向の長さ, Y方向の長さ, Z方向の長さ]
+                                </div>
+                                <p class="text-gray-300">今回はすべて60 mmなので、立方体になります。</p>
+                            </div>
+                            
+                            <!-- Try it out -->
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">cube([60, 30, 20])</code> のように、X, Y, Z の数字をバラバラにして実行してみよう！立方体以外のどんな形（直方体）になるか観察してみよう。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Center Cube -->
+                <div id="step2" class="timeline-item relative pl-12 mb-16 group scroll-mt-24">
+                    <div class="timeline-line"></div>
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-event-dark border-4 border-indigo-400 z-10 group-hover:scale-125 transition-transform duration-300"></div>
+                    <div class="bg-event-card border border-white/10 rounded-xl p-6 hover:border-indigo-400/50 transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="font-en text-3xl font-black text-indigo-400/80">02</span>
+                            <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                            <h3 class="text-2xl font-bold text-white">立方体の位置を合わせる</h3>
+                        </div>
+                        
+                        <!-- Task Area -->
+                        <div class="mb-6 space-y-5">
+                            <div class="flex items-start gap-3 bg-indigo-500/5 p-4 rounded-lg border border-indigo-500/20">
+                                <span class="bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded text-xs font-bold mt-0.5 shrink-0">課題</span>
+                                <div class="space-y-3">
+                                    <p class="text-gray-200 text-base leading-relaxed">先ほどの立方体は、角が原点に置かれています。立方体の「中心」を原点に合わせるようにコードを変更してみましょう。</p>
+                                    
+                                    <!-- Hint Box -->
+                                    <div class="bg-[#0a101d] p-4 rounded-lg border border-indigo-500/20">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <i class="fa-regular fa-lightbulb text-yellow-400"></i>
+                                            <span class="font-bold text-gray-300 text-sm">ヒント：かっこの中にオプションを追加しよう</span>
+                                        </div>
+                                        <div class="rounded-md bg-[#0f172a] border border-white/5 overflow-hidden mb-2">
+<pre class="p-3 text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 中心を原点に合わせて立方体を作成</span>
+box = cube(
+    [<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>],
+    <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
+)
+
+show(box)
+</pre>
+                                        </div>
+                                        <p class="text-xs text-gray-400">
+                                            かっこの中に <code class="text-event-accent font-mono bg-event-dark px-1 py-0.5 rounded">center=True</code> という「オプション」をカンマ区切りで書き足すだけで、中心が原点に合います。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Target Image -->
+                            <div class="rounded-xl overflow-hidden border border-white/10 shadow-lg bg-[#0a101d] p-4 text-center">
+                                 <h4 class="text-sm font-bold text-gray-400 mb-3 text-left"><i class="fa-solid fa-image mr-1"></i> 目標のカタチ</h4>
+                                 <img id="img-step2" src="" alt="原点に配置された立方体の出力結果" class="max-w-full h-auto mx-auto rounded-lg border border-white/5">
+                            </div>
+                        </div>
+
+                        <!-- Accordion Button -->
+                        <button class="answer-toggle-btn w-full bg-[#0f172a] hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-500/50 text-gray-300 hover:text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-between group/btn">
+                            <span class="btn-text">正解のコードを見る</span>
+                            <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
+                        </button>
+
+                        <!-- Answer Content -->
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            
+                            <!-- Answer Code -->
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-indigo-400/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 中心を原点に合わせて立方体を作成</span>
+box = cube(
+    [<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>],
+    center=<span class="text-event-primary">True</span>
+)
+
+show(box)
+</pre>
+                            </div>
+
+                            <!-- Code Explanation -->
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <p class="mb-4 text-gray-300">正解は <code class="text-event-accent font-mono bg-[#0a101d] px-2 py-1 rounded border border-white/10">center=True</code> を追加することでした！<br>立方体の中心を原点にすると、各面の位置は次のようになります。</p>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-mono text-center">
+                                    <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg">
+                                        <span class="block text-gray-500 mb-2 font-bold font-sans">X軸</span>
+                                        <div class="space-y-1">
+                                            <div>右の面：X = <span class="text-indigo-400"> 30</span></div>
+                                            <div>左の面：X = <span class="text-indigo-400">-30</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg">
+                                        <span class="block text-gray-500 mb-2 font-bold font-sans">Y軸</span>
+                                        <div class="space-y-1">
+                                            <div>奥の面：Y = <span class="text-indigo-400"> 30</span></div>
+                                            <div>手前の面：Y = <span class="text-indigo-400">-30</span></div>
+                                        </div>
+                                    </div>
+                                    <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg">
+                                        <span class="block text-gray-500 mb-2 font-bold font-sans">Z軸</span>
+                                        <div class="space-y-1">
+                                            <div>上の面：Z = <span class="text-indigo-400"> 30</span></div>
+                                            <div>下の面：Z = <span class="text-indigo-400">-30</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="mt-6 text-gray-400 text-sm text-center">一辺が60 mmなので、中心から各面までの距離は半分の30 mmです。</p>
+                            </div>
+                            
+                            <!-- Try it out -->
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">center=False</code> に変更したり、このオプション自体を消したりして、立方体の位置がどう変わるか（元の位置に戻るか）確認してみよう。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Create Sphere -->
+                <div id="step3" class="timeline-item relative pl-12 mb-16 group scroll-mt-24">
+                    <div class="timeline-line"></div>
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-event-dark border-4 border-event-secondary z-10 group-hover:scale-125 transition-transform duration-300"></div>
+                    <div class="bg-event-card border border-white/10 rounded-xl p-6 hover:border-event-secondary/50 transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="font-en text-3xl font-black text-event-secondary/80">03</span>
+                            <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                            <h3 class="text-2xl font-bold text-white">球を作成する</h3>
+                        </div>
+                        
+                        <!-- Task Area -->
+                        <div class="mb-6 space-y-5">
+                            <div class="flex items-start gap-3 bg-event-secondary/5 p-4 rounded-lg border border-event-secondary/20">
+                                <span class="bg-event-secondary/20 text-event-secondary px-2 py-1 rounded text-xs font-bold mt-0.5 shrink-0">課題</span>
+                                <div class="space-y-3">
+                                    <p class="text-gray-200 text-base leading-relaxed">次に、サイコロの目を作るための「球」を作成します。直径16 mmの球を作ってみましょう。</p>
+                                    
+                                    <!-- Hint Box -->
+                                    <div class="bg-[#0a101d] p-4 rounded-lg border border-event-secondary/20">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <i class="fa-regular fa-lightbulb text-yellow-400"></i>
+                                            <span class="font-bold text-gray-300 text-sm">ヒント：球を作る命令を書こう</span>
+                                        </div>
+                                        <div class="rounded-md bg-[#0f172a] border border-white/5 overflow-hidden mb-2">
+<pre class="p-3 text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 直径16 mmの球を作成</span>
+ball = <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
+
+show(ball)
+</pre>
+                                        </div>
+                                        <p class="text-xs text-gray-400">
+                                            球を作る命令は <code class="text-event-accent font-mono bg-event-dark px-1 py-0.5 rounded">sphere(r=半径, fn=64)</code> です。「直径」が16 mmのとき、「半径（r）」はいくつになるでしょうか？
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Target Image -->
+                            <div class="rounded-xl overflow-hidden border border-white/10 shadow-lg bg-[#0a101d] p-4 text-center">
+                                 <h4 class="text-sm font-bold text-gray-400 mb-3 text-left"><i class="fa-solid fa-image mr-1"></i> 目標のカタチ</h4>
+                                 <img id="img-step3" src="" alt="球の出力結果" class="max-w-full h-auto mx-auto rounded-lg border border-white/5">
+                            </div>
+                        </div>
+
+                        <!-- Accordion Button -->
+                        <button class="answer-toggle-btn w-full bg-[#0f172a] hover:bg-event-secondary/20 border border-white/10 hover:border-event-secondary/50 text-gray-300 hover:text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-between group/btn">
+                            <span class="btn-text">正解のコードを見る</span>
+                            <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
+                        </button>
+
+                        <!-- Answer Content -->
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            
+                            <!-- Answer Code -->
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-event-secondary/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 直径16 mm、半径8 mmの球を作成</span>
+ball = sphere(
+    r=<span class="text-[#facc15]">8</span>,
+    fn=<span class="text-[#facc15]">64</span>
+)
+
+show(ball)
+</pre>
+                            </div>
+
+                            <!-- Code Explanation -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                    <div class="absolute top-0 left-0 w-1 h-full bg-event-secondary"></div>
+                                    <h4 class="font-bold text-lg mb-3 text-event-secondary">コードの意味</h4>
+                                    <code class="bg-[#0a101d] px-3 py-1.5 rounded-md text-event-accent mb-3 inline-block font-mono border border-white/10">sphere(r=8)</code>
+                                    <p class="mb-3 text-gray-300 text-sm"><code>sphere()</code>は球を作る命令です。<code>r</code>は半径を表します。</p>
+                                    <div class="text-xs text-gray-400 bg-[#0a101d] border border-white/10 p-3 rounded-lg text-center font-mono">
+                                        直径16 mm ÷ 2 = 半径8 mm
+                                    </div>
+                                </div>
+                                <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                    <div class="absolute top-0 left-0 w-1 h-full bg-event-accent"></div>
+                                    <h4 class="font-bold text-lg mb-3 text-event-accent">fn=64について</h4>
+                                    <code class="bg-[#0a101d] px-3 py-1.5 rounded-md text-event-accent mb-3 inline-block font-mono border border-white/10">fn=64</code>
+                                    <p class="text-gray-300 text-sm">球の表面を滑らかにするための設定です。数字を大きくすると滑らかになりますが、コンピュータの計算量も増えます。</p>
+                                </div>
+                            </div>
+
+                            <!-- Try it out -->
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    滑らかさを決める <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">fn=64</code> の数字を、<code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">fn=10</code> のように小さくしたり、逆に <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">fn=100</code> にしたりしてみよう。球の表面のカクカク具合がどう変化するか観察してみよう！
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Move Sphere -->
+                <div id="step4" class="timeline-item relative pl-12 mb-16 group scroll-mt-24">
+                    <div class="timeline-line"></div>
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-event-dark border-4 border-event-primary z-10 group-hover:scale-125 transition-transform duration-300"></div>
+                    <div class="bg-event-card border border-white/10 rounded-xl p-6 hover:border-event-primary/50 transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="font-en text-3xl font-black text-event-primary/80">04</span>
+                            <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                            <h3 class="text-2xl font-bold text-white">球の位置を合わせる</h3>
+                        </div>
+                        
+                        <!-- Task Area -->
+                        <div class="mb-6 space-y-5">
+                            <div class="flex items-start gap-3 bg-event-primary/5 p-4 rounded-lg border border-event-primary/20">
+                                <span class="bg-event-primary/20 text-event-primary px-2 py-1 rounded text-xs font-bold mt-0.5 shrink-0">課題</span>
+                                <div class="space-y-3">
+                                    <p class="text-gray-200 text-base leading-relaxed">立方体の上面は、原点からZ方向に30 mmの位置にあります。作成した球が立方体の上面に乗るように、移動させてみましょう。</p>
+
+                                    <!-- Hint Box -->
+                                    <div class="bg-[#0a101d] p-4 rounded-lg border border-event-primary/20">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <i class="fa-regular fa-lightbulb text-yellow-400"></i>
+                                            <span class="font-bold text-gray-300 text-sm">ヒント：移動量を足し算しよう</span>
+                                        </div>
+                                        <div class="rounded-md bg-[#0f172a] border border-white/5 overflow-hidden mb-2">
+<pre class="p-3 text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 球を作成</span>
+ball = sphere(r=<span class="text-[#facc15]">8</span>, fn=<span class="text-[#facc15]">64</span>)
+
+<span class="text-gray-500"># 球をZ方向に30 mm移動</span>
+ball = ball + <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
+
+show(ball)
+</pre>
+                                        </div>
+                                        <p class="text-xs text-gray-400">
+                                            図形を移動させるには、元の図形に <code class="text-event-accent font-mono bg-event-dark px-1 py-0.5 rounded">[Xの移動量, Yの移動量, Zの移動量]</code> を足します。今回はZ方向（上）にだけ30mm動かします。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Target Image -->
+                            <div class="rounded-xl overflow-hidden border border-white/10 shadow-lg bg-[#0a101d] p-4 text-center">
+                                 <h4 class="text-sm font-bold text-gray-400 mb-3 text-left"><i class="fa-solid fa-image mr-1"></i> 目標のカタチ</h4>
+                                 <img id="img-step4" src="" alt="移動した球の出力結果" class="max-w-full h-auto mx-auto rounded-lg border border-white/5">
+                            </div>
+                        </div>
+
+                        <!-- Accordion Button -->
+                        <button class="answer-toggle-btn w-full bg-[#0f172a] hover:bg-event-primary/20 border border-white/10 hover:border-event-primary/50 text-gray-300 hover:text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-between group/btn">
+                            <span class="btn-text">正解のコードを見る</span>
+                            <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
+                        </button>
+
+                        <!-- Answer Content -->
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            
+                            <!-- Answer Code -->
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-event-primary/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 球を作成</span>
+ball = sphere(
+    r=<span class="text-[#facc15]">8</span>,
+    fn=<span class="text-[#facc15]">64</span>
+)
+
+<span class="text-gray-500"># 球をZ方向に30 mm移動</span>
+ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">30</span>]
+
+show(ball)
+</pre>
+                            </div>
+
+                            <!-- Code Explanation -->
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <p class="mb-4 text-gray-300">移動量は次の順番で指定します：</p>
+                                <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg text-center font-mono text-sm mb-4 text-gray-200">
+                                    [X方向, Y方向, Z方向]
+                                </div>
+                                <p class="text-gray-300">今回の移動は <code class="bg-[#0a101d] px-2 py-1 rounded font-mono text-event-accent text-sm border border-white/10">[0, 0, 30]</code> なので、X方向とY方向には動かさず、Z方向に30 mm移動します。<br>これにより、球の中心が立方体の上面に置かれます。</p>
+                            </div>
+
+                            <!-- Try it out -->
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">[30, 0, 30]</code> や <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">[0, -30, 30]</code> のように、XやYの移動量も変更してみよう。球が右や手前にどう動くか確認してみよう。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Subtract Sphere from Cube -->
+                <div id="step5" class="timeline-item relative pl-12 group scroll-mt-24">
+                    <div class="timeline-line"></div>
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-event-dark border-4 border-indigo-400 z-10 group-hover:scale-125 transition-transform duration-300"></div>
+                    <div class="bg-event-card border border-white/10 rounded-xl p-6 hover:border-indigo-400/50 transition-colors duration-300">
+                        <div class="flex items-center gap-4 mb-6">
+                            <span class="font-en text-3xl font-black text-indigo-400/80">05</span>
+                            <div class="h-6 w-px bg-white/20 hidden sm:block"></div>
+                            <h3 class="text-2xl font-bold text-white">立方体から球をくりぬく</h3>
+                        </div>
+                        
+                        <!-- Task Area -->
+                        <div class="mb-6 space-y-5">
+                            <div class="flex items-start gap-3 bg-indigo-500/5 p-4 rounded-lg border border-indigo-500/20">
+                                <span class="bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded text-xs font-bold mt-0.5 shrink-0">課題</span>
+                                <div class="space-y-3">
+                                    <p class="text-gray-200 text-base leading-relaxed">最後に、重なった2つの図形を使って、立方体から球を「引き算」し、サイコロの目（くぼみ）を完成させましょう！</p>
+
+                                    <!-- Hint Box -->
+                                    <div class="bg-[#0a101d] p-4 rounded-lg border border-indigo-500/20">
+                                        <div class="flex items-center gap-2 mb-3">
+                                            <i class="fa-regular fa-lightbulb text-yellow-400"></i>
+                                            <span class="font-bold text-gray-300 text-sm">ヒント：図形の引き算をしよう</span>
+                                        </div>
+                                        <div class="rounded-md bg-[#0f172a] border border-white/5 overflow-hidden mb-2">
+<pre class="p-3 text-sm font-mono text-gray-300 overflow-x-auto leading-relaxed">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># (立方体:box と 球:ball の作成は省略)</span>
+
+<span class="text-gray-500"># 球を立方体の上面に移動</span>
+ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">30</span>]
+
+<span class="text-gray-500"># 立方体から球をくりぬく</span>
+dice = <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
+
+show(dice)
+</pre>
+                                        </div>
+                                        <p class="text-xs text-gray-400">
+                                            図形の引き算は、普通の計算と同じように <code class="text-event-accent font-mono bg-event-dark px-1 py-0.5 rounded">-</code>（マイナス）の記号を使います。立方体から球を引きましょう。
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Target Image -->
+                            <div class="rounded-xl overflow-hidden border border-white/10 shadow-lg bg-[#0a101d] p-4 text-center">
+                                 <h4 class="text-sm font-bold text-gray-400 mb-3 text-left"><i class="fa-solid fa-image mr-1"></i> 目標のカタチ</h4>
+                                 <img id="img-step5" src="" alt="くりぬかれたサイコロの出力結果" class="max-w-full h-auto mx-auto rounded-lg border border-white/5">
+                            </div>
+                        </div>
+
+                        <!-- Accordion Button -->
+                        <button class="answer-toggle-btn w-full bg-[#0f172a] hover:bg-indigo-500/20 border border-white/10 hover:border-indigo-500/50 text-gray-300 hover:text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-between group/btn">
+                            <span class="btn-text">正解のコードを見る</span>
+                            <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
+                        </button>
+
+                        <!-- Answer Content -->
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            
+                            <!-- Answer Code -->
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-indigo-400/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 一辺60 mmの立方体</span>
+box = cube(
+    [<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>],
+    center=<span class="text-event-primary">True</span>
+)
+
+<span class="text-gray-500"># 直径16 mmの球</span>
+ball = sphere(
+    r=<span class="text-[#facc15]">8</span>,
+    fn=<span class="text-[#facc15]">64</span>
+)
+
+<span class="text-gray-500"># 球を立方体の上面に移動</span>
+ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">30</span>]
+
+<span class="text-gray-500"># 立方体から球をくりぬく</span>
+dice = box - ball
+
+<span class="text-gray-500"># 完成した形を表示</span>
+show(dice)
+</pre>
+                            </div>
+
+                            <!-- Code Explanation -->
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-event-secondary to-event-accent"></div>
+                                <h4 class="font-bold text-lg mb-4 text-white">引き算による形状の加工</h4>
+                                <code class="bg-[#0a101d] px-4 py-2 rounded-lg text-white font-bold mb-4 inline-block text-lg border border-white/10 font-mono">dice = box - ball</code>
+                                <p class="mb-5 text-gray-300">このコードでは、立方体から球と重なっている部分を取り除いています。</p>
+                                <div class="bg-gradient-to-r from-event-card to-[#0a101d] p-5 rounded-xl text-center font-bold mb-5 text-white text-lg border border-event-accent/30 shadow-[0_0_15px_rgba(217,70,239,0.15)]">
+                                    立方体 <span class="text-event-accent mx-2">−</span> 球 <span class="text-event-accent mx-2">＝</span> 球状のくぼみがある立方体
+                                </div>
+                                <p class="text-gray-400 text-sm">球の中心を立方体の表面に置いているため、くぼみは半球状になり、深さは球の半径と同じ8 mmになります。</p>
+                            </div>
+
+                            <!-- Try it out -->
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    引き算の順番を逆にして <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">ball - box</code> にするとどうなるでしょうか？どんな形になるか予想してから、実際に試してみましょう！
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Code Section -->
+    <section id="final" class="py-24 bg-[#0a101d] relative z-10 scroll-mt-24">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+            <div class="text-center mb-12 fade-in-up">
+                <span class="font-en tracking-[0.2em] text-event-secondary font-bold text-sm">FINAL SOURCE</span>
+                <h2 class="text-3xl md:text-4xl font-bold text-white mt-2 mb-4"><span class="text-gradient">完成コード</span></h2>
+                <p class="text-gray-400 text-lg">ここまでの内容をまとめ、寸法を変数として定義し直した、より美しいコードです。</p>
+            </div>
+            
+            <div class="rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(14,165,233,0.1)] border border-white/10 group/code fade-in-up relative">
+                <!-- Code Header -->
+                <div class="bg-event-card px-4 py-3 flex items-center justify-between border-b border-white/5">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                        </div>
+                        <span class="text-sm text-gray-300 font-mono font-bold">dice_step1.py</span>
+                    </div>
+                    <!-- Copy Button Overlay -->
+                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-[#0a101d]/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-event-primary/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                        <i class="fa-regular fa-copy"></i> Copy
+                    </button>
+                </div>
+                
+                <!-- Final Python Code -->
+<pre class="p-6 md:p-8 text-sm md:text-base overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># ==========================================
+# 寸法
+# ==========================================</span>
+DICE_SIZE = <span class="text-[#facc15]">60</span>
+PIP_DIAMETER = <span class="text-[#facc15]">16</span>
+PIP_RADIUS = PIP_DIAMETER / <span class="text-[#facc15]">2</span>
+
+<span class="text-gray-500"># ==========================================
+# 立方体を作成
+# ==========================================</span>
+box = cube(
+    [DICE_SIZE, DICE_SIZE, DICE_SIZE],
+    center=<span class="text-event-primary">True</span>
+)
+
+<span class="text-gray-500"># ==========================================
+# 球を作成
+# ==========================================</span>
+ball = sphere(
+    r=PIP_RADIUS,
+    fn=<span class="text-[#facc15]">64</span>
+)
+
+<span class="text-gray-500"># ==========================================
+# 球を立方体の上面に移動
+# ==========================================</span>
+ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">0</span>, DICE_SIZE / <span class="text-[#facc15]">2</span>]
+
+<span class="text-gray-500"># ==========================================
+# 立方体から球をくりぬく
+# ==========================================</span>
+dice = box - ball
+
+<span class="text-gray-500"># ==========================================
+# 表示
+# ==========================================</span>
+show(dice)
+</pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-event-dark border-t border-white/5 py-8 text-center text-gray-500 text-sm relative z-10">
+        <p>© PythonSCAD Tutorial Series</p>
+    </footer>
+
+    <!-- JavaScript Scripts -->
+    <script>
+        /**
+         * 1. ページ設定の初期化 (EVENT_CONFIGをUIに反映)
+         */
+        function initConfig() {
+            if (EVENT_CONFIG.pageTitle) {
+                document.title = EVENT_CONFIG.pageTitle;
+            }
+            const heroSection = document.getElementById('hero-section');
+            if (heroSection) {
+                heroSection.style.backgroundImage = `linear-gradient(to right bottom, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.7)), url('${EVENT_CONFIG.heroBackgroundImage}')`;
+            }
+
+            // 画像のソースをセット
+            const images = {
+                'img-step1': EVENT_CONFIG.step1Image,
+                'img-step2': EVENT_CONFIG.step2Image,
+                'img-step3': EVENT_CONFIG.step3Image,
+                'img-step4': EVENT_CONFIG.step4Image,
+                'img-step5': EVENT_CONFIG.step5Image
+            };
+
+            for (const [id, src] of Object.entries(images)) {
+                const el = document.getElementById(id);
+                if (el && src) el.src = src;
+            }
+            
+            // プレイグラウンドのURLをセット
+            const pythonScadLink = document.getElementById('pythonscad-link');
+            if (pythonScadLink && EVENT_CONFIG.pythonScadUrl) {
+                pythonScadLink.href = EVENT_CONFIG.pythonScadUrl;
+            }
+        }
+
+        /**
+         * 2. スクロールアニメーション (Intersection Observer)
+         */
+        function initScrollAnimations() {
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.fade-in-up').forEach(element => {
+                observer.observe(element);
+            });
+            
+            // 初回チェック
+            window.dispatchEvent(new Event('scroll'));
+        }
+
+        /**
+         * 3. ナビゲーションバーの背景色制御
+         */
+        function initNavbarScroll() {
+            const navBg = document.getElementById('nav-bg');
+            if (!navBg) return;
+
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 10) {
+                    navBg.classList.replace('bg-event-dark/80', 'bg-event-dark');
+                } else {
+                    navBg.classList.replace('bg-event-dark', 'bg-event-dark/80');
+                }
+            });
+        }
+
+        /**
+         * 4. 解答アコーディオン機能
+         */
+        function initAccordions() {
+            document.querySelectorAll('.answer-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    const icon = this.querySelector('.chevron-icon');
+                    const textSpan = this.querySelector('.btn-text');
+                    
+                    if (content.classList.contains('hidden')) {
+                        // 開く処理
+                        content.classList.remove('hidden');
+                        setTimeout(() => {
+                            content.classList.remove('opacity-0');
+                        }, 10);
+                        icon.classList.add('rotate-180');
+                        textSpan.innerText = '正解のコードを閉じる';
+                    } else {
+                        // 閉じる処理
+                        content.classList.add('opacity-0');
+                        icon.classList.remove('rotate-180');
+                        textSpan.innerText = '正解のコードを見る';
+                        setTimeout(() => {
+                            content.classList.add('hidden');
+                        }, 300);
+                    }
+                });
+            });
+        }
+
+        /**
+         * 5. クリップボードへのコピー機能 (HTML内のボタンのonclickから呼ばれる)
+         */
+        window.copyCode = function(button) {
+            const container = button.closest('.group\\/code');
+            const pre = container.querySelector('pre');
+            if (!pre) return;
+            
+            // <pre>内のテキストを取得（タグを除外してテキストと改行のみ抽出）
+            const text = pre.innerText;
+            
+            const updateButtonState = () => {
+                const originalHtml = button.innerHTML;
+                button.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">Copied!</span>`;
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                }, 2000);
+            };
+
+            const copyFallback = () => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('Fallback copy failed', err);
+                }
+                document.body.removeChild(textArea);
+            };
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(updateButtonState).catch(() => {
+                    copyFallback();
+                    updateButtonState();
+                });
+            } else {
+                copyFallback();
+                updateButtonState();
+            }
+        };
+
+        // DOM読み込み完了時にすべての初期化処理を実行
+        document.addEventListener('DOMContentLoaded', () => {
+            initConfig();
+            initNavbarScroll();
+            initAccordions();
+            initScrollAnimations();
+        });
+    </script>
+</body>
+</html>
