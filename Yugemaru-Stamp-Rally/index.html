@@ -143,7 +143,7 @@
                     "【船の煙突のマークの意味】",
                     "船の煙突（ファンネル）には、会社ごとの独自のマークや色が塗られており、" +
                     "これを「ファンネルマーク」と呼びます。" +
-                    "遠くからでもどこの会社の船か一目でわかるようになっています。"
+                    "遠くからでもどキュの会社の船か一目でわかるようになっています。"
                 ].join("\n"),
                 [
                     "【船の右舷灯と左舷灯の色】",
@@ -723,9 +723,14 @@
             <div class="flex-1 flex flex-col">
                 <div class="p-6 flex justify-between items-center text-white">
                     <span class="font-bold text-2xl tracking-wider">QRコードをスキャン</span>
-                    <button onclick="stopScanner()" class="bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
+                    <div class="flex gap-4">
+                        <button id="btn-switch-camera" onclick="switchCamera()" class="hidden bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                        </button>
+                        <button onclick="stopScanner()" class="bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="flex-1 flex items-center justify-center p-6 w-full max-w-2xl mx-auto">
                     <div id="reader" class="bg-black/50 shadow-2xl w-full aspect-square"></div>
@@ -879,6 +884,10 @@
         let stampPuzzleCompleteRevealed = false;
         let stampAudioContext = null;
         const stampSoundElements = {};
+        
+        // カメラ制御用の状態
+        let availableCameras = [];
+        let currentCameraIndex = 0;
 
         function getActiveSpots() {
             const spotIds = new Set(customCourses[currentCourseId].spots);
@@ -1464,13 +1473,80 @@
             document.getElementById('screen-scanner').classList.remove('hidden');
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+            
             try {
-                await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                // 端末のカメラ一覧を取得
+                availableCameras = await Html5Qrcode.getCameras();
+                let cameraConfig = { facingMode: "environment" }; // デフォルトは背面指定
+                
+                if (availableCameras && availableCameras.length > 0) {
+                    const switchBtn = document.getElementById('btn-switch-camera');
+                    if (switchBtn) {
+                        if (availableCameras.length > 1) {
+                            switchBtn.classList.remove('hidden'); // 複数あれば切替ボタンを表示
+                        } else {
+                            switchBtn.classList.add('hidden');
+                        }
+                    }
+
+                    // Windowsタブレット対策: ラベル名から背面カメラを探す
+                    let targetCameraIndex = -1;
+                    for (let i = 0; i < availableCameras.length; i++) {
+                        const label = availableCameras[i].label.toLowerCase();
+                        if (label.includes('back') || label.includes('rear') || label.includes('environment') || label.includes('背面') || label.includes('アウト')) {
+                            targetCameraIndex = i;
+                            break;
+                        }
+                    }
+                    
+                    if (targetCameraIndex !== -1) {
+                        currentCameraIndex = targetCameraIndex;
+                        cameraConfig = { deviceId: { exact: availableCameras[currentCameraIndex].id } };
+                    } else if (availableCameras.length > 1) {
+                        // 名前で判別つかない場合、2番目のカメラ(インデックス1)を背面と仮定
+                        currentCameraIndex = 1;
+                        cameraConfig = { deviceId: { exact: availableCameras[currentCameraIndex].id } };
+                    } else {
+                        currentCameraIndex = 0;
+                        cameraConfig = { deviceId: { exact: availableCameras[currentCameraIndex].id } };
+                    }
+                }
+
+                await html5QrCode.start(cameraConfig, config, onScanSuccess, onScanFailure);
                 isScannerRunning = true;
             } catch (err) {
-                console.error(err);
+                console.error("Camera start failed:", err);
+                
+                // 特定のカメラID指定で失敗した場合、通常の背面指定でフォールバック
+                try {
+                    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                    isScannerRunning = true;
+                } catch (fallbackErr) {
+                    console.error("Fallback camera start failed:", fallbackErr);
+                    stopScanner();
+                    showModal('カメラエラー', 'カメラの起動に失敗しました。\nブラウザの設定でカメラのアクセス権限を確認してください。', '📷');
+                }
+            }
+        }
+
+        async function switchCamera() {
+            if (!isScannerRunning || availableCameras.length <= 1) return;
+            
+            // 次のカメラへ切り替え
+            currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+            const newCameraId = availableCameras[currentCameraIndex].id;
+            
+            try {
+                // 一旦停止
+                await html5QrCode.stop();
+                
+                // 新しいカメラで再起動
+                const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+                await html5QrCode.start({ deviceId: { exact: newCameraId } }, config, onScanSuccess, onScanFailure);
+            } catch (err) {
+                console.error("Camera switch failed:", err);
+                showModal('エラー', 'カメラの切り替えに失敗しました。', '📷');
                 stopScanner();
-                showModal('カメラエラー', 'カメラの起動に失敗しました。\nAndroidタブレットのChrome設定、カメラ権限、またはローカル接続設定を確認してください。', '📷');
             }
         }
 
