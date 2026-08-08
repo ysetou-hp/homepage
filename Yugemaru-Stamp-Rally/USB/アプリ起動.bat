@@ -2,7 +2,7 @@
 setlocal
 
 rem ===== バッチファイルと同じ場所にある index.html を指定 =====
-set "HTML_FILE=%~dp0index02.html"
+set "HTML_FILE=%~dp0index.html"
 
 rem ===== Chrome の場所 =====
 set "CHROME_EXE=C:\Program Files\Google\Chrome\Application\chrome.exe"

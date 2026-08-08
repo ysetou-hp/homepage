@@ -13,13 +13,13 @@
             // ================================================================
             // 1. 基本設定
             // ================================================================
-            useLocalMode: true, // 通常は true。外部画像URLの表示確認をしたい時だけ false にします。
-            storageKey: "yugemaru_stamps_v9_default", // 内容を大きく変更した時は末尾の番号などを変えると、古い端末データをリセットできます。
+            useLocalMode: true, // 使用時はtrue。Geminiで開発中はfalse
+            storageKey: "yugemaru_stamps_v11_default", // 内容を大きく変更した時は末尾の番号などを変えると、古い端末データをリセットできます。
             isDemoMode: false, // 通常は false。起動直後から設定モードにしたい時だけ true にします。
             adminPin: "1234", // 設定メニューを開くための4桁パスワード
             sound: {
                 enabled: true, // スタンプ獲得時の効果音を鳴らす場合は true、無音にする場合は false
-                volume: 0.25, // 0.0〜1.0。会場で聞こえすぎる場合は 0.15 などに下げます。
+                volume: 0.5, // 0.0〜1.0。会場で聞こえすぎる場合は 0.15 などに下げます。
                 stampFile: "./sounds/Party_Popper01-2(Reverb).mp3", // 紙吹雪の破裂音
                 applauseFile: "./sounds/Applause03-5(Far-Mid).mp3", // 紙吹雪がちらついているときの拍手
                 applauseDelayMs: 350, // 破裂音から拍手を鳴らすまでの待ち時間
@@ -28,10 +28,10 @@
             },
             
             // ホーム画面の文章
-            welcomeTitle: "〇〇〇〇中学校の皆様",
+            welcomeTitle: "ご乗船のみなさん",
             welcomeSubtitle: "ようこそ弓削丸へ！",
             welcomeMessage: [
-                "本日は「〇〇〇イベント」にご参加いただきありがとうございます。",
+                "本日はお越しいただきありがとうございます。",
                 "船内のいろいろな場所を巡りながらスタンプを集めてみましょう。",
                 "安全に気をつけて弓削丸での時間を楽しんでください！"
             ].join("\n"),
@@ -62,21 +62,23 @@
             },
 
             // ================================================================
-            // 3. コース設定
+            // 3. コース設定・自動リセット
             // ================================================================
             defaultCourse: 'sunny', // 起動時の初期コース。'sunny' または 'rainy'
             courses: {
                 sunny: {
                     name: "☀️ 晴れの日コース",
-                    // 下の「スポットデータ定義」にある id から、使うスポットだけを並べます。
                     spots: ['bridge', 'student_hall', 'control_room', 'chimney', 'bow', 'flying_deck']
                 },
                 rainy: {
                     name: "☔️ 雨の日コース",
-                    // 下の「スポットデータ定義」にある id から、使うスポットだけを並べます。
                     spots: ['bridge', 'student_hall', 'student_room', 'control_room', 'electrical_room', 'stern']
                 }
             },
+
+            // 最大4件までの自動リセット時刻（"12:00" の形式）
+            // アプリ上の設定メニューからでも変更可能です。
+            scheduledResetTimes: ["", "", "", ""],
 
             // ================================================================
             // 4. 日程・注意事項
@@ -93,7 +95,7 @@
                 { time: "11:00", title: "・" },
                 { time: "11:30", title: "・" },
                 { time: "12:00", title: "帰港・アンケート記入・解散" },
-                { time: "12:30", title: "本日の日程終了" } // ※テスト用に追加・変更して動作を確認できます
+                { time: "12:30", title: "本日の日程終了" } 
             ],
 
             // 注意事項。行を増やす場合は、前の行の最後に , を付けてから追加します。
@@ -107,7 +109,6 @@
             // 5. 豆知識
             // ================================================================
             // スタンプタブを開くたびに、この中からランダムに1つ表示します。
-            // 編集・追加しやすいように、少し長めの文章を用意しています。\nを使って改行できます。
             trivias: [
                 [
                     "【船の速度「ノット」の由来】",
@@ -143,7 +144,7 @@
                     "【船の煙突のマークの意味】",
                     "船の煙突（ファンネル）には、会社ごとの独自のマークや色が塗られており、" +
                     "これを「ファンネルマーク」と呼びます。" +
-                    "遠くからでもどキュの会社の船か一目でわかるようになっています。"
+                    "遠くからでもど cross この会社の船か一目でわかるようになっています。"
                 ].join("\n"),
                 [
                     "【船の右舷灯と左舷灯の色】",
@@ -368,6 +369,22 @@
         @media (max-width: 420px) {
             .stamp-puzzle-bg { width: 90%; }
         }
+        
+        /* 状態表示インジケーター用カスタムスタイル */
+        .sync-indicator-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #4ade80; /* 通常時のグリーン */
+            box-shadow: 0 0 6px rgba(74, 222, 128, 0.8);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .sync-indicator-dot.is-active {
+            background-color: #f59e0b; /* チェック時のオレンジ */
+            box-shadow: 0 0 8px rgba(245, 158, 11, 1);
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body class="text-marine-900 antialiased select-none">
@@ -383,9 +400,15 @@
         <!-- ヘッダー (画面上部に固定) -->
         <header class="sticky top-0 bg-marine-900 text-white p-4 flex items-center justify-between z-40 shadow-md">
             <h1 id="header-title" class="text-lg font-bold tracking-wider">内航総連 presents デジタルスタンプラリー</h1>
-            <button onclick="requestAdminMenu()" class="text-white/80 hover:text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <div id="sync-indicator" class="sync-indicator-dot"></div>
+                    <span id="current-time-display" class="text-sm font-bold tracking-widest text-marine-100">--:--:--</span>
+                </div>
+                <button onclick="requestAdminMenu()" class="text-white/80 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+            </div>
         </header>
 
         <!-- メインコンテンツ領域 -->
@@ -396,8 +419,8 @@
                 
                 <!-- メッセージ (タブレット対応幅 max-w-2xl) -->
                 <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 mb-6 overflow-hidden">
-                    <!-- 画像を左側に回り込みさせる -->
-                    <img id="img-captain" src="" alt="船長" onclick="showCaptainGreeting()" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-white object-cover bg-marine-100 shadow-md float-left mr-4 sm:mr-5 mb-2 cursor-pointer active:scale-95 transition-transform">
+                    <!-- 画像を左側に回り込みさせる (JSで長押し判定追加) -->
+                    <img id="img-captain" src="" alt="船長" class="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-2 border-white object-cover bg-marine-100 shadow-md float-left mr-4 sm:mr-5 mb-2 cursor-pointer active:scale-95 transition-transform" draggable="false">
                     
                     <!-- タイトルとサブタイトル (画像の右側、横並び) -->
                     <div id="welcome-title-wrapper" class="mb-3">
@@ -627,7 +650,7 @@
             <!-- ==================== スタンプ画面 ==================== -->
             <section id="view-stamp" class="hidden p-6 flex flex-col items-center">
                 
-                <!-- スタンプ獲得状況 (個数ベースに変更) -->
+                <!-- スタンプ獲得状況 -->
                 <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 mb-8 text-center">
                     <h2 class="text-xl sm:text-2xl text-marine-800 font-black mb-2">スタンプ獲得状況</h2>
                     <div class="flex items-baseline justify-center gap-1 mb-4">
@@ -640,7 +663,7 @@
                     </div>
                 </div>
 
-                <!-- スタンプグリッド (8個) -->
+                <!-- スタンプグリッド -->
                 <div class="relative w-full max-w-2xl mb-8">
                     <div id="stamp-puzzle-bg" class="stamp-puzzle-bg" aria-hidden="true"></div>
                     <div id="stamp-grid" class="grid grid-cols-4 gap-4 w-full relative z-10">
@@ -648,7 +671,7 @@
                     </div>
                 </div>
                 
-                <!-- 新機能: 船や海の豆知識 -->
+                <!-- 豆知識 -->
                 <div class="glass-panel w-full max-w-2xl rounded-2xl p-6 mb-8 relative overflow-hidden border-t-4 border-accent-400 shadow-sm">
                     <div class="absolute -right-4 -top-4 text-7xl opacity-10 pointer-events-none">💡</div>
                     <h2 class="text-xl sm:text-2xl text-accent-600 font-black mb-3 flex items-center gap-2">
@@ -695,7 +718,7 @@
 
         </main>
 
-        <!-- 下部ナビゲーション (画面下部に固定) -->
+        <!-- 下部ナビゲーション -->
         <div class="fixed bottom-0 left-0 w-full z-40 pointer-events-none">
             <nav class="max-w-3xl mx-auto bg-white border-t border-marine-100 p-2 flex justify-around items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pointer-events-auto">
                 <button onclick="switchView('home')" class="flex flex-col items-center p-3 w-24 group">
@@ -717,18 +740,18 @@
             </nav>
         </div>
 
-
         <!-- スキャナー画面 (全画面オーバーレイ) -->
         <div id="screen-scanner" class="hidden fixed inset-0 bg-marine-950/95 backdrop-blur-md z-[100] flex flex-col">
             <div class="flex-1 flex flex-col">
                 <div class="p-6 flex justify-between items-center text-white">
                     <span class="font-bold text-2xl tracking-wider">QRコードをスキャン</span>
                     <div class="flex gap-4">
-                        <button id="btn-switch-camera" onclick="switchCamera()" class="hidden bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                        <!-- カメラ切り替えボタン (複数カメラがある場合のみ表示) -->
+                        <button id="btn-swap-camera" onclick="swapCamera()" class="hidden bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
                         </button>
-                        <button onclick="stopScanner()" class="bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors shadow-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        <button onclick="stopScanner()" class="bg-white/10 hover:bg-white/20 rounded-full p-4 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
                 </div>
@@ -743,7 +766,7 @@
             </div>
         </div>
 
-        <!-- 汎用モーダル (QRコードコンテナを追加) -->
+        <!-- 汎用モーダル -->
         <div id="modal-overlay" class="hidden fixed inset-0 bg-marine-950/60 backdrop-blur-sm z-[110] flex items-center justify-center p-5 opacity-0 transition-opacity duration-300">
             <div id="modal-content" class="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl transform scale-95 transition-all duration-300 relative border border-white/50 text-center">
                 <div id="modal-icon" class="text-6xl mb-4"></div>
@@ -762,8 +785,14 @@
         <!-- 運営・設定メニュー -->
         <div id="admin-menu" class="hidden fixed inset-0 bg-marine-50/95 backdrop-blur-md z-[70] flex flex-col p-8 overflow-y-auto">
             <div class="flex justify-between items-center border-b border-marine-200 pb-6 mb-8 mt-4 max-w-2xl mx-auto w-full">
-                <h2 class="text-2xl font-bold text-marine-900">設定・テスト用メニュー</h2>
-                <button onclick="closeAdminMenu()" class="p-3 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                <h2 class="text-2xl font-bold text-marine-900">設定メニュー</h2>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <div id="sync-indicator-admin" class="sync-indicator-dot"></div>
+                        <span id="current-time-display-admin" class="text-sm font-bold tracking-widest text-marine-900">--:--:--</span>
+                    </div>
+                    <button onclick="closeAdminMenu()" class="p-3 bg-white rounded-full shadow-sm text-gray-500 hover:text-gray-800"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+                </div>
             </div>
             
             <div class="max-w-2xl mx-auto w-full flex flex-col gap-6">
@@ -795,21 +824,59 @@
                     </div>
                 </div>
 
+                <!-- 指定時刻リセット設定 -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-marine-100">
-                    <h3 class="font-bold text-xl text-marine-900 mb-3">テスト用QRコード</h3>
-                    <p class="text-sm text-gray-500 mb-6">PCの画面に表示して、スマホのカメラで読み取ってテストしてください。</p>
-                    <div id="qr-container" class="grid grid-cols-2 gap-4">
-                        <!-- QRコード自動生成 -->
+                    <h3 class="font-bold text-xl text-marine-900 mb-3">指定時刻での自動リセット</h3>
+                    <p class="text-sm text-gray-500 mb-4">設定した時刻になると、自動的にスタンプがリセットされます。（最大4件・空欄は無効）</p>
+                    
+                    <div class="flex flex-col gap-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="scheduled-reset-time-0" class="reset-time-input flex-1 border border-marine-200 rounded-lg p-3 text-lg font-bold text-marine-900 text-center" title="リセット時刻1">
+                            <button onclick="clearResetTime(0)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-95" title="空欄にする">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                            <div class="w-6 flex justify-center items-center">
+                                <span id="reset-status-0" class="hidden text-green-500 drop-shadow-sm" title="実行済"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="scheduled-reset-time-1" class="reset-time-input flex-1 border border-marine-200 rounded-lg p-3 text-lg font-bold text-marine-900 text-center" title="リセット時刻2">
+                            <button onclick="clearResetTime(1)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-95" title="空欄にする">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                            <div class="w-6 flex justify-center items-center">
+                                <span id="reset-status-1" class="hidden text-green-500 drop-shadow-sm" title="実行済"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="scheduled-reset-time-2" class="reset-time-input flex-1 border border-marine-200 rounded-lg p-3 text-lg font-bold text-marine-900 text-center" title="リセット時刻3">
+                            <button onclick="clearResetTime(2)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-95" title="空欄にする">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                            <div class="w-6 flex justify-center items-center">
+                                <span id="reset-status-2" class="hidden text-green-500 drop-shadow-sm" title="実行済"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="scheduled-reset-time-3" class="reset-time-input flex-1 border border-marine-200 rounded-lg p-3 text-lg font-bold text-marine-900 text-center" title="リセット時刻4">
+                            <button onclick="clearResetTime(3)" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-95" title="空欄にする">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                            </button>
+                            <div class="w-6 flex justify-center items-center">
+                                <span id="reset-status-3" class="hidden text-green-500 drop-shadow-sm" title="実行済"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                            </div>
+                        </div>
                     </div>
+                    
+                    <button onclick="saveScheduledResetTimes()" id="btn-save-times" class="w-full bg-marine-50 hover:bg-marine-100 text-marine-700 border border-marine-200 py-3 rounded-xl font-bold transition-colors">
+                        時刻を保存する
+                    </button>
                 </div>
 
-                <!-- 初期化エリア -->
+                <!-- スタンプリセットエリア -->
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-red-100">
                     <h3 class="font-bold text-xl text-red-600 mb-2">データのリセット</h3>
-                    <p class="text-xs text-gray-500 mb-4 leading-relaxed">取得したスタンプや変更したコース設定などをすべて消去し、アプリを初期状態（現在のコードの設定）に戻します。</p>
-                    <button onclick="resetApplicationData()" id="btn-reset-app" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors">
-                        アプリを初期状態にリセット
-                    </button>
+                    <p class="text-xs text-gray-500 leading-relaxed">ホーム画面の船長画像を1.5秒長押しすると、取得したスタンプのみがリセットされます。<br>（コース設定などは維持されます）</p>
                 </div>
             </div>
         </div>
@@ -833,7 +900,7 @@
         <div id="complete-overlay" class="hidden fixed inset-0 z-[120] flex items-center justify-center pointer-events-none">
             <div class="absolute inset-0 bg-white/90 backdrop-blur-md animate-fade-in"></div>
             
-            <!-- 光の波紋演出 (上品な広がり) -->
+            <!-- 光の波紋演出 -->
             <div class="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none">
                 <div class="absolute w-64 h-64 bg-accent-400/30 rounded-full animate-ping" style="animation-duration: 3s;"></div>
                 <div class="absolute w-64 h-64 bg-accent-300/30 rounded-full animate-ping" style="animation-duration: 3s; animation-delay: 1s;"></div>
@@ -875,17 +942,17 @@
         let html5QrCode = null;
         let isScannerRunning = false;
         let currentView = 'home';
-        let mapPanzoom = null; // Panzoomインスタンス
+        let mapPanzoom = null; 
         let currentCourseId = 'sunny';
         let pendingCourseChange = null;
         let customCourses = null;
         let editingCourseId = null;
-        let pendingReset = false; // リセット確認用
+        let pendingReset = false; // 手動リセット確認用
         let stampPuzzleCompleteRevealed = false;
         let stampAudioContext = null;
         const stampSoundElements = {};
         
-        // カメラ制御用の状態
+        // カメラ制御用
         let availableCameras = [];
         let currentCameraIndex = 0;
 
@@ -971,6 +1038,7 @@
                 piece.style.transform = isVisible ? 'scale(1.015)' : 'scale(1)';
             });
         }
+        
         function prepareAcquiredStampCell(spot) {
             const cell = document.getElementById(`stamp-cell-${spot.id}`);
             if (!cell) return;
@@ -991,7 +1059,7 @@
             const iconEl = document.getElementById('modal-icon');
             if (!iconEl) return;
             if (icon === 'captain') {
-                iconEl.innerHTML = `<img src="${CONFIG.images.captain}" alt="船長" class="object-cover shadow-md mx-auto" style="width:80%; max-width:320px; aspect-ratio:1/1; border-radius:9999px;" onerror="this.onerror=null; this.replaceWith(document.createTextNode('🚢'));">`;
+                iconEl.innerHTML = `<img id="modal-captain-img" src="${CONFIG.images.captain}" alt="船長" class="object-cover shadow-md mx-auto select-none touch-none" style="width:80%; max-width:320px; aspect-ratio:1/1; border-radius:9999px;" draggable="false" onerror="this.onerror=null; this.replaceWith(document.createTextNode('🚢'));">`;
                 return;
             }
             if (icon === 'badge') {
@@ -1021,6 +1089,222 @@
             img.src = src;
         }
 
+        // --- 設定メニュー・アプリデータリセット関連 ---
+        // 自動または手動でスタンプのみをリセットする共通関数
+        function executeAutoReset(reason) {
+            acquiredStamps = [];
+            stampPuzzleCompleteRevealed = false;
+            localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
+            
+            // UIを更新してホーム画面に戻す
+            document.getElementById('stamp-grid').innerHTML = ''; 
+            updateUI();
+            switchView('home');
+        }
+
+        function resetStampDataOnly() {
+            const btn = document.getElementById('btn-reset-app');
+            
+            if (!pendingReset) {
+                pendingReset = true;
+                btn.innerHTML = `本当にリセットしますか？<br><span class="text-xs font-normal">(タップで確定)</span>`;
+                btn.className = "w-full bg-red-500 text-white border-2 border-red-600 py-2 rounded-xl font-bold";
+                
+                setTimeout(() => {
+                    if (pendingReset) {
+                        pendingReset = false;
+                        btn.innerText = "スタンプの取得状況をリセット";
+                        btn.className = "w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors";
+                    }
+                }, 4000);
+            } else {
+                pendingReset = false;
+                executeAutoReset('manual');
+                
+                btn.innerText = "スタンプの取得状況をリセット";
+                btn.className = "w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors";
+                closeAdminMenu();
+                
+                showModal('リセット完了', 'スタンプの取得状況をゼロに戻しました。', '🗑️');
+            }
+        }
+
+        // --- 船長画像 長押しリセット機能 ---
+        let captainPressTimer = null;
+        function setupCaptainSecretReset() {
+            const captainImg = document.getElementById('img-captain');
+            if (!captainImg) return;
+            
+            // 画像の右クリックメニュー・ドラッグを無効化
+            captainImg.addEventListener('contextmenu', e => e.preventDefault());
+            captainImg.draggable = false;
+            
+            let isLongPress = false;
+
+            const startPress = (e) => {
+                isLongPress = false;
+                captainPressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    executeAutoReset('secret');
+                    showModal('シークレットリセット', 'スタンプの取得状況を初期化しました。', '🗑️');
+                }, 1500); // 1.5秒長押しで発動
+            };
+            
+            const cancelPress = () => {
+                if (captainPressTimer) clearTimeout(captainPressTimer);
+            };
+
+            // クリックイベントのフック (長押し時は通常の挨拶ポップアップを出さない)
+            captainImg.addEventListener('click', (e) => {
+                if (isLongPress) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                } else {
+                    showCaptainGreeting();
+                }
+            });
+
+            captainImg.addEventListener('touchstart', startPress, { passive: true });
+            captainImg.addEventListener('touchend', cancelPress);
+            captainImg.addEventListener('mousedown', startPress);
+            captainImg.addEventListener('mouseup', cancelPress);
+            captainImg.addEventListener('mouseleave', cancelPress);
+        }
+
+        // --- 自動チェックインジケーターのアニメーション ---
+        function triggerSyncIndicator() {
+            const indicator = document.getElementById('sync-indicator');
+            if (indicator) {
+                // オレンジ色に点灯
+                indicator.classList.add('is-active');
+                
+                // 1秒後に緑色に戻す
+                setTimeout(() => {
+                    indicator.classList.remove('is-active');
+                }, 1000);
+            }
+            
+            // 設定メニュー側のインジケーターも連動させる
+            const adminIndicator = document.getElementById('sync-indicator-admin');
+            if (adminIndicator) {
+                adminIndicator.classList.add('is-active');
+                setTimeout(() => {
+                    adminIndicator.classList.remove('is-active');
+                }, 1000);
+            }
+        }
+
+        // --- タイムアウトチェック処理 ---
+        function checkAndHandleTimeout() {
+            const now = new Date();
+            const currentHours = now.getHours();
+            const currentMinutes = now.getMinutes();
+            const currentTotalMinutes = currentHours * 60 + currentMinutes;
+            const todayDateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+
+            // 実行済み履歴の読み込み
+            let executedHistory = {};
+            try {
+                executedHistory = JSON.parse(localStorage.getItem(CONFIG.storageKey + "_executed_resets")) || {};
+            } catch (e) {}
+
+            // 古い日付の履歴をクリーンアップ
+            if (executedHistory.date !== todayDateStr) {
+                executedHistory = { date: todayDateStr, times: {} };
+            }
+
+            let resetTriggered = false;
+
+            // 指定時刻でのリセット判定 (+1分の許容範囲)
+            if (CONFIG.scheduledResetTimes && CONFIG.scheduledResetTimes.length > 0) {
+                for (let i = 0; i < CONFIG.scheduledResetTimes.length; i++) {
+                    const scheduledTime = CONFIG.scheduledResetTimes[i];
+                    if (!scheduledTime || scheduledTime.trim() === "") continue;
+                    
+                    const [sHour, sMin] = scheduledTime.split(':').map(Number);
+                    const scheduledTotalMinutes = sHour * 60 + sMin;
+                    
+                    // 現在時刻と指定時刻の差分（分単位）
+                    const diff = currentTotalMinutes - scheduledTotalMinutes;
+
+                    // 指定時刻ちょうどの分で、かつ今日まだこの時刻設定でリセットを実行していない場合
+                    if (diff === 0) {
+                        if (!executedHistory.times[scheduledTime]) {
+                            executedHistory.times[scheduledTime] = true;
+                            resetTriggered = true;
+                            break; // 1回のリセットで十分なのでループを抜ける
+                        }
+                    }
+                }
+            }
+
+            if (resetTriggered) {
+                // 実行履歴を保存してUI更新 (0個でも実行済みの記録とチェックマーク付与は行う)
+                localStorage.setItem(CONFIG.storageKey + "_executed_resets", JSON.stringify(executedHistory));
+                updateScheduledResetUI();
+                
+                // スタンプが1つ以上ある場合のみ、実際の初期化処理とポップアップを行う
+                if (acquiredStamps.length > 0) {
+                    executeAutoReset('scheduled');
+                    showModal('自動リセット', '指定時刻になったため、スタンプを初期化しました。', '⏱️');
+                }
+            }
+        }
+
+        // --- 指定時刻リセットUI更新処理 ---
+        function updateScheduledResetUI() {
+            const now = new Date();
+            const todayDateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+            let executedHistory = {};
+            try {
+                executedHistory = JSON.parse(localStorage.getItem(CONFIG.storageKey + "_executed_resets")) || {};
+            } catch (e) {}
+
+            const isToday = executedHistory.date === todayDateStr;
+            const times = isToday ? (executedHistory.times || {}) : {};
+
+            for (let i = 0; i < 4; i++) {
+                const input = document.getElementById(`scheduled-reset-time-${i}`);
+                const statusBadge = document.getElementById(`reset-status-${i}`);
+                if (input && statusBadge) {
+                    const timeValue = input.value;
+                    if (timeValue && times[timeValue]) {
+                        statusBadge.classList.remove('hidden');
+                    } else {
+                        statusBadge.classList.add('hidden');
+                    }
+                }
+            }
+        }
+
+        // --- 指定時刻リセット 保存処理 ---
+        function saveScheduledResetTimes() {
+            const inputs = document.querySelectorAll('.reset-time-input');
+            const newTimes = Array.from(inputs).map(input => input.value);
+            
+            CONFIG.scheduledResetTimes = newTimes;
+            localStorage.setItem(CONFIG.storageKey + "_scheduled_times", JSON.stringify(newTimes));
+            
+            updateScheduledResetUI(); // バッジの表示状態を更新
+            
+            // 保存完了のフィードバック
+            const btn = document.getElementById('btn-save-times');
+            const originalText = btn.innerText;
+            btn.innerText = "保存しました！";
+            btn.classList.add('bg-marine-600', 'text-white');
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.classList.remove('bg-marine-600', 'text-white');
+            }, 2000);
+        }
+
+        function clearResetTime(index) {
+            const input = document.getElementById(`scheduled-reset-time-${index}`);
+            if (input) {
+                input.value = "";
+            }
+        }
+
         // --- 初期化 ---
         function init() {
             setImgSrc('img-captain', CONFIG.images.captain, 'https://placehold.co/250x250/e2e8f0/64748b?text=250x250');
@@ -1044,21 +1328,73 @@
                 try { acquiredStamps = JSON.parse(savedData); } catch (e) { acquiredStamps = []; }
             }
 
+            // 指定時刻リセット設定の読み込み
+            const savedScheduledTimes = localStorage.getItem(CONFIG.storageKey + "_scheduled_times");
+            if (savedScheduledTimes) {
+                try {
+                    const parsedTimes = JSON.parse(savedScheduledTimes);
+                    if (typeof parsedTimes === 'string') {
+                        CONFIG.scheduledResetTimes = [parsedTimes, "", "", ""]; // 古い1件データの互換性
+                    } else if (Array.isArray(parsedTimes)) {
+                        CONFIG.scheduledResetTimes = parsedTimes;
+                    }
+                } catch (e) {
+                    CONFIG.scheduledResetTimes = ["", "", "", ""];
+                }
+            }
+            
+            // 画面の入力欄に反映
+            for (let i = 0; i < 4; i++) {
+                const input = document.getElementById(`scheduled-reset-time-${i}`);
+                if (input && CONFIG.scheduledResetTimes[i]) {
+                    input.value = CONFIG.scheduledResetTimes[i];
+                }
+            }
+            
+            updateScheduledResetUI();
+
             applyWelcomeTitle();
             setupSurveyLink();
             renderSchedule();
             renderNotices();
             
+            // 隠し機能の初期化
+            setupCaptainSecretReset();
+            
             switchView('home'); 
             updateUI();
-            generateTestQRs();
             updateDemoModeUI();
             updateCourseUI();
             
             initMapZoom();
+
+            // 時計の初期化と毎秒更新
+            updateClock();
+            setInterval(updateClock, 1000);
             
-            // 1分ごとにスケジュール表示を更新する
-            setInterval(renderSchedule, 60000);
+            // 定期的な処理 (スケジュール表示とタイムアウト判定)
+            setInterval(() => {
+                renderSchedule();
+                checkAndHandleTimeout();
+                triggerSyncIndicator();
+            }, 15000); // 15秒ごとに変更
+        }
+
+        // --- 時計表示の更新 ---
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${hours}:${minutes}:${seconds}`;
+            
+            // ホーム画面の時計
+            const timeDisplay = document.getElementById('current-time-display');
+            if (timeDisplay) timeDisplay.innerText = timeStr;
+            
+            // 設定メニューの時計
+            const timeDisplayAdmin = document.getElementById('current-time-display-admin');
+            if (timeDisplayAdmin) timeDisplayAdmin.innerText = timeStr;
         }
 
         // --- タイトル表示関連 ---
@@ -1382,7 +1718,7 @@
             }
         }
 
-        // --- UI全体更新 (個数ベース表示) ---
+        // --- UI全体更新 ---
         function updateUI() {
             const activeSpots = getActiveSpots();
             const count = acquiredStamps.length;
@@ -1415,14 +1751,14 @@
             });
         }
 
-        // --- スタンプグリッド描画 (差分更新対応) ---
+        // --- スタンプグリッド描画 ---
         function renderStampGrid(activeSpots = getActiveSpots()) {
             const grid = document.getElementById('stamp-grid');
             const acquiredSet = new Set(acquiredStamps);
             const demoModeValue = String(CONFIG.isDemoMode);
             const stampCardSettings = getStampCardSettings();
             
-            // カラム数を動的に変更 (6個なら3列、それ以上なら4列)
+            // カラム数を動的に変更
             grid.className = `grid gap-4 w-full relative z-10 ${activeSpots.length <= 6 ? 'grid-cols-3' : 'grid-cols-4'}`;
             
             // 初回のみ空のセル枠を生成
@@ -1438,7 +1774,7 @@
                 const isAcquired = acquiredSet.has(spot.id);
                 const cell = document.getElementById(`stamp-cell-${spot.id}`);
                 
-                // 既に状態が反映されていれば、再描画をスキップ（チラつき・他のスタンプが動く現象を防止）
+                // 既に状態が反映されていれば再描画をスキップ
                 if (cell.dataset.acquired === String(isAcquired) && cell.dataset.demo === demoModeValue) {
                     return;
                 }
@@ -1458,7 +1794,6 @@
                 }
 
                 if (isAcquired) {
-                    // ★ ここの画像のクラス -right-3 を right-0 に変更（少し左に寄ります）
                     cell.innerHTML = acquiredStampCellHtml(spot, stampCardSettings);
                 } else {
                     cell.innerHTML = `
@@ -1468,85 +1803,71 @@
             });
         }
 
-        // --- QRスキャナー制御 ---
+        // --- QRスキャナー制御 (カメラ切り替え対応) ---
         async function startScanner() {
             document.getElementById('screen-scanner').classList.remove('hidden');
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+            
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
             
             try {
-                // 端末のカメラ一覧を取得
+                // 利用可能なすべてのカメラを取得
                 availableCameras = await Html5Qrcode.getCameras();
-                let cameraConfig = { facingMode: "environment" }; // デフォルトは背面指定
                 
                 if (availableCameras && availableCameras.length > 0) {
-                    const switchBtn = document.getElementById('btn-switch-camera');
-                    if (switchBtn) {
-                        if (availableCameras.length > 1) {
-                            switchBtn.classList.remove('hidden'); // 複数あれば切替ボタンを表示
-                        } else {
-                            switchBtn.classList.add('hidden');
-                        }
+                    const swapBtn = document.getElementById('btn-swap-camera');
+                    
+                    if (availableCameras.length > 1) {
+                        swapBtn.classList.remove('hidden'); // 複数あれば切り替えボタンを表示
+                    } else {
+                        swapBtn.classList.add('hidden');
                     }
 
-                    // Windowsタブレット対策: ラベル名から背面カメラを探す
-                    let targetCameraIndex = -1;
+                    // 最初は「背面（アウト）カメラ」と推測されるものを探す
+                    let targetIndex = 0;
                     for (let i = 0; i < availableCameras.length; i++) {
                         const label = availableCameras[i].label.toLowerCase();
                         if (label.includes('back') || label.includes('rear') || label.includes('environment') || label.includes('背面') || label.includes('アウト')) {
-                            targetCameraIndex = i;
+                            targetIndex = i;
                             break;
                         }
                     }
                     
-                    if (targetCameraIndex !== -1) {
-                        currentCameraIndex = targetCameraIndex;
-                        cameraConfig = { deviceId: { exact: availableCameras[currentCameraIndex].id } };
-                    } else if (availableCameras.length > 1) {
-                        // 名前で判別つかない場合、2番目のカメラ(インデックス1)を背面と仮定
-                        currentCameraIndex = 1;
-                        cameraConfig = { deviceId: { exact: availableCameras[currentCameraIndex].id } };
-                    } else {
-                        currentCameraIndex = 0;
-                        cameraConfig = { deviceId: { exact: availableCameras[currentCameraIndex].id } };
-                    }
+                    currentCameraIndex = targetIndex;
+                    await startCameraWithCurrentIndex();
+                } else {
+                    throw new Error("カメラが見つかりません。");
                 }
-
-                await html5QrCode.start(cameraConfig, config, onScanSuccess, onScanFailure);
-                isScannerRunning = true;
             } catch (err) {
-                console.error("Camera start failed:", err);
-                
-                // 特定のカメラID指定で失敗した場合、通常の背面指定でフォールバック
-                try {
-                    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
-                    isScannerRunning = true;
-                } catch (fallbackErr) {
-                    console.error("Fallback camera start failed:", fallbackErr);
-                    stopScanner();
-                    showModal('カメラエラー', 'カメラの起動に失敗しました。\nブラウザの設定でカメラのアクセス権限を確認してください。', '📷');
-                }
+                console.error(err);
+                stopScanner();
+                showModal('カメラエラー', 'カメラの起動に失敗しました。\nWindowsのカメラ権限設定や、ローカル接続設定を確認してください。', '📷');
             }
         }
 
-        async function switchCamera() {
-            if (!isScannerRunning || availableCameras.length <= 1) return;
+        async function startCameraWithCurrentIndex() {
+            if (isScannerRunning && html5QrCode) {
+                await html5QrCode.stop();
+            }
             
+            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+            const cameraId = availableCameras[currentCameraIndex].id;
+            
+            // 明示的にcameraIdを指定して起動する
+            await html5QrCode.start({ deviceId: { exact: cameraId } }, config, onScanSuccess, onScanFailure);
+            isScannerRunning = true;
+        }
+
+        async function swapCamera() {
+            if (availableCameras.length <= 1) return;
             // 次のカメラへ切り替え
             currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-            const newCameraId = availableCameras[currentCameraIndex].id;
             
             try {
-                // 一旦停止
-                await html5QrCode.stop();
-                
-                // 新しいカメラで再起動
-                const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-                await html5QrCode.start({ deviceId: { exact: newCameraId } }, config, onScanSuccess, onScanFailure);
+                await startCameraWithCurrentIndex();
             } catch (err) {
-                console.error("Camera switch failed:", err);
-                showModal('エラー', 'カメラの切り替えに失敗しました。', '📷');
-                stopScanner();
+                console.error("カメラ切り替えエラー:", err);
             }
         }
 
@@ -1736,6 +2057,7 @@
 
         window.addEventListener('pointerdown', unlockStampAudio, { once: true, passive: true });
         window.addEventListener('keydown', unlockStampAudio, { once: true });
+        
         // 通常のスタンプ獲得時の紙吹雪
         function fireConfetti() {
             if (typeof confetti !== 'function') return;
@@ -1804,7 +2126,6 @@
                 setTimeout(() => {
                     const stampEl = document.createElement('img');
                     stampEl.src = CONFIG.images.stamp;
-                    // ★ ここも同様に -right-3 を right-0 に変更
                     stampEl.className = `absolute -top-3 right-0 w-24 h-24 md:w-32 md:h-32 object-contain z-30 animate-stamp-press drop-shadow-md`;
                     
                     stampEl.onerror = function() {
@@ -1848,7 +2169,7 @@
             }, 3500);
         }
 
-        // --- モーダル制御 (QRコード生成拡張) ---
+        // --- モーダル制御 ---
         function showModal(title, message, icon = '', qrText = '') {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-message').innerText = message;
@@ -1956,23 +2277,6 @@
                 await processStamp(id);
             }
         }
-
-        function generateTestQRs() {
-            const container = document.getElementById('qr-container');
-            container.innerHTML = ''; // 再生成のため一度クリア
-            const fragment = document.createDocumentFragment();
-            
-            // コース設定に関わらず全9カ所のQRコードを常に生成する
-            ALL_SPOTS.forEach(spot => {
-                const wrapper = document.createElement('div'); wrapper.className = 'flex flex-col items-center p-3 border border-marine-200 rounded-xl bg-white';
-                wrapper.innerHTML = `<div class="font-bold text-xs text-marine-900 mb-2">${spot.name}</div><div id="qr-${spot.id}" class="bg-white p-1"></div><div class="text-[10px] text-gray-400 mt-2 font-mono">${spot.id}</div>`;
-                fragment.appendChild(wrapper);
-            });
-            container.appendChild(fragment);
-            ALL_SPOTS.forEach(spot => {
-                new QRCode(document.getElementById(`qr-${spot.id}`), { text: spot.id, width: 80, height: 80, colorDark : "#0c4a6e", colorLight : "#ffffff", correctLevel : QRCode.CorrectLevel.L });
-            });
-        }
         
         // --- コース変更機能 ---
         function setCourse(courseId) {
@@ -2010,7 +2314,6 @@
             document.getElementById('stamp-grid').innerHTML = ''; // グリッド枠を再生成させる
             updateCourseUI();
             updateUI();
-            generateTestQRs();
         }
 
         function updateCourseUI() {
@@ -2102,7 +2405,7 @@
             if (editingCourseId === currentCourseId) {
                 acquiredStamps = [];
                 stampPuzzleCompleteRevealed = false;
-            localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
+                localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
                 document.getElementById('stamp-grid').innerHTML = '';
                 updateUI();
             }
@@ -2111,31 +2414,15 @@
             closeCourseEditor();
         }
 
-        // --- データ初期化機能 ---
-        function resetApplicationData() {
-            const btn = document.getElementById('btn-reset-app');
+        // --- データ初期化機能 (スタンプのみリセット) ---
+        function executeAutoReset(reason) {
+            acquiredStamps = [];
+            stampPuzzleCompleteRevealed = false;
+            localStorage.setItem(CONFIG.storageKey, JSON.stringify(acquiredStamps));
             
-            if (!pendingReset) {
-                pendingReset = true;
-                btn.innerHTML = `本当に初期化しますか？<br><span class="text-xs font-normal">(タップで確定して再読み込み)</span>`;
-                btn.className = "w-full bg-red-500 text-white border-2 border-red-600 py-2 rounded-xl font-bold";
-                
-                // 4秒経過でキャンセル
-                setTimeout(() => {
-                    if (pendingReset) {
-                        pendingReset = false;
-                        btn.innerText = "アプリを初期状態にリセット";
-                        btn.className = "w-full bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 py-3 rounded-xl font-bold transition-colors";
-                    }
-                }, 4000);
-            } else {
-                // 確定処理：ローカルストレージの該当データをすべて削除してリロード
-                localStorage.removeItem(CONFIG.storageKey);
-                localStorage.removeItem(CONFIG.storageKey + "_course");
-                localStorage.removeItem(CONFIG.storageKey + "_custom_courses");
-                localStorage.removeItem(getTriviaStorageKey());
-                location.reload();
-            }
+            document.getElementById('stamp-grid').innerHTML = ''; 
+            updateUI();
+            switchView('home');
         }
 
         window.addEventListener('DOMContentLoaded', init);
