@@ -75,6 +75,10 @@
             background: linear-gradient(to bottom, #6366f1, #d946ef);
             z-index: 0;
         }
+        .timeline-item:last-child .timeline-line::before {
+            display: none;
+        }
+        
         .floating-blob {
             animation: blob 10s infinite alternate;
         }
@@ -106,11 +110,11 @@
             uiExplanationImage: "./image00.png",
             
             // 各ステップの出力画像
-            step1Image: "./image01-2.png", 
-            step2Image: "./image02-2.png", 
-            step3Image: "./image03-2.png", 
-            step4Image: "./image04-2.png", 
-            step5Image: "./image05-2.png", 
+            step1Image: "./image01.png", 
+            step2Image: "./image02.png", 
+            step3Image: "./image03.png", 
+            step4Image: "./image04.png", 
+            step5Image: "./image05.png", 
         };
     </script>
     <!-- ======================================================== -->
@@ -330,7 +334,6 @@
 <span class="text-gray-500"># 一辺60 mmの立方体を作成</span>
 box = <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
 
-
 show(box)
 </pre>
                                         </div>
@@ -352,28 +355,7 @@ show(box)
                             <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
                         </button>
 
-<div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
-                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
-                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-event-primary to-event-secondary"></div>
-                                <h4 class="font-bold text-lg mb-3 text-event-primary">コードの意味</h4>
-                                <code class="bg-[#0a101d] px-3 py-1.5 rounded-md text-event-accent mb-3 inline-block font-mono border border-white/10">cube([60, 60, 60])</code>
-                                <p class="mb-4 text-gray-300"><code>cube()</code>は直方体を作る命令です。<br>角かっこの中は、次の順番で大きさを指定します。</p>
-                                <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg text-center font-mono text-sm mb-4 text-gray-200">
-                                    [X方向の長さ, Y方向の長さ, Z方向の長さ]
-                                </div>
-                                <p class="text-gray-300">今回はすべて60 mmなので、立方体になります。</p>
-                            </div>
-
-                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
-                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
-                                </div>
-                                <p class="text-gray-300 text-sm leading-relaxed">
-                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">cube([60, 30, 20])</code> のように、X, Y, Z の数字をバラバラにして実行してみよう！立方体以外のどんな形（直方体）になるか観察してみよう。
-                                </p>
-                            </div>
-
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
                             <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
                                 <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
                                     <span class="text-xs text-gray-400 font-mono">Python</span>
@@ -387,56 +369,30 @@ show(box)
 <span class="text-gray-500"># 一辺60 mmの立方体を作成</span>
 box = cube([<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>])
 
-
-# ==========================================
-# XYZ軸
-# ==========================================
-
-AXIS_LENGTH = 100
-AXIS_RADIUS = 1.5
-
-ARROW_LENGTH = 10
-ARROW_RADIUS = 4
-
-# X軸
-x_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-x_axis = x_axis % [0, 90, 0]
-x_axis = x_axis.color("Red")
-
-x_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-x_arrow = x_arrow % [0, 90, 0]
-x_arrow = x_arrow + [AXIS_LENGTH, 0, 0]
-x_arrow = x_arrow.color("Red")
-
-# Y軸
-y_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-y_axis = y_axis % [-90, 0, 0]
-y_axis = y_axis.color("Green")
-
-y_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-y_arrow = y_arrow % [-90, 0, 0]
-y_arrow = y_arrow + [0, AXIS_LENGTH, 0]
-y_arrow = y_arrow.color("Green")
-
-# Z軸
-z_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-z_axis = z_axis.color("Blue")
-
-z_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-z_arrow = z_arrow + [0, 0, AXIS_LENGTH]
-z_arrow = z_arrow.color("Blue")
-
-xyz_axis = (
-    x_axis
-    | x_arrow
-    | y_axis
-    | y_arrow
-    | z_axis
-    | z_arrow
-)
-
-show(box | xyz_axis)
+<span class="text-gray-500"># 画面に表示</span>
+show(box)
 </pre>
+                            </div>
+
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-event-primary to-event-secondary"></div>
+                                <h4 class="font-bold text-lg mb-3 text-event-primary">コードの意味</h4>
+                                <code class="bg-[#0a101d] px-3 py-1.5 rounded-md text-event-accent mb-3 inline-block font-mono border border-white/10">cube([60, 60, 60])</code>
+                                <p class="mb-4 text-gray-300"><code>cube()</code>は直方体を作る命令です。<br>角かっこの中は、次の順番で大きさを指定します。</p>
+                                <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg text-center font-mono text-sm mb-4 text-gray-200">
+                                    [X方向の長さ, Y方向の長さ, Z方向の長さ]
+                                </div>
+                                <p class="text-gray-300">今回はすべて60 mmなので、立方体になります。</p>
+                            </div>
+                            
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">cube([60, 30, 20])</code> のように、X, Y, Z の数字をバラバラにして実行してみよう！立方体以外のどんな形（直方体）になるか観察してみよう。
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -474,7 +430,6 @@ box = cube(
     <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
 )
 
-
 show(box)
 </pre>
                                         </div>
@@ -496,7 +451,27 @@ show(box)
                             <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
                         </button>
 
-<div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-indigo-400/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 中心を原点に合わせて立方体を作成</span>
+box = cube(
+    [<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>],
+    center=<span class="text-event-primary">True</span>
+)
+
+show(box)
+</pre>
+                            </div>
+
                             <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
                                 <p class="mb-4 text-gray-300">正解は <code class="text-event-accent font-mono bg-[#0a101d] px-2 py-1 rounded border border-white/10">center=True</code> を追加することでした！<br>立方体の中心を原点にすると、各面の位置は次のようになります。</p>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-mono text-center">
@@ -524,7 +499,7 @@ show(box)
                                 </div>
                                 <p class="mt-6 text-gray-400 text-sm text-center">一辺が60 mmなので、中心から各面までの距離は半分の30 mmです。</p>
                             </div>
-
+                            
                             <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
                                 <div class="flex items-center gap-2 mb-3">
                                     <i class="fa-solid fa-rocket text-yellow-400"></i>
@@ -533,74 +508,6 @@ show(box)
                                 <p class="text-gray-300 text-sm leading-relaxed">
                                     <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">center=False</code> に変更したり、このオプション自体を消したりして、立方体の位置がどう変わるか（元の位置に戻るか）確認してみよう。
                                 </p>
-                            </div>
-
-                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
-                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
-                                    <span class="text-xs text-gray-400 font-mono">Python</span>
-                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-indigo-400/20 px-3 py-1.5 rounded-md shadow-lg z-20">
-                                        <i class="fa-regular fa-copy"></i> Copy
-                                    </button>
-                                </div>
-<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
-<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
-
-<span class="text-gray-500"># 中心を原点に合わせて立方体を作成</span>
-box = cube(
-    [<span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>, <span class="text-[#facc15]">60</span>],
-    center=<span class="text-event-primary">True</span>
-)
-
-
-# ==========================================
-# XYZ軸
-# ==========================================
-
-AXIS_LENGTH = 100
-AXIS_RADIUS = 1.5
-
-ARROW_LENGTH = 10
-ARROW_RADIUS = 4
-
-# X軸
-x_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-x_axis = x_axis % [0, 90, 0]
-x_axis = x_axis.color("Red")
-
-x_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-x_arrow = x_arrow % [0, 90, 0]
-x_arrow = x_arrow + [AXIS_LENGTH, 0, 0]
-x_arrow = x_arrow.color("Red")
-
-# Y軸
-y_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-y_axis = y_axis % [-90, 0, 0]
-y_axis = y_axis.color("Green")
-
-y_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-y_arrow = y_arrow % [-90, 0, 0]
-y_arrow = y_arrow + [0, AXIS_LENGTH, 0]
-y_arrow = y_arrow.color("Green")
-
-# Z軸
-z_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-z_axis = z_axis.color("Blue")
-
-z_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-z_arrow = z_arrow + [0, 0, AXIS_LENGTH]
-z_arrow = z_arrow.color("Blue")
-
-xyz_axis = (
-    x_axis
-    | x_arrow
-    | y_axis
-    | y_arrow
-    | z_axis
-    | z_arrow
-)
-
-show(box | xyz_axis)
-</pre>
                             </div>
                         </div>
                     </div>
@@ -635,7 +542,6 @@ show(box | xyz_axis)
 <span class="text-gray-500"># 直径16 mmの球を作成</span>
 ball = <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
 
-
 show(ball)
 </pre>
                                         </div>
@@ -657,7 +563,27 @@ show(ball)
                             <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
                         </button>
 
-<div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
+                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
+                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
+                                    <span class="text-xs text-gray-400 font-mono">Python</span>
+                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-event-secondary/20 px-3 py-1.5 rounded-md shadow-lg z-20">
+                                        <i class="fa-regular fa-copy"></i> Copy
+                                    </button>
+                                </div>
+<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
+<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
+
+<span class="text-gray-500"># 直径16 mm、半径8 mmの球を作成</span>
+ball = sphere(
+    r=<span class="text-[#facc15]">8</span>,
+    fn=<span class="text-[#facc15]">64</span>
+)
+
+show(ball)
+</pre>
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
                                     <div class="absolute top-0 left-0 w-1 h-full bg-event-secondary"></div>
@@ -684,74 +610,6 @@ show(ball)
                                 <p class="text-gray-300 text-sm leading-relaxed">
                                     滑らかさを決める <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">fn=64</code> の数字を、<code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">fn=10</code> のように小さくしたり、逆に <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">fn=100</code> にしたりしてみよう。球の表面のカクカク具合がどう変化するか観察してみよう！
                                 </p>
-                            </div>
-
-                            <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
-                                <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
-                                    <span class="text-xs text-gray-400 font-mono">Python</span>
-                                    <button onclick="copyCode(this)" class="opacity-100 sm:opacity-0 group-hover/code:opacity-100 absolute top-2 right-2 bg-event-card/80 backdrop-blur border border-white/20 text-xs text-gray-200 hover:text-white flex items-center gap-1 transition-all hover:bg-event-secondary/20 px-3 py-1.5 rounded-md shadow-lg z-20">
-                                        <i class="fa-regular fa-copy"></i> Copy
-                                    </button>
-                                </div>
-<pre class="p-6 text-sm overflow-x-auto font-mono leading-relaxed bg-[#0a101d] text-gray-300">
-<span class="text-event-accent font-bold">from</span> pythonscad <span class="text-event-accent font-bold">import</span> *
-
-<span class="text-gray-500"># 直径16 mm、半径8 mmの球を作成</span>
-ball = sphere(
-    r=<span class="text-[#facc15]">8</span>,
-    fn=<span class="text-[#facc15]">64</span>
-)
-
-
-# ==========================================
-# XYZ軸
-# ==========================================
-
-AXIS_LENGTH = 100
-AXIS_RADIUS = 1.5
-
-ARROW_LENGTH = 10
-ARROW_RADIUS = 4
-
-# X軸
-x_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-x_axis = x_axis % [0, 90, 0]
-x_axis = x_axis.color("Red")
-
-x_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-x_arrow = x_arrow % [0, 90, 0]
-x_arrow = x_arrow + [AXIS_LENGTH, 0, 0]
-x_arrow = x_arrow.color("Red")
-
-# Y軸
-y_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-y_axis = y_axis % [-90, 0, 0]
-y_axis = y_axis.color("Green")
-
-y_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-y_arrow = y_arrow % [-90, 0, 0]
-y_arrow = y_arrow + [0, AXIS_LENGTH, 0]
-y_arrow = y_arrow.color("Green")
-
-# Z軸
-z_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-z_axis = z_axis.color("Blue")
-
-z_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-z_arrow = z_arrow + [0, 0, AXIS_LENGTH]
-z_arrow = z_arrow.color("Blue")
-
-xyz_axis = (
-    x_axis
-    | x_arrow
-    | y_axis
-    | y_arrow
-    | z_axis
-    | z_arrow
-)
-
-show(ball | xyz_axis)
-</pre>
                             </div>
                         </div>
                     </div>
@@ -789,7 +647,6 @@ ball = sphere(r=<span class="text-[#facc15]">8</span>, fn=<span class="text-[#fa
 <span class="text-gray-500"># 球をZ方向に30 mm移動</span>
 ball = ball + <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
 
-
 show(ball)
 </pre>
                                         </div>
@@ -811,25 +668,7 @@ show(ball)
                             <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
                         </button>
 
-<div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
-                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
-                                <p class="mb-4 text-gray-300">移動量は次の順番で指定します：</p>
-                                <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg text-center font-mono text-sm mb-4 text-gray-200">
-                                    [X方向, Y方向, Z方向]
-                                </div>
-                                <p class="text-gray-300">今回の移動は <code class="bg-[#0a101d] px-2 py-1 rounded font-mono text-event-accent text-sm border border-white/10">[0, 0, 30]</code> なので、X方向とY方向には動かさず、Z方向に30 mm移動します。<br>これにより、球の中心が立方体の上面に置かれます。</p>
-                            </div>
-
-                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
-                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
-                                </div>
-                                <p class="text-gray-300 text-sm leading-relaxed">
-                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">[30, 0, 30]</code> や <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">[0, -30, 30]</code> のように、XやYの移動量も変更してみよう。球が右や手前にどう動くか確認してみよう。
-                                </p>
-                            </div>
-
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
                             <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
                                 <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
                                     <span class="text-xs text-gray-400 font-mono">Python</span>
@@ -849,56 +688,26 @@ ball = sphere(
 <span class="text-gray-500"># 球をZ方向に30 mm移動</span>
 ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">0</span>, <span class="text-[#facc15]">30</span>]
 
-
-# ==========================================
-# XYZ軸
-# ==========================================
-
-AXIS_LENGTH = 100
-AXIS_RADIUS = 1.5
-
-ARROW_LENGTH = 10
-ARROW_RADIUS = 4
-
-# X軸
-x_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-x_axis = x_axis % [0, 90, 0]
-x_axis = x_axis.color("Red")
-
-x_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-x_arrow = x_arrow % [0, 90, 0]
-x_arrow = x_arrow + [AXIS_LENGTH, 0, 0]
-x_arrow = x_arrow.color("Red")
-
-# Y軸
-y_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-y_axis = y_axis % [-90, 0, 0]
-y_axis = y_axis.color("Green")
-
-y_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-y_arrow = y_arrow % [-90, 0, 0]
-y_arrow = y_arrow + [0, AXIS_LENGTH, 0]
-y_arrow = y_arrow.color("Green")
-
-# Z軸
-z_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-z_axis = z_axis.color("Blue")
-
-z_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-z_arrow = z_arrow + [0, 0, AXIS_LENGTH]
-z_arrow = z_arrow.color("Blue")
-
-xyz_axis = (
-    x_axis
-    | x_arrow
-    | y_axis
-    | y_arrow
-    | z_axis
-    | z_arrow
-)
-
-show(ball | xyz_axis)
+show(ball)
 </pre>
+                            </div>
+
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <p class="mb-4 text-gray-300">移動量は次の順番で指定します：</p>
+                                <div class="bg-[#0a101d] border border-white/10 p-4 rounded-lg text-center font-mono text-sm mb-4 text-gray-200">
+                                    [X方向, Y方向, Z方向]
+                                </div>
+                                <p class="text-gray-300">今回の移動は <code class="bg-[#0a101d] px-2 py-1 rounded font-mono text-event-accent text-sm border border-white/10">[0, 0, 30]</code> なので、X方向とY方向には動かさず、Z方向に30 mm移動します。<br>これにより、球の中心が立方体の上面に置かれます。</p>
+                            </div>
+
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">[30, 0, 30]</code> や <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">[0, -30, 30]</code> のように、XやYの移動量も変更してみよう。球が右や手前にどう動くか確認してみよう。
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -938,7 +747,6 @@ ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15
 <span class="text-gray-500"># 立方体から球をくりぬく</span>
 dice = <span class="text-yellow-400 font-bold bg-yellow-400/20 px-1 rounded animate-pulse">???</span>
 
-
 show(dice)
 </pre>
                                         </div>
@@ -960,28 +768,7 @@ show(dice)
                             <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
                         </button>
 
-<div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
-                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
-                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-event-secondary to-event-accent"></div>
-                                <h4 class="font-bold text-lg mb-4 text-white">引き算による形状の加工</h4>
-                                <code class="bg-[#0a101d] px-4 py-2 rounded-lg text-white font-bold mb-4 inline-block text-lg border border-white/10 font-mono">dice = box - ball</code>
-                                <p class="mb-5 text-gray-300">このコードでは、立方体から球と重なっている部分を取り除いています。</p>
-                                <div class="bg-gradient-to-r from-event-card to-[#0a101d] p-5 rounded-xl text-center font-bold mb-5 text-white text-lg border border-event-accent/30 shadow-[0_0_15px_rgba(217,70,239,0.15)]">
-                                    立方体 <span class="text-event-accent mx-2">−</span> 球 <span class="text-event-accent mx-2">＝</span> 球状のくぼみがある立方体
-                                </div>
-                                <p class="text-gray-400 text-sm">球の中心を立方体の表面に置いているため、くぼみは半球状になり、深さは球の半径と同じ8 mmになります。</p>
-                            </div>
-
-                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
-                                <div class="flex items-center gap-2 mb-3">
-                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
-                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
-                                </div>
-                                <p class="text-gray-300 text-sm leading-relaxed">
-                                    引き算の順番を逆にして <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">ball - box</code> にするとどうなるでしょうか？どんな形になるか予想してから、実際に試してみましょう！
-                                </p>
-                            </div>
-
+                        <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6 space-y-6">
                             <div class="rounded-xl overflow-hidden shadow-2xl relative group/code">
                                 <div class="bg-[#0a101d] px-4 py-2 flex justify-between items-center border-b border-white/10">
                                     <span class="text-xs text-gray-400 font-mono">Python</span>
@@ -1011,57 +798,29 @@ ball = ball + [<span class="text-[#facc15]">0</span>, <span class="text-[#facc15
 dice = box - ball
 
 <span class="text-gray-500"># 完成した形を表示</span>
-
-# ==========================================
-# XYZ軸
-# ==========================================
-
-AXIS_LENGTH = 100
-AXIS_RADIUS = 1.5
-
-ARROW_LENGTH = 10
-ARROW_RADIUS = 4
-
-# X軸
-x_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-x_axis = x_axis % [0, 90, 0]
-x_axis = x_axis.color("Red")
-
-x_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-x_arrow = x_arrow % [0, 90, 0]
-x_arrow = x_arrow + [AXIS_LENGTH, 0, 0]
-x_arrow = x_arrow.color("Red")
-
-# Y軸
-y_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-y_axis = y_axis % [-90, 0, 0]
-y_axis = y_axis.color("Green")
-
-y_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-y_arrow = y_arrow % [-90, 0, 0]
-y_arrow = y_arrow + [0, AXIS_LENGTH, 0]
-y_arrow = y_arrow.color("Green")
-
-# Z軸
-z_axis = cylinder(h=AXIS_LENGTH, r=AXIS_RADIUS, fn=32)
-z_axis = z_axis.color("Blue")
-
-z_arrow = cylinder(h=ARROW_LENGTH, r1=ARROW_RADIUS, r2=0, fn=32)
-z_arrow = z_arrow + [0, 0, AXIS_LENGTH]
-z_arrow = z_arrow.color("Blue")
-
-xyz_axis = (
-    x_axis
-    | x_arrow
-    | y_axis
-    | y_arrow
-    | z_axis
-    | z_arrow
-)
-
-
-show( dice + xyz_axis )
+show(dice)
 </pre>
+                            </div>
+
+                            <div class="bg-event-dark/50 border border-white/5 p-6 rounded-xl relative overflow-hidden">
+                                <div class="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-event-secondary to-event-accent"></div>
+                                <h4 class="font-bold text-lg mb-4 text-white">引き算による形状の加工</h4>
+                                <code class="bg-[#0a101d] px-4 py-2 rounded-lg text-white font-bold mb-4 inline-block text-lg border border-white/10 font-mono">dice = box - ball</code>
+                                <p class="mb-5 text-gray-300">このコードでは、立方体から球と重なっている部分を取り除いています。</p>
+                                <div class="bg-gradient-to-r from-event-card to-[#0a101d] p-5 rounded-xl text-center font-bold mb-5 text-white text-lg border border-event-accent/30 shadow-[0_0_15px_rgba(217,70,239,0.15)]">
+                                    立方体 <span class="text-event-accent mx-2">−</span> 球 <span class="text-event-accent mx-2">＝</span> 球状のくぼみがある立方体
+                                </div>
+                                <p class="text-gray-400 text-sm">球の中心を立方体の表面に置いているため、くぼみは半球状になり、深さは球の半径と同じ8 mmになります。</p>
+                            </div>
+
+                            <div class="bg-gradient-to-r from-yellow-500/10 to-transparent border-l-4 border-yellow-500 p-5 rounded-r-xl relative overflow-hidden mt-6">
+                                <div class="flex items-center gap-2 mb-3">
+                                    <i class="fa-solid fa-rocket text-yellow-400"></i>
+                                    <h4 class="font-bold text-lg text-yellow-400">やってみよう！</h4>
+                                </div>
+                                <p class="text-gray-300 text-sm leading-relaxed">
+                                    引き算の順番を逆にして <code class="text-event-accent font-mono text-xs bg-[#0a101d] px-1.5 py-0.5 rounded border border-white/5">ball - box</code> にするとどうなるでしょうか？どんな形になるか予想してから、実際に試してみましょう！
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1080,13 +839,7 @@ show( dice + xyz_axis )
                 <p class="text-gray-400 text-lg">ここまでの内容をまとめ、寸法を変数として定義し直した、より美しいコードです。</p>
             </div>
             
-            <button class="answer-toggle-btn w-full bg-[#0f172a] hover:bg-event-primary/20 border border-white/10 hover:border-event-primary/50 text-gray-300 hover:text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-between group/btn fade-in-up" data-closed-label="完成コードを見る" data-open-label="完成コードを閉じる">
-                <span class="btn-text">完成コードを見る</span>
-                <i class="fa-solid fa-chevron-down chevron-icon transition-transform duration-300 group-hover/btn:translate-y-1"></i>
-            </button>
-
-            <div class="answer-content hidden opacity-0 transition-opacity duration-300 mt-6">
-            <div class="rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(14,165,233,0.1)] border border-white/10 group/code relative">
+            <div class="rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(14,165,233,0.1)] border border-white/10 group/code fade-in-up relative">
                 <div class="bg-event-card px-4 py-3 flex items-center justify-between border-b border-white/5">
                     <div class="flex items-center space-x-4">
                         <div class="flex space-x-2">
@@ -1142,7 +895,6 @@ dice = box - ball
 # ==========================================</span>
 show(dice)
 </pre>
-            </div>
             </div>
         </div>
     </section>
@@ -1219,18 +971,16 @@ show(dice)
                     const content = this.nextElementSibling;
                     const icon = this.querySelector('.chevron-icon');
                     const textSpan = this.querySelector('.btn-text');
-                    const openLabel = this.dataset.openLabel || '正解のコードを閉じる';
-                    const closedLabel = this.dataset.closedLabel || '正解のコードを見る';
                     
                     if (content.classList.contains('hidden')) {
                         content.classList.remove('hidden');
                         setTimeout(() => content.classList.remove('opacity-0'), 10);
                         icon.classList.add('rotate-180');
-                        textSpan.innerText = openLabel;
+                        textSpan.innerText = '正解のコードを閉じる';
                     } else {
                         content.classList.add('opacity-0');
                         icon.classList.remove('rotate-180');
-                        textSpan.innerText = closedLabel;
+                        textSpan.innerText = '正解のコードを見る';
                         setTimeout(() => content.classList.add('hidden'), 300);
                     }
                 });
