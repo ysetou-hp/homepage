@@ -94,10 +94,23 @@
             </div>
 
             <div class="flex items-center gap-3 w-full">
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">表示</span>
+                <div class="flex flex-wrap items-center gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="toggle-students" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        <span class="text-[10px] font-bold text-gray-500">中学校3年生</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="toggle-yuge" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        <span class="text-[10px] font-bold text-gray-500">弓削商船</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full">
                 <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学科</span>
                 <div class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
-                    <button onclick="updateDisplayMode('students')" id="btn-students" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-emerald-500 text-white">中学3年生</button>
-                    <button onclick="updateDisplayMode('sci')" id="btn-sci" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">SCI</button>
+                    <button onclick="updateDisplayMode('sci')" id="btn-sci" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-orange-500 text-white">SCI</button>
                     <button onclick="updateDisplayMode('s')" id="btn-s" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">S</button>
                     <button onclick="updateDisplayMode('c')" id="btn-c" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">C</button>
                     <button onclick="updateDisplayMode('i')" id="btn-i" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">I</button>
@@ -149,7 +162,7 @@
     <script>
         let schoolData = [];
         let map, layerGroup = L.layerGroup();
-        let currentMode = 'students';
+        let currentMode = 'sci';
         let currentYearIdx = 'total';
         let currentDistrict = 'all'; // 現在選択されている地区
         let currentSort = { key: 'students', direction: 'desc' };
@@ -390,29 +403,13 @@
             layerGroup.clearLayers();
             const showNames = document.getElementById('toggle-names').checked;
             const showValues = document.getElementById('toggle-values').checked;
+            const showStudents = document.getElementById('toggle-students').checked;
+            const showYuge = document.getElementById('toggle-yuge').checked;
             let labelClasses = "bubble-label-container";
             if (!showNames) labelClasses += " hide-name";
             if (!showValues) labelClasses += " hide-value";
 
             data.forEach(s => {
-                let displayValue;
-                let bubbleCalculationValue; 
-                if (currentMode === 'students') {
-                    displayValue = s.students;
-                    bubbleCalculationValue = s.students;
-                } else if (currentYearIdx === 'total') {
-                    displayValue = s.history[`${currentMode}_total`];
-                    bubbleCalculationValue = displayValue;
-                } else {
-                    displayValue = s.history[currentMode][currentYearIdx];
-                    bubbleCalculationValue = displayValue;
-                }
-                
-                if (currentMode !== 'students' && (displayValue === 0 || !displayValue)) return; 
-
-                const baseMultiplier = currentMode === 'students' ? 1.0 : 4.0;
-                const radius = Math.sqrt(bubbleCalculationValue || 0.5) * 180 * baseMultiplier;
-
                 const curYear = currentYearIdx === 'total' ? 'total' : currentYearIdx;
                 let valS, valC, valI, valSCI;
                 if (curYear === 'total') {
@@ -421,55 +418,35 @@
                     valS = s.history.s[curYear]; valC = s.history.c[curYear]; valI = s.history.i[curYear]; valSCI = s.history.sci[curYear];
                 }
 
-                const theme = themeColors[currentMode];
-                let labelHtml = "";
+                const selectedYugeValue = currentMode === 'sci' ? valSCI : currentMode === 's' ? valS : currentMode === 'c' ? valC : valI;
+                if (!showStudents && !showYuge) return;
+                if (!showStudents && (!selectedYugeValue || selectedYugeValue === 0)) return;
 
-                if (currentMode === 'students') {
-                    labelHtml = `<div class="${labelClasses}">
-                        <div class="school-name-label">${s.name}</div>
-                        <div class="value-label" style="color:${theme.border}">${displayValue}</div>
-                        <div class="breakdown-label">
-                            S:${valS} C:${valC} I:${valI}
-                        </div>
-                        <div class="stats-summary-label">
-                            合計:${valSCI}
-                        </div>
-                    </div>`;
-                } else {
-                    let historyRowHtml = "";
-                    // 全学年が選択されている時のみ内訳を生成
-                    if (currentYearIdx === 'total') {
-                        const historyArray = s.history[currentMode === 'sci' ? 'sci' : currentMode];
-                        const labels = ["１年", "２年", "３年", "４年", "５年"];
-                        const historyLabels = historyArray.map((v, i) => {
-                            return `<span>${labels[i]}:${v}</span>`;
-                        }).join(' ');
-                        
-                        historyRowHtml = `
-                        <div class="history-row-label">
-                            ${historyLabels}
-                        </div>`;
-                    }
+                const bubbleCalculationValue = showStudents ? s.students : selectedYugeValue;
+                const baseMultiplier = showStudents ? 1.0 : 4.0;
+                const theme = showStudents ? themeColors.students : themeColors[currentMode];
+                const radius = Math.sqrt(bubbleCalculationValue || 0.5) * 180 * baseMultiplier;
+                const studentLabel = showStudents ? `<div class="value-label" style="color:${themeColors.students.border}">${s.students}</div>` : "";
+                const yugeLabel = showYuge ? `
+                    <div class="breakdown-label">S:${valS} C:${valC} I:${valI}</div>
+                    <div class="stats-summary-label">合計:${valSCI}</div>` : "";
+                const labelHtml = `<div class="${labelClasses}">
+                    <div class="school-name-label">${s.name}</div>
+                    ${studentLabel}
+                    ${yugeLabel}
+                </div>`;
 
-                    labelHtml = `<div class="${labelClasses}">
-                        <div class="school-name-label">${s.name}</div>
-                        <div class="value-label" style="color:${theme.border}">${displayValue}</div>
-                        ${historyRowHtml}
-                    </div>`;
-                }
+                const studentPopup = showStudents ? `<div><div class="text-[8px] text-gray-400 font-bold uppercase">中3生</div><div class="text-xs font-black text-emerald-600">${s.students}</div></div>` : "";
+                const yugePopup = showYuge ? `
+                    <div><div class="text-[8px] text-gray-400 font-bold uppercase">SCI</div><div class="text-xs font-black text-orange-600">${valSCI}</div></div>
+                    <div><div class="text-[8px] text-gray-400 font-bold">S</div><div class="text-xs font-black text-cyan-600">${valS}</div></div>
+                    <div><div class="text-[8px] text-gray-400 font-bold">C</div><div class="text-xs font-black text-violet-600">${valC}</div></div>
+                    <div><div class="text-[8px] text-gray-400 font-bold">I</div><div class="text-xs font-black text-pink-600">${valI}</div></div>` : "";
 
                 const popup = `
                     <div class="p-2 custom-popup min-w-[200px]">
                         <div class="font-black text-sm mb-2 border-b pb-1 text-gray-900">${s.name}</div>
-                        <div class="grid grid-cols-2 gap-2 text-center mb-2 border-b pb-2">
-                             <div><div class="text-[8px] text-gray-400 font-bold uppercase">中3生</div><div class="text-xs font-black text-emerald-600">${s.students}</div></div>
-                             <div><div class="text-[8px] text-gray-400 font-bold uppercase">SCI</div><div class="text-xs font-black text-orange-600">${valSCI}</div></div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center">
-                            <div><div class="text-[8px] text-gray-400 font-bold">S</div><div class="text-xs font-black text-cyan-600">${valS}</div></div>
-                            <div><div class="text-[8px] text-gray-400 font-bold">C</div><div class="text-xs font-black text-violet-600">${valS}</div></div>
-                            <div><div class="text-[8px] text-gray-400 font-bold">I</div><div class="text-xs font-black text-pink-600">${valI}</div></div>
-                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-center">${studentPopup}${yugePopup}</div>
                     </div>
                 `;
 
