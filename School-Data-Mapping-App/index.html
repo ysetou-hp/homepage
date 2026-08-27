@@ -12,6 +12,7 @@
         /* マップの高さを800pxに変更 */
         #map { height: 800px; width: 100%; border-radius: 0.75rem; z-index: 1; }
         .leaflet-tile-pane { filter: grayscale(100%) brightness(105%) contrast(90%); }
+        .map-tiles { filter: grayscale(100%) brightness(115%) contrast(85%); }
         
         .bubble-label-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -509,7 +510,11 @@
 
         window.onload = () => {
             map = L.map('map', { zoomControl: false }).setView([34.40, 133.20], 10);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19,
+                className: 'map-tiles'
+            }).addTo(map);
             L.control.zoom({ position: 'bottomright' }).addTo(map);
             
             // データのロード前にUIを初期化して表示
