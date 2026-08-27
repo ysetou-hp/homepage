@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中学校データ分布バブルマップ（ベクター版）</title>
+    <title>中学校データ分布バブルマップ</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" />
-    <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         /* マップの高さを800pxに変更 */
         #map { height: 800px; width: 100%; border-radius: 0.75rem; z-index: 1; }
-        .maplibregl-popup-content { border-radius: 12px; padding: 8px; }
+        .leaflet-tile-pane { filter: grayscale(100%) brightness(105%) contrast(90%); }
         
         .bubble-label-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -45,10 +45,14 @@
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255,255,255,0.9); z-index: 9999; align-items: center; justify-content: center; flex-direction: column;
         }
+        .table-container { max-height: 600px; overflow-y: auto; overflow-x: auto; }
+        thead th { position: sticky; top: 0; z-index: 10; background: white; }
+        .highlight-col { background-color: #f8fafc !important; }
+        .highlight-text { color: #111827 !important; font-weight: 800; }
+        .sort-icon { font-size: 10px; margin-left: 2px; opacity: 0.5; }
+
         .stat-display { display: flex; align-items: center; gap: 1.5rem; }
         .stat-item { display: flex; flex-direction: column; }
-        .yuge-conditions.is-disabled { opacity: 0.4; }
-        .yuge-conditions button:disabled { cursor: not-allowed; }
     </style>
 </head>
 <body class="bg-white min-h-screen text-gray-800 font-sans">
@@ -78,12 +82,20 @@
             </div>
 
             <div class="flex items-center gap-3 w-full">
-                <span class="text-[10px] font-bold text-gray-400 uppercase w-24 shrink-0">表示するデータ</span>
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学年</span>
+                <div id="year-btn-group" class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
+                    <button onclick="updateYear('total')" id="year-btn-total" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-emerald-500 text-white shadow-sm">全学年</button>
+                    <button onclick="updateYear(0)" id="year-btn-0" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">１年</button>
+                    <button onclick="updateYear(1)" id="year-btn-1" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">２年</button>
+                    <button onclick="updateYear(2)" id="year-btn-2" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">３年</button>
+                    <button onclick="updateYear(3)" id="year-btn-3" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">４年</button>
+                    <button onclick="updateYear(4)" id="year-btn-4" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">５年</button>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 w-full">
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">表示</span>
                 <div class="flex flex-wrap items-center gap-4">
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" id="toggle-names" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500">
-                        <span class="text-[10px] font-bold text-gray-500">学校名</span>
-                    </label>
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                         <input type="checkbox" id="toggle-students" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
                         <span class="text-[10px] font-bold text-gray-500">中学校3年生</span>
@@ -92,50 +104,68 @@
                         <input type="checkbox" id="toggle-yuge" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
                         <span class="text-[10px] font-bold text-gray-500">弓削商船</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                        <input type="checkbox" id="toggle-pr" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
-                        <span class="text-[10px] font-bold text-gray-500">PR回数</span>
-                    </label>
                 </div>
             </div>
 
-            <div id="yuge-conditions" class="yuge-conditions flex flex-col items-start gap-3 w-full">
-                <div class="flex items-center gap-3 w-full">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学年</span>
-                    <div id="year-btn-group" class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
-                        <button onclick="updateYear('total')" id="year-btn-total" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-emerald-500 text-white shadow-sm">全学年</button>
-                        <button onclick="updateYear(0)" id="year-btn-0" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">１年</button>
-                        <button onclick="updateYear(1)" id="year-btn-1" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">２年</button>
-                        <button onclick="updateYear(2)" id="year-btn-2" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">３年</button>
-                        <button onclick="updateYear(3)" id="year-btn-3" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">４年</button>
-                        <button onclick="updateYear(4)" id="year-btn-4" class="year-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100 hover:bg-gray-50">５年</button>
-                    </div>
+            <div class="flex items-center gap-3 w-full">
+                <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学科</span>
+                <div class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
+                    <button onclick="updateDisplayMode('sci')" id="btn-sci" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-orange-500 text-white">SCI</button>
+                    <button onclick="updateDisplayMode('s')" id="btn-s" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">S</button>
+                    <button onclick="updateDisplayMode('c')" id="btn-c" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">C</button>
+                    <button onclick="updateDisplayMode('i')" id="btn-i" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">I</button>
                 </div>
-                <div class="flex items-center gap-3 w-full">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase w-16 shrink-0">学科</span>
-                    <div class="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-lg w-fit">
-                        <button onclick="updateDisplayMode('sci')" id="btn-sci" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-orange-500 text-white">SCI</button>
-                        <button onclick="updateDisplayMode('s')" id="btn-s" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">S</button>
-                        <button onclick="updateDisplayMode('c')" id="btn-c" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">C</button>
-                        <button onclick="updateDisplayMode('i')" id="btn-i" class="mode-btn px-3 py-1.5 text-[11px] font-bold rounded transition-all bg-white text-gray-400 border border-gray-100">I</button>
-                    </div>
-                </div>
+            </div>
+
+            <div class="flex items-center gap-4 pt-1 pl-19" style="padding-left: 4.75rem;">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="toggle-names" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500">
+                    <span class="text-[10px] font-bold text-gray-500">学校名</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" id="toggle-values" onchange="refreshUI(false)" checked class="w-3.5 h-3.5 rounded border-gray-300 text-gray-900 focus:ring-gray-500">
+                    <span class="text-[10px] font-bold text-gray-500">数値</span>
+                </label>
             </div>
         </div>
 
         <div id="map" class="border border-gray-200 bg-gray-50 mb-8 shadow-sm"></div>
 
+        <div id="data-table-section" class="border border-gray-100 rounded-lg overflow-hidden shadow-sm">
+            <div class="table-container">
+                <table class="min-w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-400 text-[9px] font-bold uppercase">
+                            <th rowspan="2" class="px-4 py-3 text-left border-r border-b cursor-pointer hover:bg-gray-100" onclick="handleSort('district')">地区<span class="sort-icon">⇅</span></th>
+                            <th rowspan="2" class="px-4 py-3 text-left border-r border-b cursor-pointer hover:bg-gray-100" onclick="handleSort('name')">学校名<span class="sort-icon">⇅</span></th>
+                            <th rowspan="2" class="px-2 py-3 text-center border-r border-b cursor-pointer hover:bg-gray-100" onclick="handleSort('students')">中3<span class="sort-icon">⇅</span></th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">１年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">２年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">３年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center border-r border-b">４年</th>
+                            <th colspan="3" class="px-2 py-1.5 text-center">５年</th>
+                        </tr>
+                        <tr class="bg-white text-gray-500 text-[8px] font-bold border-b">
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1 border-r">I</th>
+                            <th class="px-2 py-1 border-r">S</th><th class="px-2 py-1 border-r">C</th><th class="px-2 py-1">I</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-[11px] font-medium"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
         let schoolData = [];
-        let map;
-        let mapMarkers = [];
-        const CARTO_API_KEY = 'YOUR_CARTO_API_KEY';
-        const CARTO_STYLE_URL = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+        let map, layerGroup = L.layerGroup();
         let currentMode = 'sci';
         let currentYearIdx = 'total';
         let currentDistrict = 'all'; // 現在選択されている地区
+        let currentSort = { key: 'students', direction: 'desc' };
         
         const AUTO_LOAD_FILE = '近隣中学校.xlsx'; 
         const themeColors = {
@@ -198,12 +228,9 @@
 
                 // 最終的に緯度経度が取得できた場合のみデータに追加
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    const rawPr = row['PR'];
-                    const prValue = rawPr === undefined || rawPr === null || String(rawPr).trim() === '' ? null : Number(rawPr);
                     processed.push({
                         district: row['地区'], name: row['学校名'], address: row['住所'],
                         students: parseInt(row['中学3年生'] || 0), lat: lat, lng: lng,
-                        pr: Number.isFinite(prValue) ? prValue : null,
                         history, s_total: history.s_total, c_total: history.c_total,
                         i_total: history.i_total, sci_total: history.sci_total
                     });
@@ -215,7 +242,7 @@
         async function loadInitialData() {
             try {
                 document.getElementById('loading-overlay').style.display = 'flex';
-                const response = await fetch(`${AUTO_LOAD_FILE}?v=${Date.now()}`, { cache: 'no-store' });
+                const response = await fetch(AUTO_LOAD_FILE);
                 if (!response.ok) throw new Error('File not found');
                 const buffer = await response.arrayBuffer();
                 schoolData = await processWorkbook(buffer);
@@ -291,6 +318,16 @@
             refreshUI(true);
         }
 
+        function handleSort(key) {
+            if (currentSort.key !== key) {
+                currentSort.key = key;
+                currentSort.direction = (key === 'district' || key === 'name') ? 'asc' : 'desc';
+            } else {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            }
+            refreshUI(false);
+        }
+
         function updateYear(yearVal) {
             currentYearIdx = yearVal;
             document.querySelectorAll('.year-btn').forEach(btn => {
@@ -312,71 +349,65 @@
             refreshUI(false);
         }
 
-        function setInitialState() {
-            currentDistrict = 'all';
-            currentYearIdx = 'total';
-            currentMode = 'sci';
-            document.getElementById('toggle-names').checked = true;
-            document.getElementById('toggle-students').checked = true;
-            document.getElementById('toggle-yuge').checked = true;
-            document.getElementById('toggle-pr').checked = true;
-        }
-
         function refreshUI(shouldFitBounds = false) {
             // 選択された地区変数を使用してフィルタリング
             const filtered = currentDistrict === 'all' ? schoolData : schoolData.filter(s => s.district === currentDistrict);
-            const showStudents = document.getElementById('toggle-students').checked;
-            const showYuge = document.getElementById('toggle-yuge').checked;
-            const yugeConditions = document.getElementById('yuge-conditions');
-            yugeConditions.classList.toggle('is-disabled', !showYuge);
-            yugeConditions.querySelectorAll('button').forEach(button => { button.disabled = !showYuge; });
-
-            let studentTotal = 0;
-            let yugeTotal = 0;
+            
+            let totalValue = 0;
             const activeData = [];
             
             if (schoolData && schoolData.length > 0) {
                 filtered.forEach(s => {
-                    const selectedYugeValue = currentYearIdx === 'total'
-                        ? s.history[`${currentMode}_total`]
-                        : s.history[currentMode][currentYearIdx];
-                    studentTotal += s.students;
-                    yugeTotal += selectedYugeValue;
-                    if ((showStudents && s.students >= 0) || (showYuge && selectedYugeValue > 0)) {
+                    let val = 0;
+                    if (currentMode === 'students') val = s.students;
+                    else if (currentYearIdx === 'total') val = s.history[`${currentMode}_total`];
+                    else val = s.history[currentMode][currentYearIdx];
+                    
+                    if (currentMode === 'students' || val > 0) {
+                        totalValue += val;
                         activeData.push(s);
                     }
                 });
             }
 
-            const stats = [
-                `<div class="stat-item"><span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">表示中</span><span class="text-sm font-black text-gray-900">${activeData.length} <span class="text-[15px] font-bold text-gray-400">校</span></span></div>`
-            ];
-            if (showStudents) {
-                stats.push(`<div class="stat-item"><span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">中学校3年生</span><span class="text-sm font-black text-gray-900">${studentTotal.toLocaleString()} <span class="text-[15px] font-bold text-gray-400">人</span></span></div>`);
-            }
-            if (showYuge) {
-                stats.push(`<div class="stat-item"><span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">弓削商船</span><span class="text-sm font-black text-gray-900">${yugeTotal.toLocaleString()} <span class="text-[15px] font-bold text-gray-400">人</span></span></div>`);
-            }
+            const theme = themeColors[currentMode];
+            const yearLabels = ["１年", "２年", "３年", "４年", "５年"];
+            const yearLabel = currentYearIdx === 'total' ? '全学年' : yearLabels[currentYearIdx];
 
-            document.getElementById('current-mode-desc').innerHTML = stats.join('');
+            document.getElementById('current-mode-desc').innerHTML = `
+                <div class="stat-item">
+                    <span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">表示中</span>
+                    <span class="text-sm font-black text-gray-900">${activeData.length} <span class="text-[15px] font-bold text-gray-400">校</span></span>
+                </div>
+                <div class="stat-item">
+                    <span class="text-[15px] font-bold text-gray-400 uppercase tracking-widest">総計</span>
+                    <span class="text-sm font-black text-gray-900">${totalValue.toLocaleString()} <span class="text-[15px] font-bold text-gray-400">名</span></span>
+                </div>
+            `;
 
             if (!schoolData || schoolData.length === 0) return;
 
+            const sorted = [...filtered].sort((a, b) => {
+                const factor = currentSort.direction === 'asc' ? 1 : -1;
+                let valA = a[currentSort.key]; let valB = b[currentSort.key];
+                if (typeof valA === 'number' && typeof valB === 'number') return factor * (valA - valB);
+                valA = String(valA || ""); valB = String(valB || "");
+                return factor * (valA.localeCompare(valB, 'ja'));
+            });
+
             renderMap(filtered, shouldFitBounds);
+            renderTable(sorted);
         }
 
         function renderMap(data, shouldFitBounds) {
-            mapMarkers.forEach(marker => marker.remove());
-            mapMarkers = [];
+            layerGroup.clearLayers();
             const showNames = document.getElementById('toggle-names').checked;
-            const showValues = true;
+            const showValues = document.getElementById('toggle-values').checked;
             const showStudents = document.getElementById('toggle-students').checked;
             const showYuge = document.getElementById('toggle-yuge').checked;
-            const showPr = document.getElementById('toggle-pr').checked;
             let labelClasses = "bubble-label-container";
             if (!showNames) labelClasses += " hide-name";
             if (!showValues) labelClasses += " hide-value";
-            const features = [];
 
             data.forEach(s => {
                 const curYear = currentYearIdx === 'total' ? 'total' : currentYearIdx;
@@ -388,21 +419,20 @@
                 }
 
                 const selectedYugeValue = currentMode === 'sci' ? valSCI : currentMode === 's' ? valS : currentMode === 'c' ? valC : valI;
-                const showBubble = showStudents || (showYuge && selectedYugeValue > 0);
+                if (!showStudents && !showYuge) return;
+                if (!showStudents && (!selectedYugeValue || selectedYugeValue === 0)) return;
 
                 const bubbleCalculationValue = showStudents ? s.students : selectedYugeValue;
                 const baseMultiplier = showStudents ? 1.0 : 4.0;
                 const theme = showStudents ? themeColors.students : themeColors[currentMode];
-                // Leaflet版の半径（メートル）を、初期ズーム10でのMapLibreのピクセル半径へ換算する。
-                const metersPerPixelAtZoom10 = 156543.03392 * Math.cos(s.lat * Math.PI / 180) / Math.pow(2, 10);
-                const radius = Math.sqrt(bubbleCalculationValue || 0.5) * 180 * baseMultiplier / metersPerPixelAtZoom10;
+                const radius = Math.sqrt(bubbleCalculationValue || 0.5) * 180 * baseMultiplier;
                 const studentLabel = showStudents ? `<div class="value-label" style="color:${themeColors.students.border}">${s.students}</div>` : "";
                 const yugeLabel = !showYuge ? "" : currentMode === 'sci' ? `
                     <div class="breakdown-label">S:${valS} C:${valC} I:${valI}</div>
                     <div class="stats-summary-label">合計:${valSCI}</div>` :
                     `<div class="breakdown-label">${currentMode.toUpperCase()}:${selectedYugeValue}</div>`;
                 const labelHtml = `<div class="${labelClasses}">
-                    <div class="school-name-label">${s.name}${showPr && s.pr !== null ? `（${s.pr}）` : ''}</div>
+                    <div class="school-name-label">${s.name}</div>
                     ${studentLabel}
                     ${yugeLabel}
                 </div>`;
@@ -414,94 +444,61 @@
                     <div><div class="text-[8px] text-gray-400 font-bold">C</div><div class="text-xs font-black text-violet-600">${valC}</div></div>
                     <div><div class="text-[8px] text-gray-400 font-bold">I</div><div class="text-xs font-black text-pink-600">${valI}</div></div>` :
                     `<div><div class="text-[8px] text-gray-400 font-bold">${currentMode.toUpperCase()}</div><div class="text-xs font-black ${theme.text}">${selectedYugeValue}</div></div>`;
-                const prPopup = showPr && s.pr !== null ? `<div><div class="text-xs font-black text-gray-900">${s.pr}</div></div>` : "";
 
                 const popup = `
                     <div class="p-2 custom-popup min-w-[200px]">
                         <div class="font-black text-sm mb-2 border-b pb-1 text-gray-900">${s.name}</div>
-                        <div class="grid grid-cols-2 gap-2 text-center">${prPopup}${studentPopup}${yugePopup}</div>
+                        <div class="grid grid-cols-2 gap-2 text-center">${studentPopup}${yugePopup}</div>
                     </div>
                 `;
 
-                if (showBubble) {
-                    features.push({
-                        type: 'Feature',
-                        geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
-                        properties: { radius, color: theme.border, fill: theme.fill, popup }
-                    });
-                }
+                L.circle([s.lat, s.lng], {
+                    radius: radius, color: theme.border, fillColor: theme.fill, fillOpacity: 0.4, weight: 1.5
+                }).bindPopup(popup).addTo(layerGroup);
 
-                if (showNames || showStudents || showYuge) {
-                    const markerElement = document.createElement('div');
-                    markerElement.innerHTML = labelHtml;
-                    const marker = new maplibregl.Marker({ element: markerElement, anchor: 'center' })
-                        .setLngLat([s.lng, s.lat])
-                        .setPopup(new maplibregl.Popup({ offset: 12 }).setHTML(popup))
-                        .addTo(map);
-                    mapMarkers.push(marker);
-                }
+                L.marker([s.lat, s.lng], {
+                    icon: L.divIcon({ className: '', html: labelHtml, iconSize: [260, 100], iconAnchor: [130, 50] })
+                }).addTo(layerGroup);
             });
-
-            map.getSource('school-bubbles').setData({ type: 'FeatureCollection', features });
+            layerGroup.addTo(map);
             if (shouldFitBounds) {
-                if (features.length > 0) {
-                    const bounds = features.reduce((result, feature) => result.extend(feature.geometry.coordinates), new maplibregl.LngLatBounds());
-                    map.fitBounds(bounds, { padding: 40 });
-                }
+                const circles = layerGroup.getLayers().filter(l => l instanceof L.Circle);
+                if (circles.length > 0) map.fitBounds(new L.featureGroup(circles).getBounds().pad(0.1));
             }
         }
 
+        function renderTable(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            data.forEach(s => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-gray-50 cursor-pointer" onclick="map.setView([${s.lat}, ${s.lng}], 14); window.scrollTo({top: 0, behavior: 'smooth'});">
+                        <td class="px-4 py-2 border-r text-gray-400">${s.district}</td>
+                        <td class="px-4 py-2 border-r font-bold">${s.name}</td>
+                        <td class="px-2 py-2 border-r text-center ${currentMode==='students'?'highlight-col highlight-text':''}">${s.students}</td>
+                        ${[0,1,2,3,4].map(i => `
+                            <td class="px-1 py-2 border-r text-center ${currentYearIdx===i&&currentMode==='s'?'highlight-col highlight-text':''}">${s.history.s[i]}</td>
+                            <td class="px-1 py-2 border-r text-center ${currentYearIdx===i&&currentMode==='c'?'highlight-col highlight-text':''}">${s.history.c[i]}</td>
+                            <td class="px-1 py-2 border-r text-center ${currentYearIdx===i&&currentMode==='i'?'highlight-col highlight-text':''}">${s.history.i[i]}</td>
+                        `).join('')}
+                    </tr>
+                `;
+            });
+        }
+
         window.onload = () => {
-            const appendCartoKey = url => {
-                if (CARTO_API_KEY === 'YOUR_CARTO_API_KEY' || !url.includes('cartocdn.com')) return url;
-                return `${url}${url.includes('?') ? '&' : '?'}key=${encodeURIComponent(CARTO_API_KEY)}`;
-            };
+            map = L.map('map', { zoomControl: false }).setView([34.40, 133.20], 10);
+            L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png', {
+                attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+                maxZoom: 18
+            }).addTo(map);
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+            
+            // データのロード前にUIを初期化して表示
+            updateDistrictButtons();
+            refreshUI(false);
 
-            map = new maplibregl.Map({
-                container: 'map',
-                style: appendCartoKey(CARTO_STYLE_URL),
-                center: [133.20, 34.40],
-                zoom: 10,
-                maxZoom: 20,
-                transformRequest: (url) => ({ url: appendCartoKey(url) })
-            });
-            map.addControl(new maplibregl.NavigationControl(), 'bottom-right');
-
-            map.on('load', () => {
-                map.addSource('school-bubbles', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-                map.addLayer({
-                    id: 'school-bubbles',
-                    type: 'circle',
-                    source: 'school-bubbles',
-                    paint: {
-                        'circle-radius': ['get', 'radius'],
-                        'circle-color': ['get', 'fill'],
-                        'circle-opacity': 0.4,
-                        'circle-stroke-width': 1.5,
-                        'circle-stroke-color': ['get', 'color'],
-                        'circle-stroke-opacity': 1
-                    }
-                });
-                const updateBubbleScale = () => {
-                    const zoomScale = Math.pow(2, map.getZoom() - 10);
-                    map.setPaintProperty('school-bubbles', 'circle-radius', ['*', ['get', 'radius'], zoomScale]);
-                };
-                map.on('zoom', updateBubbleScale);
-                map.on('click', 'school-bubbles', event => {
-                    const feature = event.features[0];
-                    new maplibregl.Popup({ offset: 12 })
-                        .setLngLat(feature.geometry.coordinates)
-                        .setHTML(feature.properties.popup)
-                        .addTo(map);
-                });
-                map.on('mouseenter', 'school-bubbles', () => { map.getCanvas().style.cursor = 'pointer'; });
-                map.on('mouseleave', 'school-bubbles', () => { map.getCanvas().style.cursor = ''; });
-
-                setInitialState();
-                updateDistrictButtons();
-                refreshUI(false);
-                loadInitialData();
-            });
+            loadInitialData();
         };
     </script>
 </body>
