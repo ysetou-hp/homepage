@@ -11,9 +11,6 @@
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- MapLibre GL: CARTOベクターベースマップの描画 -->
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" />
-
   <!-- React & ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -23,10 +20,6 @@
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- MapLibre GL と Leaflet 連携プラグイン -->
-  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.20/leaflet-maplibre-gl.js"></script>
   
   <!-- PapaParse -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -104,61 +97,6 @@
       text-shadow: -1px -1px 0 #111827, 1px -1px 0 #111827, -1px 1px 0 #111827, 1px 1px 0 #111827, 0 0 4px #111827;
     }
 
-    /* 方向矢印のデータポップアップ */
-    .arrow-data-popup .leaflet-popup-content-wrapper {
-      border-radius: 14px;
-      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.22);
-    }
-    .arrow-data-popup .leaflet-popup-content {
-      margin: 0;
-    }
-    .arrow-data-popup .leaflet-popup-tip {
-      background: #ffffff;
-    }
-    .arrow-data-card {
-      min-width: 220px;
-      overflow: hidden;
-      font-family: ui-sans-serif, system-ui, sans-serif;
-      color: #1f2937;
-    }
-    .arrow-data-card__header {
-      padding: 11px 14px;
-      background: linear-gradient(135deg, #0891b2, #06b6d4);
-      color: #ffffff;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-    }
-    .arrow-data-card__grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 1px;
-      background: #e5e7eb;
-    }
-    .arrow-data-card__item {
-      padding: 9px 12px;
-      background: #ffffff;
-    }
-    .arrow-data-card__item--wide {
-      grid-column: 1 / -1;
-    }
-    .arrow-data-card__label {
-      display: block;
-      margin-bottom: 3px;
-      color: #6b7280;
-      font-size: 9px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .arrow-data-card__value {
-      display: block;
-      color: #111827;
-      font-size: 12px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-
     /* スクロールバーのカスタマイズ */
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
@@ -203,33 +141,35 @@
     const ChevronRight = (p) => <IconBase {...p}><polyline points="9 18 15 12 9 6"></polyline></IconBase>;
     const Download = (p) => <IconBase {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></IconBase>;
 
-    // --- CARTOベクターベースマップ（MapLibre Style JSON） ---
+    // --- 海図 (Nautical Chart) スタイルを含むマップリスト ---
     const MAP_STYLES = [
+      { 
+        id: 'nautical', 
+        label: 'Nautical Chart (海図)', 
+        layers: [
+          { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '&copy; OpenStreetMap contributors' },
+          { url: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', attr: '&copy; OpenSeaMap' }
+        ]
+      },
       { 
         id: 'light', 
         label: 'Light Gray (グレー基調)', 
-        url: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        url: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png?key=cb1_29nm_1_e72dd8b2252de0b927e7ac80',
         attr: '&copy; OpenStreetMap &copy; CARTO' 
       },
       { 
         id: 'dark', 
         label: 'Dark Gray (ダーク基調)', 
-        url: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        url: 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png?key=cb1_29nm_1_e72dd8b2252de0b927e7ac80',
         attr: '&copy; OpenStreetMap &copy; CARTO' 
       },
       { 
         id: 'color', 
         label: 'Color (海と陸を色分け)', 
-        url: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+        url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png?key=cb1_29nm_1_e72dd8b2252de0b927e7ac80',
         attr: '&copy; OpenStreetMap &copy; CARTO' 
       }
     ];
-
-    // 作成時点で同じフォルダにあった最初のCSVを初期データとして使用
-    const INITIAL_CSV_FILE = 'sample.csv';
-
-    // 方向矢印を表示する初期時間間隔（分）。画面上で変更できる。
-    const DEFAULT_ARROW_INTERVAL_MINUTES = 10;
 
     // 日時を input[type="datetime-local"] 用に変換（分まで）
     const formatDateForInput = (dateObj) => {
@@ -240,17 +180,6 @@
       const HH = String(dateObj.getHours()).padStart(2, '0');
       const mm = String(dateObj.getMinutes()).padStart(2, '0');
       return `${yyyy}-${MM}-${dd}T${HH}:${mm}`;
-    };
-
-    const formatDateTimeForPopup = (dateObj) => {
-      if (!dateObj || isNaN(dateObj.getTime())) return '—';
-      const yyyy = dateObj.getFullYear();
-      const MM = String(dateObj.getMonth() + 1).padStart(2, '0');
-      const dd = String(dateObj.getDate()).padStart(2, '0');
-      const HH = String(dateObj.getHours()).padStart(2, '0');
-      const mm = String(dateObj.getMinutes()).padStart(2, '0');
-      const ss = String(dateObj.getSeconds()).padStart(2, '0');
-      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
     };
 
     // シンプルなトグルスイッチ
@@ -281,7 +210,6 @@
       const [allCsvData, setAllCsvData] = useState([]);
       const [csvHeaders, setCsvHeaders] = useState([]); 
       const [csvFileName, setCsvFileName] = useState("");
-      const [isInitialCsvLoading, setIsInitialCsvLoading] = useState(true);
 
       const [startIndex, setStartIndex] = useState(0);
       const [endIndex, setEndIndex] = useState(0);
@@ -291,12 +219,9 @@
       const [showStartMarker, setShowStartMarker] = useState(true);
       const [showEndMarker, setShowEndMarker] = useState(true);
       const [showLabels, setShowLabels] = useState(true);
-      const [showArrows, setShowArrows] = useState(true);
+      const [showArrows, setShowArrows] = useState(false);
       const [showGrid, setShowGrid] = useState(true);
       const [lineWidth, setLineWidth] = useState(1);
-      const [arrowIntervalMinutes, setArrowIntervalMinutes] = useState(DEFAULT_ARROW_INTERVAL_MINUTES);
-      const [excludeZeroSpeedAtStart, setExcludeZeroSpeedAtStart] = useState(false);
-      const [excludeZeroSpeedAtEnd, setExcludeZeroSpeedAtEnd] = useState(false);
       
       const [mapStyle, setMapStyle] = useState('light'); 
       const [zoomLevel, setZoomLevel] = useState(8);
@@ -307,10 +232,7 @@
 
         const L = window.L;
         const map = L.map(mapRef.current, {
-          zoomControl: false,
-          maxBounds: [[-85, -Infinity], [85, Infinity]],
-          maxBoundsViscosity: 1,
-          minZoom: 1
+          zoomControl: false 
         }).setView([34.25, 133.20], 8);
 
         map.on('zoomend', () => setZoomLevel(map.getZoom()));
@@ -343,13 +265,17 @@
         tileLayerRefs.current = [];
 
         const style = MAP_STYLES.find(s => s.id === mapStyle);
-        if (style && window.maplibregl && L.maplibreGL) {
-          const layer = L.maplibreGL({
-            style: style.url,
-            attribution: style.attr,
-            maxZoom: 18
-          }).addTo(mapInstanceRef.current);
-          tileLayerRefs.current.push(layer);
+        if (style) {
+          const layersToAdd = style.layers || [{ url: style.url, attr: style.attr }];
+
+          layersToAdd.forEach((layerDef, index) => {
+            const layer = L.tileLayer(layerDef.url, {
+              attribution: layerDef.attr,
+              maxZoom: 18,
+              zIndex: index 
+            }).addTo(mapInstanceRef.current);
+            tileLayerRefs.current.push(layer);
+          });
         }
       }, [mapStyle]);
 
@@ -451,7 +377,7 @@
       }, [showGrid, mapStyle]);
 
       // CSV読み込み
-      const handleFileUpload = (e, { initialLoad = false } = {}) => {
+      const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
@@ -470,10 +396,6 @@
                 const timeStr = String(row[2]).replace(/["']/g, '');
                 const latStr = row[4];
                 const lngStr = row[5];
-                const course = parseFloat(String(row[12] ?? '').replace(/["']/g, ''));
-                const speed = parseFloat(String(row[13] ?? '').replace(/["']/g, ''));
-                const depth = parseFloat(String(row[14] ?? '').replace(/["']/g, ''));
-                const waterTemperature = parseFloat(String(row[15] ?? '').replace(/["']/g, ''));
                 
                 const lat = parseFloat(String(latStr).replace(/["']/g, ''));
                 const lng = parseFloat(String(lngStr).replace(/["']/g, ''));
@@ -481,7 +403,7 @@
                 if (!isNaN(lat) && !isNaN(lng) && timeStr) {
                   const timeObj = new Date(timeStr);
                   if (!isNaN(timeObj.getTime())) {
-                    parsedData.push({ time: timeObj, lat, lng, course, speed, depth, waterTemperature, rawRow: row });
+                    parsedData.push({ time: timeObj, lat, lng, rawRow: row });
                   }
                 } else {
                   if (parsedData.length === 0) {
@@ -510,28 +432,10 @@
               setCsvFileName("");
               setCsvHeaders([]);
             }
-            if (initialLoad) setIsInitialCsvLoading(false);
           }
         });
         e.target.value = null;
       };
-
-      // 同じフォルダの初期CSVを読み込む。HTTP(S)で開いた場合に利用できる。
-      useEffect(() => {
-        fetch(encodeURI(`./${INITIAL_CSV_FILE}`))
-          .then(response => {
-            if (!response.ok) throw new Error(`CSV load failed: ${response.status}`);
-            return response.blob();
-          })
-          .then(blob => {
-            const file = new File([blob], INITIAL_CSV_FILE, { type: 'text/csv' });
-            handleFileUpload({ target: { files: [file], value: null } }, { initialLoad: true });
-          })
-          .catch(error => {
-            console.warn(`初期CSVを読み込めませんでした: ${INITIAL_CSV_FILE}`, error);
-            setIsInitialCsvLoading(false);
-          });
-      }, []);
 
       const clearCsvData = () => {
         setAllCsvData([]);
@@ -570,31 +474,6 @@
         if (idx < startIndex) idx = startIndex;
         setEndIndex(idx);
       };
-
-      // 船速0除外スイッチに合わせて開始／終了位置を更新する
-      useEffect(() => {
-        if (allCsvData.length === 0) return;
-        if (!excludeZeroSpeedAtStart) {
-          setStartIndex(0);
-          return;
-        }
-        const idx = allCsvData.findIndex(record => record.speed !== 0);
-        if (idx !== -1) setStartIndex(idx);
-      }, [allCsvData, excludeZeroSpeedAtStart]);
-
-      useEffect(() => {
-        if (allCsvData.length === 0) return;
-        if (!excludeZeroSpeedAtEnd) {
-          setEndIndex(allCsvData.length - 1);
-          return;
-        }
-        for (let i = allCsvData.length - 1; i >= 0; i--) {
-          if (allCsvData[i].speed !== 0) {
-            setEndIndex(i);
-            break;
-          }
-        }
-      }, [allCsvData, excludeZeroSpeedAtEnd]);
 
       // エクスポート機能
       const exportFilteredData = () => {
@@ -654,21 +533,15 @@
             const endPoint = filtered[filtered.length - 1];
 
             if (showArrows && filtered.length > 1) {
-              const arrowIntervalMs = arrowIntervalMinutes * 60 * 1000;
-              const startTime = filtered[0].time.getTime();
-              const endTime = filtered[filtered.length - 1].time.getTime();
-              // 開始・終了ポイント付近は、矢印表示インターバルと同じ時間だけ非表示にする
-              let lastArrowTime = startTime;
+              const step = Math.max(1, Math.ceil(filtered.length / 80));
               const arrowSize = Math.max(10, Math.min(30, 8 + (zoomLevel - 5) * 2));
               const containerSize = arrowSize * 1.5;
               const anchorPos = containerSize / 2;
 
-              for (let i = 1; i < filtered.length - 1; i++) {
+              for (let i = 0; i < filtered.length - 1; i += step) {
                 const p1 = filtered[i];
                 const p2 = filtered[Math.min(i + 1, filtered.length - 1)];
                 
-                if (p1.time.getTime() - startTime < arrowIntervalMs || endTime - p1.time.getTime() < arrowIntervalMs) continue;
-                if (p1.time.getTime() - lastArrowTime < arrowIntervalMs) continue;
                 if (p1.lat === p2.lat && p1.lng === p2.lng) continue;
 
                 const bearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
@@ -684,53 +557,7 @@
                   iconAnchor: [anchorPos, anchorPos]
                 });
 
-                const formatNumber = (value, digits) => Number.isFinite(value) ? value.toFixed(digits) : '—';
-                const popupHtml = `
-                  <div class="arrow-data-card">
-                    <div class="arrow-data-card__header">TRACK DATA</div>
-                    <div class="arrow-data-card__grid">
-                      <div class="arrow-data-card__item arrow-data-card__item--wide">
-                        <span class="arrow-data-card__label">Timestamp</span>
-                        <span class="arrow-data-card__value">${formatDateTimeForPopup(p1.time)}</span>
-                      </div>
-                      <div class="arrow-data-card__item">
-                        <span class="arrow-data-card__label">Latitude</span>
-                        <span class="arrow-data-card__value">${formatNumber(p1.lat, 6)}°</span>
-                      </div>
-                      <div class="arrow-data-card__item">
-                        <span class="arrow-data-card__label">Longitude</span>
-                        <span class="arrow-data-card__value">${formatNumber(p1.lng, 6)}°</span>
-                      </div>
-                      <div class="arrow-data-card__item">
-                        <span class="arrow-data-card__label">Speed</span>
-                        <span class="arrow-data-card__value">${formatNumber(p1.speed, 1)}</span>
-                      </div>
-                      <div class="arrow-data-card__item">
-                        <span class="arrow-data-card__label">Course</span>
-                        <span class="arrow-data-card__value">${formatNumber(p1.course, 1)}°</span>
-                      </div>
-                      <div class="arrow-data-card__item">
-                        <span class="arrow-data-card__label">Depth</span>
-                        <span class="arrow-data-card__value">${formatNumber(p1.depth, 1)}</span>
-                      </div>
-                      <div class="arrow-data-card__item">
-                        <span class="arrow-data-card__label">Water Temp</span>
-                        <span class="arrow-data-card__value">${formatNumber(p1.waterTemperature, 1)}°C</span>
-                      </div>
-                    </div>
-                  </div>`;
-
-                L.marker([p1.lat, p1.lng], {
-                  icon: arrowIcon,
-                  interactive: true,
-                  keyboard: true,
-                  title: 'Track data'
-                }).bindPopup(popupHtml, {
-                  className: 'arrow-data-popup',
-                  maxWidth: 260,
-                  closeButton: true
-                }).addTo(markersLayerGroupRef.current);
-                lastArrowTime = p1.time.getTime();
+                L.marker([p1.lat, p1.lng], { icon: arrowIcon, interactive: false }).addTo(markersLayerGroupRef.current);
               }
             }
 
@@ -770,7 +597,7 @@
             }
           }
         }
-      }, [allCsvData, startIndex, endIndex, showStartMarker, showEndMarker, showLabels, showArrows, lineWidth, arrowIntervalMinutes, zoomLevel]);
+      }, [allCsvData, startIndex, endIndex, showStartMarker, showEndMarker, showLabels, showArrows, lineWidth, zoomLevel]);
 
       const dataLength = allCsvData.length;
       const maxIndex = Math.max(0, dataLength - 1);
@@ -786,14 +613,6 @@
 
           <main className="flex-1 min-h-0 relative overflow-hidden bg-[#e0e7ee] z-0">
             <div ref={mapRef} className="absolute inset-0 w-full h-full"></div>
-            {isInitialCsvLoading && (
-              <div className="absolute inset-0 z-[900] flex items-center justify-center bg-slate-900/20 backdrop-blur-[1px] pointer-events-none">
-                <div className="rounded-xl bg-white/95 px-5 py-4 shadow-lg border border-gray-200 text-center">
-                  <p className="text-sm font-black text-gray-800">Loading CSV…</p>
-                  <p className="mt-1 text-[11px] font-medium text-gray-500">Preparing initial track data</p>
-                </div>
-              </div>
-            )}
             
             <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-sm border border-gray-100 z-[400] pointer-events-none">
               <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">Legend</h3>
@@ -935,22 +754,6 @@
                        <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Points</p>
                        <p className="text-2xl font-black text-cyan-500 leading-none">{activeCount.toLocaleString()}</p>
                     </div>
-
-                    <div className="mt-3 border-y border-gray-100 px-1">
-                      <SimpleToggle
-                        label="Exclude Zero Speed at Start"
-                        active={excludeZeroSpeedAtStart}
-                        onClick={() => setExcludeZeroSpeedAtStart(!excludeZeroSpeedAtStart)}
-                        colorClass="bg-cyan-500"
-                      />
-                      <div className="h-px bg-gray-100 w-full" />
-                      <SimpleToggle
-                        label="Exclude Zero Speed at End"
-                        active={excludeZeroSpeedAtEnd}
-                        onClick={() => setExcludeZeroSpeedAtEnd(!excludeZeroSpeedAtEnd)}
-                        colorClass="bg-pink-400"
-                      />
-                    </div>
                     
                     <button
                       onClick={exportFilteredData}
@@ -1045,33 +848,6 @@
                           <button
                             onClick={() => setLineWidth(prev => Math.min(5, prev + 1))}
                             disabled={lineWidth >= 5}
-                            className="p-1.5 rounded-md text-gray-600 hover:text-cyan-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none cursor-pointer"
-                          >
-                            <ChevronRight size={16} strokeWidth={2.5} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="h-px bg-gray-100 w-full my-2" />
-                      <div className="flex flex-col gap-2 py-2">
-                        <label className="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1">
-                          Arrow Interval
-                        </label>
-                        <div className="flex items-center justify-between bg-gray-200/60 rounded-lg p-1">
-                          <button
-                            onClick={() => setArrowIntervalMinutes(prev => prev <= 20 ? Math.max(5, prev - 1) : Math.max(20, prev - 5))}
-                            disabled={arrowIntervalMinutes <= 5}
-                            className="p-1.5 rounded-md text-gray-600 hover:text-cyan-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none cursor-pointer"
-                          >
-                            <ChevronLeft size={16} strokeWidth={2.5} />
-                          </button>
-                          
-                          <span className="text-[13px] font-bold text-cyan-600 tracking-wider w-12 text-center">
-                            {arrowIntervalMinutes} min
-                          </span>
-                          
-                          <button
-                            onClick={() => setArrowIntervalMinutes(prev => prev < 20 ? Math.min(20, prev + 1) : Math.min(60, prev + 5))}
-                            disabled={arrowIntervalMinutes >= 60}
                             className="p-1.5 rounded-md text-gray-600 hover:text-cyan-600 hover:bg-white hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none cursor-pointer"
                           >
                             <ChevronRight size={16} strokeWidth={2.5} />
