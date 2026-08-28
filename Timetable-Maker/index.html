@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>タイムテーブルメーカー v0.8</title>
+  <title>タイムテーブルメーカー v0.9</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -67,6 +67,8 @@
       { bg: '#FFF7ED', border: '#FB923C', text: '#9A3412', name: 'オレンジ' },
       { bg: '#F0FDF4', border: '#4ADE80', text: '#14532D', name: '緑' },
       { bg: '#FEF2F2', border: '#F87171', text: '#7F1D1D', name: '赤' },
+      { bg: '#F5F3FF', border: '#A78BFA', text: '#4C1D95', name: '紫' },
+      { bg: '#ECFEFF', border: '#22D3EE', text: '#155E75', name: '青緑' },
       { bg: '#FEFCE8', border: '#FACC15', text: '#713F12', name: '黄' },
       { bg: '#F3F4F6', border: '#9CA3AF', text: '#1F2937', name: 'グレー' },
       { bg: '#FFFFFF', border: '#D1D5DB', text: '#374151', name: '白' },
@@ -218,9 +220,10 @@
       
       const [editingTitle, setEditingTitle] = useState(false);
       const [editingEvent, setEditingEvent] = useState(null);
-      const [editingColumn, setEditingColumn] = useState(null);
-      const [isSettingsOpen, setIsSettingsOpen] = useState(false); 
-      const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
+       const [editingColumn, setEditingColumn] = useState(null);
+       const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+       const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+       const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false);
       const [isTimeSettingsOpen, setIsTimeSettingsOpen] = useState(false);
       const [resizing, setResizing] = useState(null);
       const [dragging, setDragging] = useState(null); 
@@ -333,7 +336,7 @@
           result.push({ ...ev, isClone: false, originalId: ev.id });
 
           // バスブロックの場合、対応するバス列を探してクローンを生成
-          if (ev.isBus && ev.busType) {
+          if (ev.isBus && ev.busType !== undefined) {
             const currentStartIdx = getEventStartIndex(ev);
             if (currentStartIdx === -1) return;
             const originalEndIdx = currentStartIdx + (ev.colSpan || 1) - 1;
@@ -343,7 +346,7 @@
               if (colIdx >= currentStartIdx && colIdx <= originalEndIdx) return;
 
               // バスの種類が一致する列にクローンを追加
-              if (col.isBus && col.busType === ev.busType) {
+               if (col.isBus && String(col.busType) === String(ev.busType)) {
                 result.push({
                   ...ev,
                   id: ev.id + '_clone_' + col.id, // クローン用の一意なID
@@ -926,7 +929,7 @@
         busEvents.forEach(ev => {
           const startTime = formatTime(ev.start);
           const endTime = formatTime(ev.end);
-          const busType = ev.busType || '';
+          const busType = Number(ev.busType) > 0 ? ev.busType : '';
           const title = `"${(ev.title || '').replace(/"/g, '""')}"`;
           
           // イベントの人数を計算
@@ -1235,31 +1238,50 @@
 
       return (
         <div className="flex flex-col h-screen bg-gray-50 font-sans print:h-auto print:bg-white">
-          <header className="bg-white border-b border-gray-200 p-4 flex justify-between items-center shadow-sm z-30 print:hidden">
+          <header className={`relative bg-white border-b border-gray-200 p-4 flex justify-between items-center shadow-sm ${isQuickMenuOpen ? 'z-[200]' : 'z-30'} print:hidden`}>
             <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <AlignLeft className="w-6 h-6 text-blue-600" />
               タイムテーブルメーカー
-              <span className="text-sm font-normal text-gray-500 ml-1">v0.8</span>
+              <span className="text-sm font-normal text-gray-500 ml-1">v0.9</span>
             </h1>
-            <div className="flex gap-3 items-center">
-              <button onClick={addEvent} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors shadow-sm font-medium text-sm" title="ブロックを追加">
-                <Plus className="w-4 h-4" /> Block
+            <div className="relative">
+              <button
+                onClick={() => setIsQuickMenuOpen(prev => !prev)}
+                className={`p-2.5 rounded-xl border transition-all ${isQuickMenuOpen ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-white border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 hover:shadow-sm'}`}
+                title="操作メニュー"
+                aria-label="操作メニュー"
+                aria-expanded={isQuickMenuOpen}
+              >
+                <Settings className="w-5 h-5" />
               </button>
-              <button onClick={() => setIsSettingsOpen(true)} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors shadow-sm font-medium text-sm" title="列の設定">
-                <Settings className="w-4 h-4" /> Column
-              </button>
-              <div className="w-px h-6 bg-gray-300 mx-1"></div>
-              <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 transition-colors select-none" title="ブロック内の人数表示を切り替え">
-                <Users className="w-4 h-4" />
-                <input type="checkbox" className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer" checked={showBlockCapacity} onChange={(e) => setShowBlockCapacity(e.target.checked)} />
-              </label>
-              <button onClick={() => setIsTimeSettingsOpen(true)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors" title="表示時間の設定">
-                <Clock className="w-5 h-5" />
-              </button>
-              <div className="w-px h-6 bg-gray-300 mx-1"></div>
-              <button onClick={() => setIsSaveMenuOpen(true)} className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors" title="保存・出力・読込">
-                <Save className="w-5 h-5" />
-              </button>
+
+              {isQuickMenuOpen && (
+                <div className="absolute right-0 top-full mt-3 w-72 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl shadow-gray-300/50 z-[150]">
+                  <div className="px-3 pt-2 pb-2 text-xs font-semibold tracking-wider text-gray-400">操作メニュー</div>
+                  <button onClick={() => { addEvent(); setIsQuickMenuOpen(false); }} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Plus className="w-5 h-5" /></span>
+                    <span>ブロックを追加</span>
+                  </button>
+                  <button onClick={() => { setIsSettingsOpen(true); setIsQuickMenuOpen(false); }} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-violet-50 hover:text-violet-700">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-600"><AlignLeft className="w-5 h-5" /></span>
+                    <span>列の設定</span>
+                  </button>
+                  <button onClick={() => { setIsTimeSettingsOpen(true); setIsQuickMenuOpen(false); }} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-amber-50 hover:text-amber-700">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-600"><Clock className="w-5 h-5" /></span>
+                    <span>表示時間の設定</span>
+                  </button>
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600"><Users className="w-5 h-5" /></span>
+                    <span className="flex-1">ブロック内の人数を表示</span>
+                    <input type="checkbox" className="peer sr-only" checked={showBlockCapacity} onChange={(e) => setShowBlockCapacity(e.target.checked)} />
+                    <span className="relative h-6 w-11 rounded-full bg-gray-200 transition-colors peer-checked:bg-emerald-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:after:translate-x-5"></span>
+                  </label>
+                  <button onClick={() => { setIsSaveMenuOpen(true); setIsQuickMenuOpen(false); }} className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-slate-50 hover:text-slate-800">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><Save className="w-5 h-5" /></span>
+                    <span>保存・出力・読込</span>
+                  </button>
+                </div>
+              )}
             </div>
           </header>
 
@@ -1306,7 +1328,7 @@
                       onDragEnd={handleHeaderDragEnd}
                       className={`w-full h-full rounded-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:shadow-md transition-all relative ${col.fontSize || 'text-sm'} font-bold ${draggedColId === col.id ? 'opacity-40 scale-95 ring-2 ring-blue-500 ring-offset-1' : ''}`}
                       style={{ 
-                        backgroundColor: col.bgColor === 'transparent' ? 'transparent' : (col.bgColor || '#6B7280'), 
+                        backgroundColor: col.bgColor === 'transparent' ? 'transparent' : (col.bgColor || '#6B7280'),
                         color: col.textColor || '#FFFFFF',
                         border: col.bgColor === 'transparent' ? '2px solid #9CA3AF' : 'none'
                       }}
@@ -1317,9 +1339,9 @@
                       <div className="leading-snug text-center px-1 py-0.5 overflow-hidden w-full h-full flex flex-col items-center justify-center">
                         <div className="whitespace-pre-wrap">
                           {col.isBus && (
-                            <span className="inline-flex items-center align-text-bottom mr-1 bg-black/10 rounded-sm px-0.5">
+                            <span className="inline-flex items-center align-text-bottom mr-1">
                               <BusFront className="w-[1.2em] h-[1.2em]" />
-                              {col.busType && <span className="text-[0.8em] font-black ml-0.5 mr-0.5 leading-none">{col.busType}</span>}
+                              {Number(col.busType) > 0 && <span className="text-[0.8em] font-black ml-0.5 mr-0.5 leading-none">{col.busType}</span>}
                             </span>
                           )}
                           {col.name}{!col.subtitle && col.capacity && <span className="font-normal text-xs ml-0.5">（{String(col.capacity).trim().match(/[名人]$/) ? col.capacity : `${col.capacity}名`}）</span>}
@@ -1450,16 +1472,16 @@
                       <div className="absolute inset-0 p-1 flex flex-col items-center justify-center overflow-hidden">
                         {/* 常に文字が見切れないように leading-snug (行間1.375) を適用 */}
                         {evt.showTime !== false && (
-                          <div className={`text-content w-full ${evt.isClone ? '' : 'cursor-pointer hover:opacity-60 transition-opacity'} font-semibold ${evt.timeFontSize || 'text-sm'} tracking-wider whitespace-nowrap mb-0.5 truncate text-center px-1`} title={evt.isClone ? '' : 'クリックして編集'}>
+                          <div className={`text-content max-w-full ${evt.isClone ? '' : 'cursor-pointer hover:opacity-60 transition-opacity'} font-semibold ${evt.timeFontSize || 'text-sm'} tracking-wider whitespace-nowrap mb-0.5 truncate text-center px-2 py-0.5`} title={evt.isClone ? '' : 'クリックして編集'}>
                             {formatTime(evt.start)} <span className="text-[0.75em] mx-0.5 pointer-events-none">▶</span> {formatTime(evt.end)}
                           </div>
                         )}
                         {/* leading-tight を leading-snug に変更 */}
-                        <div className={`text-content w-full ${evt.isClone ? '' : 'cursor-pointer hover:opacity-60 transition-opacity'} font-bold whitespace-pre-wrap leading-snug drop-shadow-sm ${evt.titleFontSize || 'text-sm'} text-center overflow-hidden max-w-full text-ellipsis px-1`} title={evt.isClone ? '' : 'クリックして編集'}>
+                        <div className={`text-content max-w-full ${evt.isClone ? '' : 'cursor-pointer hover:opacity-60 transition-opacity'} font-bold whitespace-pre-wrap leading-snug drop-shadow-sm ${evt.titleFontSize || 'text-sm'} text-center overflow-hidden text-ellipsis px-2 py-0.5`} title={evt.isClone ? '' : 'クリックして編集'}>
                           {evt.isBus && (
-                            <span className="inline-flex items-center align-text-bottom mr-1 bg-black/5 rounded-sm px-0.5">
+                            <span className="inline-flex items-center align-text-bottom mr-1">
                               <BusFront className="w-[1.2em] h-[1.2em]" />
-                              {evt.busType && <span className="text-[0.8em] font-black ml-0.5 mr-0.5 leading-none">{evt.busType}</span>}
+                              {Number(evt.busType) > 0 && <span className="text-[0.8em] font-black ml-0.5 mr-0.5 leading-none">{evt.busType}</span>}
                             </span>
                           )}
                           {evt.title}{showBlockCapacity && capacityText && <span className="font-normal text-[0.85em] ml-0.5 whitespace-nowrap">{capacityText}</span>}
@@ -1470,19 +1492,19 @@
                       {!isShiftPressed && !evt.isClone && (
                         <>
                           <div 
-                            className="resize-handle absolute top-0 left-4 right-4 h-3 cursor-ns-resize z-20"
+                            className="resize-handle absolute top-0 left-4 right-4 h-5 cursor-ns-resize z-20"
                             onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'top')}
                           />
                           <div 
-                            className="resize-handle absolute bottom-0 left-4 right-4 h-3 cursor-ns-resize z-20"
+                            className="resize-handle absolute bottom-0 left-4 right-4 h-5 cursor-ns-resize z-20"
                             onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'bottom')}
                           />
                           <div 
-                            className="resize-handle absolute top-3 bottom-3 left-0 w-3 cursor-ew-resize z-20"
+                            className="resize-handle absolute top-3 bottom-3 left-0 w-5 cursor-ew-resize z-20"
                             onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'left')}
                           />
                           <div 
-                            className="resize-handle absolute top-3 bottom-3 right-0 w-3 cursor-ew-resize z-20"
+                            className="resize-handle absolute top-3 bottom-3 right-0 w-5 cursor-ew-resize z-20"
                             onMouseDown={(e) => handleResizeStart(e, evt.originalId, 'right')}
                           />
                         </>
@@ -1564,27 +1586,25 @@
                   {/* ブロックの種類の選択 */}
                   <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
                     <label className="block text-sm font-bold text-gray-700 mb-2">ブロックの種類</label>
-                    <div className="flex gap-6 items-center">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="radio" checked={!editingEvent.isBus} onChange={() => setEditingEvent({...editingEvent, isBus: false})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
                         <span className="text-sm font-medium text-gray-700">標準</span>
                       </label>
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="radio" checked={editingEvent.isBus} onChange={() => setEditingEvent({...editingEvent, isBus: true, busType: editingEvent.busType || 1})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                          <span className="text-sm font-medium text-gray-700 flex items-center gap-1"><BusFront className="w-4 h-4 text-gray-600" /> バス</span>
-                        </label>
-                        {editingEvent.isBus && (
-                          <div className="flex items-center gap-2 ml-2 bg-white px-2 py-1 rounded border border-gray-200">
-                            {[1, 2, 3, 4, 5, 6].map(num => (
-                              <label key={num} className="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" checked={editingEvent.busType === num} onChange={() => setEditingEvent({...editingEvent, busType: num})} className="text-blue-600 focus:ring-blue-500" />
-                                <span className="text-xs font-bold text-gray-700">{num}</span>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" checked={editingEvent.isBus} onChange={() => setEditingEvent({...editingEvent, isBus: true, busType: editingEvent.busType !== undefined ? editingEvent.busType : 1})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                        <span className="text-sm font-medium text-gray-700 flex items-center gap-1"><BusFront className="w-4 h-4 text-gray-600" /> バス <span className="text-xs font-normal text-gray-500">（0:番号無し）</span></span>
+                      </label>
+                      {editingEvent.isBus && (
+                          <div className="grid w-full grid-cols-7 gap-1 rounded-md border border-gray-200 bg-white p-1.5">
+                            {[0, 1, 2, 3, 4, 5, 6].map(num => (
+                              <label key={num} className={`flex cursor-pointer items-center justify-center gap-1 rounded px-1 py-1 text-xs font-bold transition-colors ${Number(editingEvent.busType) === num ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+                                <input type="radio" checked={Number(editingEvent.busType) === num} onChange={() => setEditingEvent({...editingEvent, busType: num})} className="text-blue-600 focus:ring-blue-500" />
+                                <span>{num}</span>
                               </label>
                             ))}
                           </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
 
@@ -1750,27 +1770,25 @@
                 <div className="p-4 flex flex-col gap-4">
                   <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
                     <label className="block text-sm font-bold text-gray-700 mb-2">列の種類</label>
-                    <div className="flex gap-6 items-center">
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input type="radio" checked={!editingColumn.isBus} onChange={() => setEditingColumn({...editingColumn, isBus: false})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
                         <span className="text-sm font-medium text-gray-700">標準</span>
                       </label>
-                      <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="radio" checked={editingColumn.isBus} onChange={() => setEditingColumn({...editingColumn, isBus: true, busType: editingColumn.busType || 1})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
-                          <span className="text-sm font-medium text-gray-700 flex items-center gap-1"><BusFront className="w-4 h-4 text-gray-600" /> バス</span>
-                        </label>
-                        {editingColumn.isBus && (
-                          <div className="flex items-center gap-2 ml-2 bg-white px-2 py-1 rounded border border-gray-200">
-                            {[1, 2, 3, 4, 5, 6].map(num => (
-                              <label key={num} className="flex items-center gap-1 cursor-pointer">
-                                <input type="radio" checked={editingColumn.busType === num} onChange={() => setEditingColumn({...editingColumn, busType: num})} className="text-blue-600 focus:ring-blue-500" />
-                                <span className="text-xs font-bold text-gray-700">{num}</span>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" checked={editingColumn.isBus} onChange={() => setEditingColumn({...editingColumn, isBus: true, busType: editingColumn.busType !== undefined ? editingColumn.busType : 1})} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                        <span className="text-sm font-medium text-gray-700 flex items-center gap-1"><BusFront className="w-4 h-4 text-gray-600" /> バス <span className="text-xs font-normal text-gray-500">（0:番号無し）</span></span>
+                      </label>
+                      {editingColumn.isBus && (
+                          <div className="grid w-full grid-cols-7 gap-1 rounded-md border border-gray-200 bg-white p-1.5">
+                            {[0, 1, 2, 3, 4, 5, 6].map(num => (
+                              <label key={num} className={`flex cursor-pointer items-center justify-center gap-1 rounded px-1 py-1 text-xs font-bold transition-colors ${Number(editingColumn.busType) === num ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}>
+                                <input type="radio" checked={Number(editingColumn.busType) === num} onChange={() => setEditingColumn({...editingColumn, busType: num})} className="text-blue-600 focus:ring-blue-500" />
+                                <span>{num}</span>
                               </label>
                             ))}
                           </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -1840,18 +1858,18 @@
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">列ブロックのカラー</label>
                      <div className="flex flex-wrap gap-2">
-                      {COLUMN_PALETTE.map((color, idx) => {
-                        const isTransparent = color.bg === 'transparent';
-                        return (
-                          <button 
-                            key={idx} 
-                            onClick={() => setEditingColumn({...editingColumn, bgColor: color.bg, textColor: color.text})} 
-                            className={`w-8 h-8 rounded-md ${editingColumn.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`} 
-                            style={{ 
+                       {COLUMN_PALETTE.map((color, idx) => {
+                         const isTransparent = color.bg === 'transparent';
+                         return (
+                           <button
+                             key={idx}
+                            onClick={() => setEditingColumn({...editingColumn, bgColor: color.bg, textColor: color.text})}
+                            className={`w-8 h-8 rounded-md ${editingColumn.bgColor === color.bg ? 'ring-2 ring-offset-1 ring-blue-500 scale-110' : 'hover:scale-105'}`}
+                            style={{
                               backgroundColor: isTransparent ? '#F3F4F6' : color.bg,
                               border: isTransparent ? '2px solid #9CA3AF' : 'none'
-                            }} 
-                            title={color.name} 
+                            }}
+                            title={color.name}
                           />
                         );
                       })}
@@ -1868,40 +1886,38 @@
 
           {isSaveMenuOpen && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4 print:hidden">
-              <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
-                <div className="bg-gray-100 px-4 py-3 border-b flex justify-between items-center">
-                  <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2"><Save className="w-5 h-5" /> 保存・出力・読込</h2>
-                  <button onClick={() => setIsSaveMenuOpen(false)} className="text-gray-500 hover:text-gray-700"><X className="w-5 h-5" /></button>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+                <div className="bg-slate-50 px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+                  <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600"><Save className="w-5 h-5" /></span> 保存・出力・読込</h2>
+                  <button onClick={() => setIsSaveMenuOpen(false)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700" title="閉じる"><X className="w-5 h-5" /></button>
                 </div>
 
-                <div className="p-4 border-b border-gray-200 bg-white flex flex-col gap-2">
-                  <div className="flex gap-2">
-                    <button onClick={() => fileInputRef.current.click()} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <Upload className="w-4 h-4" /> データ読込
-                    </button>
-                    <button onClick={() => { setIsSaveMenuOpen(false); setTimeout(handlePrint, 300); }} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <Download className="w-4 h-4" /> PDF出力
-                    </button>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <button onClick={handleImageExport} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <ImageIcon className="w-4 h-4" /> 画像出力
-                    </button>
-                    <button onClick={handleExport} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <Save className="w-4 h-4" /> データ保存
-                    </button>
-                    <input type="file" ref={fileInputRef} onChange={handleImport} accept=".txt" className="hidden" />
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <button onClick={handleBusCsvExport} className="flex-1 py-2 border border-gray-300 bg-gray-50 text-gray-700 rounded-md text-sm hover:bg-gray-100 font-medium flex items-center justify-center gap-1 shadow-sm">
-                      <FileText className="w-4 h-4" /> バスCSV出力
-                    </button>
-                    <div className="flex-1"></div>
-                  </div>
+                <div className="grid grid-cols-2 gap-3 p-5 bg-white">
+                  <button onClick={() => fileInputRef.current.click()} className="group flex min-h-20 items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/40 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 hover:shadow-md">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-600"><Upload className="w-5 h-5" /></span>
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-blue-700">データ読込</span>
+                  </button>
+                  <button onClick={handleExport} className="group flex min-h-20 items-center gap-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50 hover:shadow-md">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600"><Save className="w-5 h-5" /></span>
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-indigo-700">データ保存</span>
+                  </button>
+                  <button onClick={handleImageExport} className="group flex min-h-20 items-center gap-3 rounded-xl border border-violet-100 bg-violet-50/40 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-violet-300 hover:bg-violet-50 hover:shadow-md">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-100 text-violet-600"><ImageIcon className="w-5 h-5" /></span>
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-violet-700">画像出力</span>
+                  </button>
+                  <button onClick={() => { setIsSaveMenuOpen(false); setTimeout(handlePrint, 300); }} className="group flex min-h-20 items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/40 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-50 hover:shadow-md">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-600"><Download className="w-5 h-5" /></span>
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-amber-700">PDF出力</span>
+                  </button>
+                  <button onClick={handleBusCsvExport} className="group flex min-h-20 items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3 text-left transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50 hover:shadow-md">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600"><FileText className="w-5 h-5" /></span>
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-emerald-700">バスCSV出力</span>
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleImport} accept=".txt" className="hidden" />
                 </div>
-                
-                <div className="bg-gray-50 px-4 py-3 border-t flex justify-end items-center">
-                  <button onClick={() => setIsSaveMenuOpen(false)} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 font-medium">閉じる</button>
+
+                <div className="bg-slate-50 px-5 py-3 border-t border-slate-200 flex justify-end items-center">
+                  <button onClick={() => setIsSaveMenuOpen(false)} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700">閉じる</button>
                 </div>
               </div>
             </div>

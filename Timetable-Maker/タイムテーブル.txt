@@ -44,14 +44,14 @@
     },
     {
       "id": "5z3pxg0xk",
-      "name": "大型",
+      "name": "バス",
       "bgColor": "#6B7280",
       "textColor": "#FFFFFF",
       "width": 1,
       "isVisible": true,
       "capacity": "",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     }
   ],
   "events": [
@@ -139,7 +139,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "fxew2d3z5",
@@ -155,7 +155,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "e82extnv8",
@@ -202,7 +202,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "9ydoxt8kj",
@@ -218,7 +218,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "g0okyl4jm",
@@ -363,7 +363,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "9thfq3buu",
@@ -379,7 +379,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "7xcgshkyh",
@@ -395,7 +395,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "qkbn3hys8",
@@ -411,7 +411,7 @@
       "titleFontSize": "text-xs",
       "timeFontSize": "text-sm",
       "isBus": true,
-      "busType": 1
+      "busType": 0
     },
     {
       "id": "fp72vi8kk",
@@ -534,8 +534,8 @@
     {
       "id": "69yg83mbh",
       "title": "女子生徒向け 座談会",
-      "start": 650,
-      "end": 710,
+      "start": 640,
+      "end": 695,
       "colSpan": 1,
       "bgColor": "#EBF4FF",
       "borderColor": "#60A5FA",
@@ -570,5 +570,5 @@
   "startMin": 475,
   "endMin": 995,
   "isZoomed": false,
-  "showBlockCapacity": true
+  "showBlockCapacity": false
 }
