@@ -49,6 +49,22 @@
         .stat-item { display: flex; flex-direction: column; }
         .yuge-conditions.is-disabled { opacity: 0.4; }
         .yuge-conditions button:disabled { cursor: not-allowed; }
+        .pr-legend {
+            display: none;
+            min-width: 134px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18);
+            color: #374151;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.5;
+        }
+        .pr-legend.is-visible { display: block; }
+        .pr-legend-title { margin-bottom: 4px; color: #111827; font-weight: 900; }
+        .pr-legend-row { display: flex; align-items: center; gap: 6px; }
+        .pr-legend-line { width: 20px; border-top-style: solid; border-radius: 999px; }
     </style>
 </head>
 <body class="bg-white min-h-screen text-gray-800 font-sans">
@@ -373,6 +389,7 @@
             const showStudents = document.getElementById('toggle-students').checked;
             const showYuge = document.getElementById('toggle-yuge').checked;
             const showPr = document.getElementById('toggle-pr').checked;
+            document.getElementById('pr-legend')?.classList.toggle('is-visible', showPr);
             let labelClasses = "bubble-label-container";
             if (!showNames) labelClasses += " hide-name";
             if (!showValues) labelClasses += " hide-value";
@@ -393,6 +410,17 @@
                 const bubbleCalculationValue = showStudents ? s.students : selectedYugeValue;
                 const baseMultiplier = showStudents ? 1.0 : 4.0;
                 const theme = showStudents ? themeColors.students : themeColors[currentMode];
+                let strokeColor = theme.border;
+                let strokeWidth = 3;
+                if (showPr && s.pr > 0) {
+                    if (s.pr >= 5) {
+                        strokeColor = '#ef4444';
+                    } else if (s.pr >= 3) {
+                        strokeColor = '#f59e0b';
+                    } else {
+                        strokeColor = '#2563eb';
+                    }
+                }
                 // Leaflet版の半径（メートル）を、初期ズーム10でのMapLibreのピクセル半径へ換算する。
                 const metersPerPixelAtZoom10 = 156543.03392 * Math.cos(s.lat * Math.PI / 180) / Math.pow(2, 10);
                 const radius = Math.sqrt(bubbleCalculationValue || 0.5) * 180 * baseMultiplier / metersPerPixelAtZoom10;
@@ -408,18 +436,21 @@
                 </div>`;
 
                 const studentPopup = showStudents ? `<div><div class="text-[8px] text-gray-400 font-bold uppercase">中3生</div><div class="text-xs font-black text-emerald-600">${s.students}</div></div>` : "";
-                const yugePopup = !showYuge ? "" : currentMode === 'sci' ? `
-                    <div><div class="text-[8px] text-gray-400 font-bold uppercase">SCI</div><div class="text-xs font-black text-orange-600">${valSCI}</div></div>
-                    <div><div class="text-[8px] text-gray-400 font-bold">S</div><div class="text-xs font-black text-cyan-600">${valS}</div></div>
-                    <div><div class="text-[8px] text-gray-400 font-bold">C</div><div class="text-xs font-black text-violet-600">${valC}</div></div>
-                    <div><div class="text-[8px] text-gray-400 font-bold">I</div><div class="text-xs font-black text-pink-600">${valI}</div></div>` :
+                const yugePrimaryPopup = !showYuge ? "" : currentMode === 'sci' ?
+                    `<div><div class="text-[8px] text-gray-400 font-bold uppercase">SCI</div><div class="text-xs font-black text-orange-600">${valSCI}</div></div>` :
                     `<div><div class="text-[8px] text-gray-400 font-bold">${currentMode.toUpperCase()}</div><div class="text-xs font-black ${theme.text}">${selectedYugeValue}</div></div>`;
-                const prPopup = showPr && s.pr !== null ? `<div><div class="text-xs font-black text-gray-900">${s.pr}</div></div>` : "";
+                const yugeBreakdownPopup = !showYuge || currentMode !== 'sci' ? "" : `
+                    <div><div class="text-[8px] text-gray-400 font-bold">S</div><div class="text-xs font-black text-blue-600">${valS}</div></div>
+                    <div><div class="text-[8px] text-gray-400 font-bold">C</div><div class="text-xs font-black text-violet-600">${valC}</div></div>
+                    <div><div class="text-[8px] text-gray-400 font-bold">I</div><div class="text-xs font-black text-pink-600">${valI}</div></div>`;
+                const prPopup = showPr && s.pr !== null ?
+                    `<div><div class="text-[8px] text-gray-400 font-bold uppercase">PR</div><div class="text-xs font-black text-gray-900">${s.pr}</div></div>` : "";
+                const prPopupSlot = currentMode === 'sci' ? (prPopup || '<div aria-hidden="true"></div>') : prPopup;
 
                 const popup = `
                     <div class="p-2 custom-popup min-w-[200px]">
                         <div class="font-black text-sm mb-2 border-b pb-1 text-gray-900">${s.name}</div>
-                        <div class="grid grid-cols-2 gap-2 text-center">${prPopup}${studentPopup}${yugePopup}</div>
+                        <div class="grid grid-cols-3 gap-2 text-center">${studentPopup}${yugePrimaryPopup}${prPopupSlot}${yugeBreakdownPopup}</div>
                     </div>
                 `;
 
@@ -427,7 +458,7 @@
                     features.push({
                         type: 'Feature',
                         geometry: { type: 'Point', coordinates: [s.lng, s.lat] },
-                        properties: { radius, color: theme.border, fill: theme.fill, popup }
+                        properties: { radius, color: strokeColor, strokeWidth, fill: theme.fill, popup }
                     });
                 }
 
@@ -477,11 +508,26 @@
                         'circle-radius': ['get', 'radius'],
                         'circle-color': ['get', 'fill'],
                         'circle-opacity': 0.4,
-                        'circle-stroke-width': 1.5,
+                        'circle-stroke-width': ['get', 'strokeWidth'],
                         'circle-stroke-color': ['get', 'color'],
                         'circle-stroke-opacity': 1
                     }
                 });
+                const prLegend = {
+                    onAdd() {
+                        const container = document.createElement('div');
+                        container.id = 'pr-legend';
+                        container.className = 'maplibregl-ctrl pr-legend';
+                        container.innerHTML = `
+                            <div class="pr-legend-title">PR回数</div>
+                            <div class="pr-legend-row"><span class="pr-legend-line" style="border-color:#2563eb;border-width:3px"></span>1〜2回</div>
+                            <div class="pr-legend-row"><span class="pr-legend-line" style="border-color:#f59e0b;border-width:3px"></span>3〜4回</div>
+                            <div class="pr-legend-row"><span class="pr-legend-line" style="border-color:#ef4444;border-width:3px"></span>5回以上</div>`;
+                        return container;
+                    },
+                    onRemove() { document.getElementById('pr-legend')?.remove(); }
+                };
+                map.addControl(prLegend, 'bottom-left');
                 const updateBubbleScale = () => {
                     const zoomScale = Math.pow(2, map.getZoom() - 10);
                     map.setPaintProperty('school-bubbles', 'circle-radius', ['*', ['get', 'radius'], zoomScale]);
