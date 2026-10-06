@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>スクショ置き場</title>
+  <style>
+    :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; color: #293044; background: #f6f7fb; font-synthesis: none; --accent: #6b5bce; --border: #e5e7ef; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    button { font: inherit; cursor: pointer; }
+    button:disabled { cursor: default; opacity: .4; }
+    button:focus-visible, .stage:focus-visible { outline: 3px solid #b9aef3; outline-offset: 3px; }
+    svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .app { max-width: 1440px; margin: auto; padding: 24px 40px; }
+    .workspace { display: grid; grid-template-columns: minmax(0, 1fr); background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px #25305704; }
+    aside { border-bottom: 1px solid var(--border); min-width: 0; background: #fcfcfe; }
+    .list-heading { height: 44px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; }
+    .list-label { display: flex; align-items: center; gap: 9px; }
+    #count { background: #edeaf8; color: #74659e; min-width: 23px; padding: 3px 7px; text-align: center; border-radius: 6px; font-size: 11px; }
+    .image-list { display: flex; flex-direction: row; flex-wrap: nowrap; gap: 10px; overflow-x: auto; overflow-y: hidden; padding: 0 12px 12px; min-height: 52px; }
+    .list-empty { color: #a2a7b6; font-size: 12px; margin: 0; padding: 6px; line-height: 1.9; }
+    .thumbnail { width: 136px; flex-shrink: 0; text-align: left; padding: 7px; border: 1px solid transparent; border-radius: 9px; background: transparent; color: #777f91; user-select: none; }
+    .thumbnail:hover { background: #f0eef8; }
+    .thumbnail[aria-pressed="true"] { border-color: #a79adb; background: #f0edf9; color: #6350a8; }
+    .thumbnail img { display: block; width: 100%; height: 72px; object-fit: contain; background: #e9eaf0; border-radius: 5px; }
+    .clear { background: transparent; border: 0; border-radius: 5px; padding: 7px 0 7px 8px; color: #848a9b; font-size: 12px; }
+    .clear:not(:disabled):hover { color: #b95465; background: #fff6f7; }
+    main { min-width: 0; }
+    .viewer-heading { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 22px; border-bottom: 1px solid var(--border); }
+    .viewer-title { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; }
+    #image-title { font-size: 12px; color: #727a8d; }
+    #dimensions { font-size: 11px; color: #9ba1ae; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .stage { height: max(360px, calc(100vh - 280px)); max-height: 800px; position: relative; margin: 16px; border-radius: 9px; overflow: hidden; background-color: #f6f7fa; background-image: radial-gradient(#dfe2eb .8px, transparent .8px); background-size: 12px 12px; border: 1px solid #eceef4; }
+    .stage.has-image { cursor: grab; touch-action: none; user-select: none; }
+    .stage.panning { cursor: grabbing; }
+    .stage.dragging { outline: 2px dashed var(--accent); outline-offset: -5px; background-color: #efebfb; }
+    .empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+    .paste-icon { color: #9a8ec3; display: grid; place-items: center; width: 68px; height: 68px; border: 1px solid #e4deef; border-radius: 20px; background: #efebf6; margin-bottom: 25px; }
+    .paste-icon svg { width: 30px; height: 30px; }
+    .empty h2 { font-size: 18px; margin: 0 0 12px; font-weight: 600; }
+    .shortcut { display: flex; align-items: center; gap: 9px; color: #b1adbd; margin-bottom: 18px; }
+    kbd { font-family: inherit; font-size: 13px; color: #645c7e; padding: 7px 11px; background: white; border: 1px solid #dedbe7; border-bottom-width: 3px; border-radius: 6px; }
+    .empty p { color: #9297a6; font-size: 12px; line-height: 1.9; margin: 0; }
+    .image-frame { position: absolute; inset: 0; pointer-events: none; }
+    #preview { display: block; position: absolute; left: 0; top: 0; max-width: none; max-height: none; transform-origin: 0 0; user-select: none; box-shadow: 0 3px 18px #26304412; }
+    [hidden] { display: none !important; }
+    .view-hint { color: #9297a6; font-size: 11px; line-height: 1.7; }
+    @media (max-width: 760px) {
+      .app { padding: 18px; }
+      .list-heading { height: 42px; } .image-list { padding-bottom: 10px; }
+      .thumbnail { width: 120px; } .thumbnail img { height: 64px; }
+      .clear { padding: 9px; } .viewer-heading { padding: 12px 16px; } .stage { height: 48vh; min-height: 300px; margin: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="workspace">
+      <aside aria-label="貼り付けた画像">
+        <div class="list-heading"><span class="list-label">画像一覧<span id="count">0</span></span><button type="button" id="clear" class="clear" disabled>すべて削除</button></div>
+        <div class="image-list" id="image-list"><p class="list-empty" id="list-empty">貼り付けた画像がここに並びます</p></div>
+      </aside>
+      <main>
+        <div class="viewer-heading"><div class="viewer-title"><span id="image-title">プレビュー</span><span class="view-hint" id="view-hint">ドラッグで移動 · ホイールでズーム · ダブルクリックで全体表示</span></div><span id="dimensions"></span></div>
+        <div class="stage" id="stage" tabindex="0" aria-label="画像プレビュー。画像を貼り付けるかドロップしてください。" aria-describedby="view-hint">
+          <div class="empty" id="empty">
+            <div class="paste-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg></div>
+            <h2 id="empty-title">スクショを貼り付け</h2>
+            <div class="shortcut" id="empty-shortcut"><kbd id="modifier">Ctrl</kbd><span>+</span><kbd>V</kbd></div>
+            <p id="empty-instructions">画像をコピーして、このページで貼り付けてください。<br>画像ファイルのドラッグ＆ドロップもできます。</p>
+          </div>
+          <div class="image-frame" id="image-frame" hidden><img id="preview" alt="" draggable="false"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const images = [];
+    const selectedIds = new Set();
+    let selectedId = null;
+    let anchorId = null;
+    let nextId = 1;
+    let generation = 0;
+    let dragDepth = 0;
+    const stage = $('stage');
+    const view = { zoom: 1, panX: 0, panY: 0 };
+    let panGesture = null;
+    if (/Mac|iPhone|iPad/.test(navigator.platform)) $('modifier').textContent = '⌘';
+
+    function applyView() {
+      const current = images.find(item => item.id === selectedId);
+      if (!current) return;
+      const width = stage.clientWidth;
+      const height = stage.clientHeight;
+      const fit = Math.min(1, Math.max(1, width - 40) / current.width, Math.max(1, height - 40) / current.height);
+      const scale = fit * view.zoom;
+      const x = (width - current.width * scale) / 2 + view.panX;
+      const y = (height - current.height * scale) / 2 + view.panY;
+      $('preview').style.width = `${current.width}px`;
+      $('preview').style.height = `${current.height}px`;
+      $('preview').style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    }
+
+    function endPan() {
+      const pointerId = panGesture?.pointerId;
+      panGesture = null;
+      stage.classList.remove('panning');
+      if (pointerId !== undefined && stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
+    }
+
+    function resetView() {
+      endPan();
+      view.zoom = 1;
+      view.panX = 0;
+      view.panY = 0;
+      applyView();
+    }
+
+    function scrollCurrentThumbnail() {
+      if (selectedId === null) return;
+      $('image-list').querySelector(`[data-image-id="${selectedId}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function selectImage(id, event) {
+      const additive = event.ctrlKey || event.metaKey;
+      if (event.shiftKey) {
+        let anchorIndex = images.findIndex(item => item.id === anchorId);
+        const index = images.findIndex(item => item.id === id);
+        if (anchorIndex < 0) { anchorIndex = index; anchorId = id; }
+        if (!additive) selectedIds.clear();
+        for (let i = Math.min(anchorIndex, index); i <= Math.max(anchorIndex, index); i++) selectedIds.add(images[i].id);
+        selectedId = id;
+      } else if (additive) {
+        if (selectedIds.has(id)) {
+          selectedIds.delete(id);
+          if (selectedId === id) selectedId = Array.from(selectedIds).at(-1) ?? null;
+        } else {
+          selectedIds.add(id);
+          selectedId = id;
+        }
+        anchorId = id;
+      } else {
+        selectedIds.clear();
+        selectedIds.add(id);
+        selectedId = id;
+        anchorId = id;
+      }
+      render();
+      const clicked = $('image-list').querySelector(`[data-image-id="${id}"]`);
+      clicked?.focus({ preventScroll: true });
+      clicked?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function render() {
+      const current = images.find(item => item.id === selectedId);
+      const hasImage = Boolean(current);
+      $('count').textContent = images.length;
+      $('empty').hidden = hasImage;
+      $('image-frame').hidden = !hasImage;
+      $('list-empty').hidden = images.length > 0;
+      $('empty-title').textContent = images.length ? '画像を選択してください' : 'スクショを貼り付け';
+      $('empty-shortcut').hidden = images.length > 0;
+      $('empty-instructions').textContent = images.length
+        ? '上の画像一覧から、表示する画像を選択してください。'
+        : '画像をコピーして、このページで貼り付けてください。画像ファイルのドラッグ＆ドロップもできます。';
+      stage.classList.toggle('has-image', hasImage);
+      $('clear').disabled = images.length === 0;
+      $('clear').textContent = selectedIds.size ? `選択した${selectedIds.size}枚を削除` : 'すべて削除';
+      $('dimensions').textContent = current ? `${current.width} × ${current.height} px` : '';
+      if (current) {
+        $('preview').src = current.url;
+        $('preview').alt = current.label;
+      } else {
+        $('preview').removeAttribute('src');
+        $('preview').alt = '';
+      }
+      $('image-list').querySelectorAll('.thumbnail').forEach(button => button.remove());
+      for (const item of images) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'thumbnail';
+        button.setAttribute('data-image-id', String(item.id));
+        button.setAttribute('aria-label', `${item.label}を選択`);
+        button.setAttribute('aria-pressed', String(selectedIds.has(item.id)));
+        button.title = 'Ctrl＋クリックで選択・解除、Shift＋クリックで範囲選択';
+        const thumbnail = document.createElement('img');
+        thumbnail.src = item.url;
+        thumbnail.alt = '';
+        thumbnail.draggable = false;
+        button.append(thumbnail);
+        button.addEventListener('click', event => selectImage(item.id, event));
+        $('image-list').append(button);
+      }
+      resetView();
+    }
+
+    async function addImages(files) {
+      const batchGeneration = generation;
+      const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+      if (!imageFiles.length) return;
+      for (const file of imageFiles) {
+        const url = URL.createObjectURL(file);
+        const probe = new Image();
+        try {
+          await new Promise((resolve, reject) => {
+            probe.onload = resolve;
+            probe.onerror = reject;
+            probe.src = url;
+          });
+          if (generation !== batchGeneration) { URL.revokeObjectURL(url); continue; }
+          const id = nextId++;
+          images.push({ id, url, label: `画像 ${String(id).padStart(2, '0')}`, width: probe.naturalWidth, height: probe.naturalHeight });
+          selectedId = id;
+          selectedIds.clear();
+          selectedIds.add(id);
+          anchorId = id;
+        } catch {
+          URL.revokeObjectURL(url);
+        }
+      }
+      if (generation !== batchGeneration) return;
+      render();
+      scrollCurrentThumbnail();
+    }
+
+    document.addEventListener('paste', event => {
+      const files = Array.from(event.clipboardData?.items || [])
+        .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+        .map(item => item.getAsFile()).filter(Boolean);
+      event.preventDefault();
+      addImages(files);
+    });
+    stage.addEventListener('wheel', event => {
+      if (selectedId === null) return;
+      event.preventDefault();
+      endPan();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? stage.clientHeight : 1;
+      const delta = Math.max(-500, Math.min(500, event.deltaY * unit));
+      const nextZoom = Math.max(0.1, Math.min(20, view.zoom * Math.exp(-delta * 0.002)));
+      const ratio = nextZoom / view.zoom;
+      const rect = stage.getBoundingClientRect();
+      const x = event.clientX - rect.left - stage.clientLeft - stage.clientWidth / 2;
+      const y = event.clientY - rect.top - stage.clientTop - stage.clientHeight / 2;
+      view.panX = ratio * view.panX + (1 - ratio) * x;
+      view.panY = ratio * view.panY + (1 - ratio) * y;
+      view.zoom = nextZoom;
+      applyView();
+    }, { passive: false });
+    stage.addEventListener('pointerdown', event => {
+      if (selectedId === null || event.button !== 0 || panGesture) return;
+      event.preventDefault();
+      panGesture = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, panX: view.panX, panY: view.panY };
+      stage.setPointerCapture(event.pointerId);
+      stage.classList.add('panning');
+      stage.focus({ preventScroll: true });
+    });
+    stage.addEventListener('pointermove', event => {
+      if (!panGesture || event.pointerId !== panGesture.pointerId) return;
+      view.panX = panGesture.panX + event.clientX - panGesture.x;
+      view.panY = panGesture.panY + event.clientY - panGesture.y;
+      applyView();
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+      stage.addEventListener(type, event => {
+        if (panGesture?.pointerId === event.pointerId) endPan();
+      });
+    }
+    stage.addEventListener('dblclick', resetView);
+    new ResizeObserver(resetView).observe(stage);
+    function deleteImages(ids) {
+      const targets = new Set(ids);
+      const index = images.findIndex(item => targets.has(item.id));
+      if (index < 0) return;
+      const removed = images.filter(item => targets.has(item.id));
+      const remaining = images.filter(item => !targets.has(item.id));
+      images.splice(0, images.length, ...remaining);
+      targets.forEach(id => selectedIds.delete(id));
+      if (!selectedIds.has(selectedId)) selectedId = Array.from(selectedIds).at(-1) ?? images[Math.min(index, images.length - 1)]?.id ?? null;
+      if (selectedId !== null && !selectedIds.size) selectedIds.add(selectedId);
+      if (targets.has(anchorId)) anchorId = selectedId;
+      render();
+      removed.forEach(item => URL.revokeObjectURL(item.url));
+      scrollCurrentThumbnail();
+    }
+    $('clear').addEventListener('click', () => {
+      if (selectedIds.size) { deleteImages(selectedIds); return; }
+      generation++;
+      const removed = images.splice(0);
+      selectedId = null;
+      selectedIds.clear();
+      anchorId = null;
+      render();
+      removed.forEach(item => URL.revokeObjectURL(item.url));
+    });
+    document.addEventListener('dragenter', event => {
+      if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return;
+      event.preventDefault();
+      dragDepth++;
+      $('stage').classList.add('dragging');
+    });
+    document.addEventListener('dragover', event => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    });
+    document.addEventListener('dragleave', () => {
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (!dragDepth) $('stage').classList.remove('dragging');
+    });
+    document.addEventListener('drop', event => {
+      event.preventDefault();
+      dragDepth = 0;
+      $('stage').classList.remove('dragging');
+      addImages(event.dataTransfer?.files || []);
+    });
+  </script>
+</body>
+</html>
