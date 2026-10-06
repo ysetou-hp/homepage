@@ -15,6 +15,7 @@
     svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
     .app { max-width: 1440px; margin: auto; padding: 24px 40px; }
     .workspace { display: grid; grid-template-columns: minmax(0, 1fr); background: white; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px #25305704; }
+    .privacy-note { margin: 14px 4px 0; padding: 11px 14px; color: #6f7180; background: #fbfaff; border: 1px solid #e7e2f4; border-radius: 9px; font-size: 12px; line-height: 1.75; }
     aside { border-bottom: 1px solid var(--border); min-width: 0; background: #fcfcfe; }
     .list-heading { height: 44px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 600; }
     .list-label { display: flex; align-items: center; gap: 9px; }
@@ -75,6 +76,7 @@
         </div>
       </main>
     </div>
+    <p class="privacy-note">画像はブラウザ内で処理し、外部へ送信しない設計です。ただし、機密情報を含む画像などを扱う際に心配な場合は、ローカル環境でご利用ください。</p>
   </div>
   <script>
     'use strict';
